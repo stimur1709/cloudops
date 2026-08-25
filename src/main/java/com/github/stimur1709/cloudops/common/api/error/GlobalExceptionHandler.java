@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.resource.api.error;
+package com.github.stimur1709.cloudops.common.api.error;
 
 import java.time.Clock;
 import java.util.Arrays;
@@ -135,3 +135,4 @@ public class GlobalExceptionHandler {
         return List.of(new ApiFieldError(field, displayName + " must be one of: " + allowedValues));
     }
 }
+
