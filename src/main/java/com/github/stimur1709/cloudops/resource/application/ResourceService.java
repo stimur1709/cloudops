@@ -5,8 +5,8 @@ import java.time.Instant;
 
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
-import com.github.stimur1709.cloudops.resource.infrastructure.persistence.ResourceEntity;
-import com.github.stimur1709.cloudops.resource.infrastructure.persistence.ResourceJpaRepository;
+import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
+import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

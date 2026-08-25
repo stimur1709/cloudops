@@ -4,7 +4,7 @@ import java.time.Instant;
 
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
-import com.github.stimur1709.cloudops.resource.infrastructure.persistence.ResourceEntity;
+import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 
 public record ResourceResponse(
         Long id,
