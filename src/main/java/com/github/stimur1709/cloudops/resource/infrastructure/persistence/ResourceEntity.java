@@ -2,9 +2,8 @@ package com.github.stimur1709.cloudops.resource.infrastructure.persistence;
 
 import java.time.Instant;
 
-import com.github.stimur1709.cloudops.resource.domain.Resource;
-import com.github.stimur1709.cloudops.resource.domain.ResourceStatus;
-import com.github.stimur1709.cloudops.resource.domain.ResourceType;
+import com.github.stimur1709.cloudops.resource.ResourceStatus;
+import com.github.stimur1709.cloudops.resource.ResourceType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,7 +15,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "resources")
-class ResourceEntity {
+public class ResourceEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,21 +41,50 @@ class ResourceEntity {
     protected ResourceEntity() {
     }
 
-    private ResourceEntity(Resource resource) {
-        this.id = resource.id();
-        this.name = resource.name();
-        this.type = resource.type();
-        this.status = resource.status();
-        this.createdAt = resource.createdAt();
-        this.updatedAt = resource.updatedAt();
+    private ResourceEntity(
+            String name,
+            ResourceType type,
+            ResourceStatus status,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        this.name = name;
+        this.type = type;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
-    static ResourceEntity from(Resource resource) {
-        return new ResourceEntity(resource);
+    public static ResourceEntity create(
+            String name,
+            ResourceType type,
+            ResourceStatus status,
+            Instant createdAt
+    ) {
+        return new ResourceEntity(name, type, status, createdAt, createdAt);
     }
 
-    Resource toDomain() {
-        return new Resource(id, name, type, status, createdAt, updatedAt);
+    public Long id() {
+        return id;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public ResourceType type() {
+        return type;
+    }
+
+    public ResourceStatus status() {
+        return status;
+    }
+
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    public Instant updatedAt() {
+        return updatedAt;
     }
 }
-

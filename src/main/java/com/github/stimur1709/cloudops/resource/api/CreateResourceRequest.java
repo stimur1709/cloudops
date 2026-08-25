@@ -1,7 +1,7 @@
 package com.github.stimur1709.cloudops.resource.api;
 
-import com.github.stimur1709.cloudops.resource.domain.ResourceStatus;
-import com.github.stimur1709.cloudops.resource.domain.ResourceType;
+import com.github.stimur1709.cloudops.resource.ResourceStatus;
+import com.github.stimur1709.cloudops.resource.ResourceType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -18,4 +18,3 @@ public record CreateResourceRequest(
         ResourceStatus status
 ) {
 }
-

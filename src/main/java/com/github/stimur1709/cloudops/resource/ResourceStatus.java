@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.resource.domain;
+package com.github.stimur1709.cloudops.resource;
 
 public enum ResourceStatus {
     ACTIVE,

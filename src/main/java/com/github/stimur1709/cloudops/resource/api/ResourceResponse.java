@@ -2,9 +2,9 @@ package com.github.stimur1709.cloudops.resource.api;
 
 import java.time.Instant;
 
-import com.github.stimur1709.cloudops.resource.domain.Resource;
-import com.github.stimur1709.cloudops.resource.domain.ResourceStatus;
-import com.github.stimur1709.cloudops.resource.domain.ResourceType;
+import com.github.stimur1709.cloudops.resource.ResourceStatus;
+import com.github.stimur1709.cloudops.resource.ResourceType;
+import com.github.stimur1709.cloudops.resource.infrastructure.persistence.ResourceEntity;
 
 public record ResourceResponse(
         Long id,
@@ -15,7 +15,7 @@ public record ResourceResponse(
         Instant updatedAt
 ) {
 
-    static ResourceResponse from(Resource resource) {
+    static ResourceResponse from(ResourceEntity resource) {
         return new ResourceResponse(
                 resource.id(),
                 resource.name(),
@@ -26,4 +26,3 @@ public record ResourceResponse(
         );
     }
 }
-
