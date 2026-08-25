@@ -1,0 +1,31 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Maven
+target/
+.flattened-pom.xml
+
+# Java
+*.class
+hs_err_pid*
+replay_pid*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Operating systems
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Codex local state
+.codex-log/
