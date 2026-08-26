@@ -201,7 +201,7 @@ class ResourceApiIntegrationTest {
         mockMvc.perform(get("/api/resources/{id}", 999_999L))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"))
-                .andExpect(jsonPath("$.message").value("Resource not found"))
+                .andExpect(jsonPath("$.message").value("Entity not found"))
                 .andExpect(jsonPath("$.path").value("/api/resources/999999"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
                 .andExpect(jsonPath("$.errors", hasSize(0)));
