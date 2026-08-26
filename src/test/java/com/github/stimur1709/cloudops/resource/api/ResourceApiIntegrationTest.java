@@ -143,9 +143,9 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"))
                 .andExpect(jsonPath("$.path").value("/api/resources"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
-                .andExpect(jsonPath("$.errors", hasSize(4)))
+                .andExpect(jsonPath("$.errors", hasSize(5)))
                 .andExpect(jsonPath("$.errors[*].field", containsInAnyOrder(
-                        "name", "type", "status", "organizationId"
+                        "name", "type", "status", "organizationId", "config"
                 )))
                 .andExpect(jsonPath("$.errors[?(@.field == 'name')].message").value("Name must not be blank"))
                 .andExpect(jsonPath("$.errors[?(@.field == 'type')].message").value("Type is required"))
@@ -170,7 +170,8 @@ class ResourceApiIntegrationTest {
                                 {
                                   "name": "router-01",
                                   "type": "ROUTER",
-                                  "status": "ACTIVE"
+                                  "status": "ACTIVE",
+                                  "config": {}
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
@@ -179,7 +180,7 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.errors", hasSize(1)))
                 .andExpect(jsonPath("$.errors[0].field").value("type"))
                 .andExpect(jsonPath("$.errors[0].message").value(
-                        "Type must be one of: NETWORK_DEVICE, SERVER, DATABASE, OTHER"
+                        "Type must be one of: NETWORK_DEVICE, SERVER, DATABASE, SERVICE, OTHER"
                 ));
     }
 
@@ -199,7 +200,7 @@ class ResourceApiIntegrationTest {
     void returnsUnifiedNotFoundError() throws Exception {
         mockMvc.perform(get("/api/resources/{id}", 999_999L))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
+                .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("Resource not found"))
                 .andExpect(jsonPath("$.path").value("/api/resources/999999"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
@@ -322,9 +323,20 @@ class ResourceApiIntegrationTest {
                           "name": "%s",
                           "type": "%s",
                           "status": "%s",
-                          "organizationId": %d
+                          "organizationId": %d,
+                          "config": %s
                         }
-                        """.formatted(name, type, status, organizationId)));
+                        """.formatted(name, type, status, organizationId, configFor(type))));
+    }
+
+    private String configFor(String type) {
+        return switch (type) {
+            case "NETWORK_DEVICE" -> "{\"host\":\"10.0.0.1\"}";
+            case "SERVER" -> "{\"host\":\"10.0.0.15\"}";
+            case "DATABASE" -> "{\"host\":\"db.internal\",\"port\":5432,\"database\":\"orders\"}";
+            case "SERVICE" -> "{\"url\":\"https://api.example.com\"}";
+            default -> "{}";
+        };
     }
 
     @RestController

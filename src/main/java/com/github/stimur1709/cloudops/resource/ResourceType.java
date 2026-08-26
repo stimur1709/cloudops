@@ -4,6 +4,6 @@ public enum ResourceType {
     NETWORK_DEVICE,
     SERVER,
     DATABASE,
+    SERVICE,
     OTHER
 }
-

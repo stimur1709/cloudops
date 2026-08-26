@@ -6,6 +6,8 @@ import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
 import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.resource.application.ResourceService;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
+import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ResourceController {
 
     private final ResourceService resourceService;
+    private final ResourceConfigMapper configMapper;
 
-    public ResourceController(ResourceService resourceService) {
+    public ResourceController(ResourceService resourceService, ResourceConfigMapper configMapper) {
         this.resourceService = resourceService;
+        this.configMapper = configMapper;
     }
 
     @PostMapping
@@ -33,19 +37,18 @@ public class ResourceController {
             @Valid @RequestBody CreateResourceRequest request,
             Authentication authentication
     ) {
-        ResourceResponse response = ResourceResponse.from(
-                resourceService.create(
-                        request.name(), request.type(), request.status(), request.organizationId(),
-                        CurrentUser.id(authentication)
-                )
+        ResourceEntity resource = resourceService.create(
+                request.name(), request.type(), request.status(), request.organizationId(), request.config(),
+                CurrentUser.id(authentication)
         );
+        ResourceResponse response = ResourceResponse.from(resource, configMapper);
         URI location = URI.create("/api/resources/" + response.id());
         return ResponseEntity.created(location).body(response);
     }
 
     @GetMapping("/{id}")
     public ResourceResponse get(@PathVariable long id, Authentication authentication) {
-        return ResourceResponse.from(resourceService.get(id, CurrentUser.id(authentication)));
+        return ResourceResponse.from(resourceService.get(id, CurrentUser.id(authentication)), configMapper);
     }
 
     @PostMapping("/search")
@@ -55,7 +58,7 @@ public class ResourceController {
     ) {
         return SearchResponse.from(
                 resourceService.search(request.toQuery(), CurrentUser.id(authentication)),
-                ResourceResponse::from
+                resource -> ResourceResponse.from(resource, configMapper)
         );
     }
 
@@ -65,12 +68,11 @@ public class ResourceController {
             @Valid @RequestBody UpdateResourceRequest request,
             Authentication authentication
     ) {
-        return ResourceResponse.from(
-                resourceService.update(
-                        id, request.name(), request.type(), request.status(), request.organizationId(),
-                        CurrentUser.id(authentication)
-                )
+        ResourceEntity resource = resourceService.update(
+                id, request.name(), request.type(), request.status(), request.organizationId(), request.config(),
+                CurrentUser.id(authentication)
         );
+        return ResourceResponse.from(resource, configMapper);
     }
 
     @DeleteMapping("/{id}")

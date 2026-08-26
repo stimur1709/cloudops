@@ -70,7 +70,7 @@ class AuthorizationApiIntegrationTest {
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/organizations/{id}", organization).with(as(OUTSIDER_ID)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("ORGANIZATION_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
     }
 
     @Test
@@ -130,7 +130,7 @@ class AuthorizationApiIntegrationTest {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/resources/{id}", hiddenResource))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
 
         mockMvc.perform(post("/api/resources/search")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -192,14 +192,15 @@ class AuthorizationApiIntegrationTest {
     private long insertResource(String name, long organizationId) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO resources
-                    (name, type, status, organization_id, created_at, updated_at)
-                VALUES (?, 'SERVER', 'ACTIVE', ?, now(), now()) RETURNING id
+                    (name, type, status, organization_id, config, created_at, updated_at)
+                VALUES (?, 'SERVER', 'ACTIVE', ?, '{"host":"server.internal"}', now(), now()) RETURNING id
                 """, Long.class, name, organizationId);
     }
 
     private String resourceBody(String name, long organizationId) {
         return """
-                {"name":"%s","type":"SERVER","status":"ACTIVE","organizationId":%d}
+                {"name":"%s","type":"SERVER","status":"ACTIVE","organizationId":%d,
+                 "config":{"host":"server.internal"}}
                 """.formatted(name, organizationId);
     }
 
