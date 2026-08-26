@@ -66,6 +66,46 @@ curl -i -X POST http://localhost:8080/api/resources \
 curl -i http://localhost:8080/api/resources/1
 ```
 
+Найти ресурсы с фильтрацией, сортировкой и смещением:
+
+```shell
+curl -i -X POST http://localhost:8080/api/resources/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "start": 0,
+    "size": 20,
+    "filter": {
+      "operator": "AND",
+      "conditions": [
+        {"field": "type", "operation": "EQ", "value": "SERVER"},
+        {"field": "name", "operation": "CONTAINS", "value": "prod"}
+      ]
+    },
+    "sort": [
+      {"field": "createdAt", "order": "DESC"}
+    ],
+    "getTotal": true
+  }'
+```
+
+`start` должен быть не меньше `0`, `size` — от `1` до `100`. Фильтровать и сортировать можно по полям `id`, `name`, `type`, `status`, `createdAt`, `updatedAt`. Поддерживаются операции `EQ`, `NE`, `GT`, `GE`, `LT`, `LE`, а для строк также `CONTAINS`. Если `getTotal` равен `false`, поле `total` отсутствует и отдельный запрос подсчёта не выполняется.
+
+Поиск построен на общем framework в `common`: `SearchRequest` и `SearchResponse` задают единый API-контракт, а `JpaSearchExecutor` собирает Criteria-запрос, применяет смещение и ограничение, и при необходимости выполняет `count`. Для каждой новой JPA-сущности нужно создать `JpaSearchDefinition` с явной картой внешних имён на типизированные `JpaSearchField`, выбрать конвертеры значений и поле сортировки по умолчанию. Клиентские имена полей не передаются напрямую в Criteria API, а поля entity не открываются через reflection.
+
+Обновить ресурс:
+
+```shell
+curl -i -X PUT http://localhost:8080/api/resources/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"router-core-01","type":"NETWORK_DEVICE","status":"INACTIVE"}'
+```
+
+Удалить ресурс:
+
+```shell
+curl -i -X DELETE http://localhost:8080/api/resources/1
+```
+
 Допустимые типы: `NETWORK_DEVICE`, `SERVER`, `DATABASE`, `OTHER`.
 Допустимые статусы: `ACTIVE`, `INACTIVE`.
 

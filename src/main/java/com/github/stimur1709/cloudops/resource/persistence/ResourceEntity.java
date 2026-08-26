@@ -64,6 +64,18 @@ public class ResourceEntity {
         return new ResourceEntity(name, type, status, createdAt, createdAt);
     }
 
+    public void update(
+            String name,
+            ResourceType type,
+            ResourceStatus status,
+            Instant updatedAt
+    ) {
+        this.name = name;
+        this.type = type;
+        this.status = status;
+        this.updatedAt = updatedAt;
+    }
+
     public Long id() {
         return id;
     }

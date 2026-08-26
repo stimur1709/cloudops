@@ -5,8 +5,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -215,13 +215,13 @@ class ResourceApiIntegrationTest {
 
     @Test
     void returnsMethodNotAllowedForUnsupportedMethod() throws Exception {
-        mockMvc.perform(delete("/api/resources/1"))
+        mockMvc.perform(patch("/api/resources/1"))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"))
                 .andExpect(jsonPath("$.message").value("HTTP method is not supported for this endpoint"))
                 .andExpect(jsonPath("$.path").value("/api/resources/1"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
-                .andExpect(header().string("Allow", containsString("GET")))
+                .andExpect(header().string("Allow", containsString("PUT")))
                 .andExpect(jsonPath("$.errors", hasSize(0)));
     }
 
