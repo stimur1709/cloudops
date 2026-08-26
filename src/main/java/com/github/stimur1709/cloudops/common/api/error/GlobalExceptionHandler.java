@@ -8,6 +8,9 @@ import java.util.stream.Collectors;
 
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
 import com.github.stimur1709.cloudops.resource.application.ResourceNotFoundException;
+import com.github.stimur1709.cloudops.resource.application.ResourceNameConflictException;
+import com.github.stimur1709.cloudops.organization.application.OrganizationInUseException;
+import com.github.stimur1709.cloudops.organization.application.OrganizationNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,6 +140,39 @@ public class GlobalExceptionHandler {
                 HttpStatus.NOT_FOUND,
                 "RESOURCE_NOT_FOUND",
                 "Resource not found",
+                request,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(OrganizationNotFoundException.class)
+    ResponseEntity<ApiError> handleOrganizationNotFound(HttpServletRequest request) {
+        return response(
+                HttpStatus.NOT_FOUND,
+                "ORGANIZATION_NOT_FOUND",
+                "Organization not found",
+                request,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(ResourceNameConflictException.class)
+    ResponseEntity<ApiError> handleResourceNameConflict(HttpServletRequest request) {
+        return response(
+                HttpStatus.CONFLICT,
+                "RESOURCE_NAME_CONFLICT",
+                "Resource name is already used in this organization",
+                request,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(OrganizationInUseException.class)
+    ResponseEntity<ApiError> handleOrganizationInUse(HttpServletRequest request) {
+        return response(
+                HttpStatus.CONFLICT,
+                "ORGANIZATION_IN_USE",
+                "Organization cannot be deleted while it has resources",
                 request,
                 List.of()
         );

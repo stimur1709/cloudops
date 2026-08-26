@@ -23,7 +23,7 @@ public record SearchRequest(
         @Valid
         Filter filter,
 
-        List<@Valid Sort> sort,
+        List<@NotNull(message = "Sort item must not be null") @Valid Sort> sort,
 
         boolean getTotal
 ) {
@@ -41,7 +41,7 @@ public record SearchRequest(
             SearchQuery.LogicalOperator operator,
 
             @NotEmpty(message = "Filter conditions must not be empty")
-            List<@Valid Condition> conditions
+            List<@NotNull(message = "Filter condition must not be null") @Valid Condition> conditions
     ) {
 
         SearchQuery.Filter toQuery() {

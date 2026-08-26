@@ -5,7 +5,8 @@ Content-Type: application/json
 {
   "name": "router-01",
   "type": "NETWORK_DEVICE",
-  "status": "ACTIVE"
+  "status": "ACTIVE",
+  "organizationId": 1
 }
 
 ### Get resource
@@ -22,9 +23,9 @@ Content-Type: application/json
     "operator": "AND",
     "conditions": [
       {
-        "field": "id",
+        "field": "name",
         "operation": "EQ",
-        "value": "1"
+        "value": "router-01"
       }
     ]
   },
@@ -42,9 +43,10 @@ PUT http://localhost:8080/api/resources/1
 Content-Type: application/json
 
 {
-  "name": "router-core-01",
+  "name": "router-01",
   "type": "NETWORK_DEVICE",
-  "status": "INACTIVE"
+  "status": "INACTIVE",
+  "organizationId": 1
 }
 
 ### Delete resource

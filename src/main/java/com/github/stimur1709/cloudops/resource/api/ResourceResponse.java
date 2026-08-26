@@ -11,6 +11,7 @@ public record ResourceResponse(
         String name,
         ResourceType type,
         ResourceStatus status,
+        Long organizationId,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -21,6 +22,7 @@ public record ResourceResponse(
                 resource.name(),
                 resource.type(),
                 resource.status(),
+                resource.organizationId(),
                 resource.createdAt(),
                 resource.updatedAt()
         );

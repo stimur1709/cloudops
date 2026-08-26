@@ -44,10 +44,16 @@ class ResourceApiIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    private long organizationId;
+
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
-        jdbcTemplate.execute("TRUNCATE TABLE resources RESTART IDENTITY");
+        jdbcTemplate.execute("TRUNCATE TABLE resources, organizations RESTART IDENTITY");
+        organizationId = jdbcTemplate.queryForObject("""
+                INSERT INTO organizations (name, created_at, updated_at)
+                VALUES ('Test', now(), now()) RETURNING id
+                """, Long.class);
     }
 
     @Test
@@ -79,6 +85,7 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.name").value("router-01"))
                 .andExpect(jsonPath("$.type").value("NETWORK_DEVICE"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.organizationId").value(organizationId))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty())
                 .andReturn()
@@ -104,6 +111,7 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.name").value("db-01"))
                 .andExpect(jsonPath("$.type").value("DATABASE"))
                 .andExpect(jsonPath("$.status").value("INACTIVE"))
+                .andExpect(jsonPath("$.organizationId").value(organizationId))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty());
     }
@@ -124,8 +132,10 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"))
                 .andExpect(jsonPath("$.path").value("/api/resources"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
-                .andExpect(jsonPath("$.errors", hasSize(3)))
-                .andExpect(jsonPath("$.errors[*].field", containsInAnyOrder("name", "type", "status")))
+                .andExpect(jsonPath("$.errors", hasSize(4)))
+                .andExpect(jsonPath("$.errors[*].field", containsInAnyOrder(
+                        "name", "type", "status", "organizationId"
+                )))
                 .andExpect(jsonPath("$.errors[?(@.field == 'name')].message").value("Name must not be blank"))
                 .andExpect(jsonPath("$.errors[?(@.field == 'type')].message").value("Type is required"))
                 .andExpect(jsonPath("$.errors[?(@.field == 'status')].message").value("Status is required"));
@@ -300,9 +310,10 @@ class ResourceApiIntegrationTest {
                         {
                           "name": "%s",
                           "type": "%s",
-                          "status": "%s"
+                          "status": "%s",
+                          "organizationId": %d
                         }
-                        """.formatted(name, type, status)));
+                        """.formatted(name, type, status, organizationId)));
     }
 
     @RestController
