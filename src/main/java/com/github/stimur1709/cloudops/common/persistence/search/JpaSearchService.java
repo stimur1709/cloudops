@@ -26,15 +26,7 @@ public class JpaSearchService {
     }
 
     public <E> SearchResult<E> search(SearchQuery search, JpaSearchDefinition<E> definition) {
-        return search(search, null, null, definition);
-    }
-
-    public <E> SearchResult<E> search(
-            SearchQuery search,
-            SearchQuery.Filter requiredFilter,
-            JpaSearchDefinition<E> definition
-    ) {
-        return search(search, requiredFilter, null, definition);
+        return search(search, null, definition);
     }
 
     public <E> SearchResult<E> search(
@@ -42,22 +34,13 @@ public class JpaSearchService {
             JpaSearchScope<E> scope,
             JpaSearchDefinition<E> definition
     ) {
-        return search(search, null, scope, definition);
-    }
-
-    private <E> SearchResult<E> search(
-            SearchQuery search,
-            SearchQuery.Filter requiredFilter,
-            JpaSearchScope<E> scope,
-            JpaSearchDefinition<E> definition
-    ) {
-        PreparedSearch<E> preparedSearch = prepare(search, requiredFilter, definition);
+        PreparedSearch<E> preparedSearch = prepare(search, definition);
         CriteriaBuilder builder = entityManager.getCriteriaBuilder();
 
         CriteriaQuery<E> criteria = builder.createQuery(definition.entityType());
         Root<E> root = criteria.from(definition.entityType());
         criteria.select(root);
-        applyFilters(criteria, root, builder, scope, preparedSearch.requiredFilter(), preparedSearch.filter());
+        applyFilters(criteria, root, builder, scope, preparedSearch.filter());
         criteria.orderBy(toOrders(root, builder, preparedSearch.sort(), definition));
 
         TypedQuery<E> query = entityManager.createQuery(criteria)
@@ -66,7 +49,7 @@ public class JpaSearchService {
         List<E> items = query.getResultList();
 
         Long total = search.getTotal()
-                ? count(builder, scope, preparedSearch.requiredFilter(), preparedSearch.filter(), definition)
+                ? count(builder, scope, preparedSearch.filter(), definition)
                 : null;
         return new SearchResult<>(items, total);
     }
@@ -74,26 +57,23 @@ public class JpaSearchService {
     private <E> Long count(
             CriteriaBuilder builder,
             JpaSearchScope<E> scope,
-            PreparedFilter<E> requiredFilter,
             PreparedFilter<E> filter,
             JpaSearchDefinition<E> definition
     ) {
         CriteriaQuery<Long> criteria = builder.createQuery(Long.class);
         Root<E> root = criteria.from(definition.entityType());
         criteria.select(builder.count(root));
-        applyFilters(criteria, root, builder, scope, requiredFilter, filter);
+        applyFilters(criteria, root, builder, scope, filter);
         return entityManager.createQuery(criteria).getSingleResult();
     }
 
     private <E> PreparedSearch<E> prepare(
             SearchQuery search,
-            SearchQuery.Filter requiredFilter,
             JpaSearchDefinition<E> definition
     ) {
-        PreparedFilter<E> preparedRequiredFilter = prepareFilter(requiredFilter, definition);
         PreparedFilter<E> filter = prepareFilter(search.filter(), definition);
         List<PreparedSort<E>> sort = prepareSort(search.sort(), definition);
-        return new PreparedSearch<>(preparedRequiredFilter, filter, sort);
+        return new PreparedSearch<>(filter, sort);
     }
 
     private <E> PreparedFilter<E> prepareFilter(
@@ -164,19 +144,15 @@ public class JpaSearchService {
             Root<E> root,
             CriteriaBuilder builder,
             JpaSearchScope<E> scope,
-            PreparedFilter<E> requiredFilter,
             PreparedFilter<E> filter
     ) {
         Predicate scopePredicate = scope == null ? null : scope.toPredicate(root, criteria, builder);
-        if (requiredFilter == null && filter == null && scopePredicate == null) {
+        if (filter == null && scopePredicate == null) {
             return;
         }
         List<Predicate> predicates = new ArrayList<>();
         if (scopePredicate != null) {
             predicates.add(scopePredicate);
-        }
-        if (requiredFilter != null) {
-            predicates.add(toPredicate(root, builder, requiredFilter));
         }
         if (filter != null) {
             predicates.add(toPredicate(root, builder, filter));
@@ -222,7 +198,6 @@ public class JpaSearchService {
     }
 
     private record PreparedSearch<E>(
-            PreparedFilter<E> requiredFilter,
             PreparedFilter<E> filter,
             List<PreparedSort<E>> sort
     ) {

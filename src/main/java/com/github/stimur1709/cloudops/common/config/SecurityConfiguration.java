@@ -3,12 +3,12 @@ package com.github.stimur1709.cloudops.common.config;
 import com.github.stimur1709.cloudops.common.api.error.ApiAuthenticationEntryPoint;
 import com.github.stimur1709.cloudops.common.api.error.ApiAccessDeniedHandler;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,7 +31,7 @@ public class SecurityConfiguration {
 
     @Bean
     JwtEncoder jwtEncoder(JwtProperties properties) {
-        return new NimbusJwtEncoder(new ImmutableSecret<SecurityContext>(properties.key()));
+        return new NimbusJwtEncoder(new ImmutableSecret<>(properties.key()));
     }
 
     @Bean
@@ -48,9 +48,9 @@ public class SecurityConfiguration {
             HttpSecurity http,
             ApiAuthenticationEntryPoint authenticationEntryPoint,
             ApiAccessDeniedHandler accessDeniedHandler
-    ) throws Exception {
+    ) {
         return http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()

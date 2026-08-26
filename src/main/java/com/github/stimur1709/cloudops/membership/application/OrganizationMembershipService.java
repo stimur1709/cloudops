@@ -7,6 +7,7 @@ import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.ForbiddenException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
+import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchScopes;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.membership.MembershipRole;
@@ -75,21 +76,13 @@ public class OrganizationMembershipService {
             SearchQuery search,
             long currentUserId
     ) {
-        getOrganization(organizationId);
+        checkOrganization(organizationId);
         if (!membershipRepository.existsByOrganizationIdAndUserId(organizationId, currentUserId)) {
-            throw new NotFoundException("Organization");
+            throw new NotFoundException();
         }
-        SearchQuery.Filter organizationFilter = new SearchQuery.Filter(
-                SearchQuery.LogicalOperator.AND,
-                List.of(new SearchQuery.Condition(
-                        OrganizationMembershipEntity_.ORGANIZATION_ID,
-                        SearchQuery.Operation.EQ,
-                        Long.toString(organizationId)
-                ))
-        );
         return searchService.search(
                 search,
-                organizationFilter,
+                JpaSearchScopes.equal(OrganizationMembershipEntity_.organizationId, organizationId),
                 OrganizationMembershipSearchDefinition.DEFINITION
         );
     }
@@ -135,25 +128,25 @@ public class OrganizationMembershipService {
         membershipRepository.delete(membership);
     }
 
-    private OrganizationEntity getOrganization(long id) {
-        return organizationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Organization"));
+    private void checkOrganization(long id) {
+        organizationRepository.findById(id)
+                .orElseThrow(NotFoundException::new);
     }
 
     private OrganizationEntity getOrganizationForUpdate(long id) {
         return organizationRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new NotFoundException("Organization"));
+                .orElseThrow(NotFoundException::new);
     }
 
     private UserEntity getUser(long id) {
-        return userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
+        return userRepository.findById(id).orElseThrow(NotFoundException::new);
     }
 
     private OrganizationMembershipEntity find(List<OrganizationMembershipEntity> memberships, long userId) {
         return memberships.stream()
                 .filter(item -> item.userId() == userId)
                 .findFirst()
-                .orElseThrow(() -> new NotFoundException("Membership"));
+                .orElseThrow(NotFoundException::new);
     }
 
     private OrganizationMembershipEntity findActor(
@@ -163,7 +156,7 @@ public class OrganizationMembershipService {
         return memberships.stream()
                 .filter(item -> item.userId() == currentUserId)
                 .findFirst()
-                .orElseThrow(() -> new NotFoundException("Organization"));
+                .orElseThrow(NotFoundException::new);
     }
 
     private void requireCanAdd(MembershipRole actorRole, MembershipRole addedRole) {

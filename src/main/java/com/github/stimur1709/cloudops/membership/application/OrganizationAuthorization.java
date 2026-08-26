@@ -20,21 +20,20 @@ public class OrganizationAuthorization {
         this.membershipRepository = membershipRepository;
     }
 
-    public MembershipRole requireMember(long organizationId, long userId, String hiddenEntityName) {
+    public MembershipRole requireMember(long organizationId, long userId) {
         return membershipRepository.findRole(organizationId, userId)
-                .orElseThrow(() -> new NotFoundException(hiddenEntityName));
+                .orElseThrow(NotFoundException::new);
     }
 
-    public MembershipRole requireManager(long organizationId, long userId, String hiddenEntityName) {
-        MembershipRole role = requireMember(organizationId, userId, hiddenEntityName);
+    public void requireManager(long organizationId, long userId) {
+        MembershipRole role = requireMember(organizationId, userId);
         if (!MANAGERS.contains(role)) {
             throw new ForbiddenException();
         }
-        return role;
     }
 
-    public void requireOwner(long organizationId, long userId, String hiddenEntityName) {
-        MembershipRole role = requireMember(organizationId, userId, hiddenEntityName);
+    public void requireOwner(long organizationId, long userId) {
+        MembershipRole role = requireMember(organizationId, userId);
         if (role != MembershipRole.OWNER) {
             throw new ForbiddenException();
         }

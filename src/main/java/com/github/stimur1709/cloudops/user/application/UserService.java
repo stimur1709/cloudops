@@ -44,7 +44,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserEntity get(long id) {
-        return userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
+        return userRepository.findById(id).orElseThrow(NotFoundException::new);
     }
 
     @Transactional(readOnly = true)
@@ -66,7 +66,7 @@ public class UserService {
     @Transactional
     public UserEntity update(long id, String email, String displayName, long currentUserId) {
         requireSelf(id, currentUserId);
-        UserEntity user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
+        UserEntity user = userRepository.findById(id).orElseThrow(NotFoundException::new);
         user.update(email, displayName, clock.instant());
         return save(user);
     }
@@ -74,7 +74,7 @@ public class UserService {
     @Transactional
     public void delete(long id, long currentUserId) {
         requireSelf(id, currentUserId);
-        UserEntity user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
+        UserEntity user = userRepository.findById(id).orElseThrow(NotFoundException::new);
         if (membershipRepository.existsByUserId(id)) {
             throw userInUse();
         }

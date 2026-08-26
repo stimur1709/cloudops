@@ -9,8 +9,7 @@ import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
-import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipEntity;
-import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipEntity_;
+import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipScopes;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
@@ -19,8 +18,6 @@ import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository
 import com.github.stimur1709.cloudops.resource.persistence.ResourceSearchDefinition;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
-import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.Subquery;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -57,7 +54,7 @@ public class ResourceService {
             long currentUserId
     ) {
         OrganizationEntity organization = getOrganizationForUpdate(organizationId);
-        authorization.requireManager(organizationId, currentUserId, "Organization");
+        authorization.requireManager(organizationId, currentUserId);
         if (resourceRepository.existsByOrganizationIdAndName(organizationId, name)) {
             throw resourceNameConflict();
         }
@@ -69,22 +66,18 @@ public class ResourceService {
     @Transactional(readOnly = true)
     public ResourceEntity get(long id, long currentUserId) {
         ResourceEntity resource = resourceRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Resource"));
-        authorization.requireMember(resource.organizationId(), currentUserId, "Resource");
+                .orElseThrow(NotFoundException::new);
+        authorization.requireMember(resource.organizationId(), currentUserId);
         return resource;
     }
 
     @Transactional(readOnly = true)
     public SearchResult<ResourceEntity> search(SearchQuery search, long currentUserId) {
-        return searchService.search(search, (root, query, builder) -> {
-            Subquery<Long> memberships = query.subquery(Long.class);
-            Root<OrganizationMembershipEntity> membership = memberships.from(OrganizationMembershipEntity.class);
-            memberships.select(membership.get(OrganizationMembershipEntity_.organizationId));
-            memberships.where(builder.equal(
-                    membership.get(OrganizationMembershipEntity_.userId), currentUserId
-            ));
-            return root.get(ResourceEntity_.organizationId).in(memberships);
-        }, ResourceSearchDefinition.DEFINITION);
+        return searchService.search(
+                search,
+                OrganizationMembershipScopes.visibleTo(currentUserId, ResourceEntity_.organizationId),
+                ResourceSearchDefinition.DEFINITION
+        );
     }
 
     @Transactional
@@ -97,13 +90,13 @@ public class ResourceService {
             long currentUserId
     ) {
         ResourceEntity resource = resourceRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new NotFoundException("Resource"));
+                .orElseThrow(NotFoundException::new);
         long sourceOrganizationId = resource.organizationId();
-        authorization.requireManager(sourceOrganizationId, currentUserId, "Resource");
+        authorization.requireManager(sourceOrganizationId, currentUserId);
         OrganizationEntity organization = lockOrganizations(sourceOrganizationId, organizationId);
-        authorization.requireManager(sourceOrganizationId, currentUserId, "Resource");
+        authorization.requireManager(sourceOrganizationId, currentUserId);
         if (organizationId != sourceOrganizationId) {
-            authorization.requireManager(organizationId, currentUserId, "Organization");
+            authorization.requireManager(organizationId, currentUserId);
         }
         if (resourceRepository.existsByOrganizationIdAndNameAndIdNot(organizationId, name, id)) {
             throw resourceNameConflict();
@@ -115,15 +108,15 @@ public class ResourceService {
     @Transactional
     public void delete(long id, long currentUserId) {
         ResourceEntity resource = resourceRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new NotFoundException("Resource"));
+                .orElseThrow(NotFoundException::new);
         getOrganizationForUpdate(resource.organizationId());
-        authorization.requireManager(resource.organizationId(), currentUserId, "Resource");
+        authorization.requireManager(resource.organizationId(), currentUserId);
         resourceRepository.delete(resource);
     }
 
     private OrganizationEntity getOrganizationForUpdate(long organizationId) {
         return organizationRepository.findByIdForUpdate(organizationId)
-                .orElseThrow(() -> new NotFoundException("Organization"));
+                .orElseThrow(NotFoundException::new);
     }
 
     private OrganizationEntity lockOrganizations(long sourceId, long targetId) {

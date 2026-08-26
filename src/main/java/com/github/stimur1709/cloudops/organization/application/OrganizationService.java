@@ -10,7 +10,7 @@ import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService
 import com.github.stimur1709.cloudops.membership.MembershipRole;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipEntity;
-import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipEntity_;
+import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipScopes;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity_;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
@@ -19,8 +19,6 @@ import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembers
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import com.github.stimur1709.cloudops.user.persistence.UserEntity;
 import com.github.stimur1709.cloudops.user.persistence.UserJpaRepository;
-import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.Subquery;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,7 +55,7 @@ public class OrganizationService {
     @Transactional
     public OrganizationEntity create(String name, long currentUserId) {
         UserEntity creator = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new NotFoundException("User"));
+                .orElseThrow(NotFoundException::new);
         OrganizationEntity organization = organizationRepository.saveAndFlush(
                 OrganizationEntity.create(name, clock.instant())
         );
@@ -70,29 +68,25 @@ public class OrganizationService {
     @Transactional(readOnly = true)
     public OrganizationEntity get(long id, long currentUserId) {
         OrganizationEntity organization = organizationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Organization"));
-        authorization.requireMember(id, currentUserId, "Organization");
+                .orElseThrow(NotFoundException::new);
+        authorization.requireMember(id, currentUserId);
         return organization;
     }
 
     @Transactional(readOnly = true)
     public SearchResult<OrganizationEntity> search(SearchQuery search, long currentUserId) {
-        return searchService.search(search, (root, query, builder) -> {
-            Subquery<Long> memberships = query.subquery(Long.class);
-            Root<OrganizationMembershipEntity> membership = memberships.from(OrganizationMembershipEntity.class);
-            memberships.select(membership.get(OrganizationMembershipEntity_.organizationId));
-            memberships.where(builder.equal(
-                    membership.get(OrganizationMembershipEntity_.userId), currentUserId
-            ));
-            return root.get(OrganizationEntity_.id).in(memberships);
-        }, OrganizationSearchDefinition.DEFINITION);
+        return searchService.search(
+                search,
+                OrganizationMembershipScopes.visibleTo(currentUserId, OrganizationEntity_.id),
+                OrganizationSearchDefinition.DEFINITION
+        );
     }
 
     @Transactional
     public OrganizationEntity update(long id, String name, long currentUserId) {
         OrganizationEntity organization = organizationRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new NotFoundException("Organization"));
-        authorization.requireManager(id, currentUserId, "Organization");
+                .orElseThrow(NotFoundException::new);
+        authorization.requireManager(id, currentUserId);
         organization.update(name, clock.instant());
         return organization;
     }
@@ -100,8 +94,8 @@ public class OrganizationService {
     @Transactional
     public void delete(long id, long currentUserId) {
         OrganizationEntity organization = organizationRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new NotFoundException("Organization"));
-        authorization.requireOwner(id, currentUserId, "Organization");
+                .orElseThrow(NotFoundException::new);
+        authorization.requireOwner(id, currentUserId);
         if (resourceRepository.existsByOrganizationId(id) || membershipRepository.existsByOrganizationId(id)) {
             throw organizationInUse();
         }
