@@ -5,9 +5,11 @@ import java.net.URI;
 import com.github.stimur1709.cloudops.resource.application.ResourceService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,5 +37,25 @@ public class ResourceController {
     public ResourceResponse get(@PathVariable long id) {
         return ResourceResponse.from(resourceService.get(id));
     }
-}
 
+    @PostMapping("/search")
+    public SearchResourcesResponse search(@Valid @RequestBody SearchResourcesRequest request) {
+        return SearchResourcesResponse.from(resourceService.search(request.toSearch()));
+    }
+
+    @PutMapping("/{id}")
+    public ResourceResponse update(
+            @PathVariable long id,
+            @Valid @RequestBody UpdateResourceRequest request
+    ) {
+        return ResourceResponse.from(
+                resourceService.update(id, request.name(), request.type(), request.status())
+        );
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable long id) {
+        resourceService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+}

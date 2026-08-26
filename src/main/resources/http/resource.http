@@ -1,17 +1,51 @@
-### create resources
+### Create resource
 POST http://localhost:8080/api/resources
 Content-Type: application/json
 
 {
-  "name": "NEW",
+  "name": "router-01",
   "type": "NETWORK_DEVICE",
   "status": "ACTIVE"
 }
 
-### get resources
-GET http://localhost:8080/api/resources/fff
+### Get resource
+GET http://localhost:8080/api/resources/1
+
+### Search resources
+POST http://localhost:8080/api/resources/search
 Content-Type: application/json
 
-### get resources
-PUT http://localhost:8080/api/resources/fff
+{
+  "start": 0,
+  "size": 20,
+  "filter": {
+    "operator": "AND",
+    "conditions": [
+      {
+        "field": "id",
+        "operation": "EQ",
+        "value": "1"
+      }
+    ]
+  },
+  "sort": [
+    {
+      "field": "createdAt",
+      "order": "DESC"
+    }
+  ],
+  "getTotal": true
+}
+
+### Update resource
+PUT http://localhost:8080/api/resources/1
 Content-Type: application/json
+
+{
+  "name": "router-core-01",
+  "type": "NETWORK_DEVICE",
+  "status": "INACTIVE"
+}
+
+### Delete resource
+DELETE http://localhost:8080/api/resources/1

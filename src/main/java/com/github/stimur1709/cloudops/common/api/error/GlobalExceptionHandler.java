@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.stimur1709.cloudops.resource.application.InvalidResourceSearchException;
 import com.github.stimur1709.cloudops.resource.application.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -138,6 +139,20 @@ public class GlobalExceptionHandler {
                 "Resource not found",
                 request,
                 List.of()
+        );
+    }
+
+    @ExceptionHandler(InvalidResourceSearchException.class)
+    ResponseEntity<ApiError> handleInvalidSearch(
+            InvalidResourceSearchException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_REQUEST",
+                "Search request is invalid",
+                request,
+                List.of(new ApiFieldError(exception.field(), exception.getMessage()))
         );
     }
 
