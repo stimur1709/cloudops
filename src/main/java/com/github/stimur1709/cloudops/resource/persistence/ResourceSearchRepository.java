@@ -48,6 +48,11 @@ public class ResourceSearchRepository {
                                     root -> root.get("status"),
                                     SearchValueConverter.enumeration(ResourceStatus.class)
                             ).allowing(EQ, NE).sortable(),
+                            "organizationId",
+                            JpaSearchField.<ResourceEntity, Long>comparable(
+                                    root -> root.get("organizationId"),
+                                    SearchValueConverter.longInteger()
+                            ).allowing(EQ, NE, GT, GE, LT, LE).sortable(),
                             "createdAt",
                             JpaSearchField.<ResourceEntity, Instant>comparable(
                                     root -> root.get("createdAt"),

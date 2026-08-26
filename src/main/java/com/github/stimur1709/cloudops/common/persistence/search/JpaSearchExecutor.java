@@ -1,5 +1,6 @@
 package com.github.stimur1709.cloudops.common.persistence.search;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -88,16 +89,26 @@ public final class JpaSearchExecutor<E> {
     }
 
     private List<PreparedSort<E>> prepareSort(List<SearchQuery.Sort> sort) {
-        return IntStream.range(0, sort.size())
+        List<PreparedSort<E>> prepared = new ArrayList<>(IntStream.range(0, sort.size())
                 .mapToObj(index -> {
                     SearchQuery.Sort item = sort.get(index);
                     JpaSearchField<E, ?> field = definition.fields().get(item.field());
                     if (field == null || !field.isSortable()) {
                         throw invalid("sort[%d].field".formatted(index), "Unknown sort field: " + item.field());
                     }
-                    return new PreparedSort<>(field, item.order());
+                    return new PreparedSort<>(item.field(), field, item.order());
                 })
-                .toList();
+                .toList());
+        boolean hasDefaultSort = prepared.stream()
+                .anyMatch(item -> item.name().equals(definition.defaultSortField()));
+        if (!prepared.isEmpty() && !hasDefaultSort) {
+            prepared.add(new PreparedSort<>(
+                    definition.defaultSortField(),
+                    definition.fields().get(definition.defaultSortField()),
+                    SearchQuery.Direction.ASC
+            ));
+        }
+        return List.copyOf(prepared);
     }
 
     private void applyFilter(
@@ -159,6 +170,7 @@ public final class JpaSearchExecutor<E> {
     }
 
     private record PreparedSort<E>(
+            String name,
             JpaSearchField<E, ?> field,
             SearchQuery.Direction order
     ) {

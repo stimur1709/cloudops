@@ -52,10 +52,13 @@ class ResourceSearchApiIntegrationTest {
     @Autowired
     private SqlStatementRecorder sqlStatementRecorder;
 
+    private long organizationId;
+
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
-        jdbcTemplate.execute("TRUNCATE TABLE resources RESTART IDENTITY");
+        jdbcTemplate.execute("TRUNCATE TABLE resources, organizations RESTART IDENTITY");
+        organizationId = insertOrganization("Test organization");
         sqlStatementRecorder.clear();
     }
 
@@ -298,8 +301,9 @@ class ResourceSearchApiIntegrationTest {
                                   "name": "router-core-01",
                                   "type": "NETWORK_DEVICE",
                                   "status": "INACTIVE"
+                                  ,"organizationId": %d
                                 }
-                                """))
+                                """.formatted(organizationId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.name").value("router-core-01"))
@@ -329,8 +333,9 @@ class ResourceSearchApiIntegrationTest {
                                   "name": "  ",
                                   "type": null,
                                   "status": null
+                                  ,"organizationId": %d
                                 }
-                                """))
+                                """.formatted(organizationId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.errors[*].field", containsInAnyOrder("name", "type", "status")));
@@ -345,8 +350,9 @@ class ResourceSearchApiIntegrationTest {
                                   "name": "router-core-01",
                                   "type": "NETWORK_DEVICE",
                                   "status": "INACTIVE"
+                                  ,"organizationId": %d
                                 }
-                                """))
+                                """.formatted(organizationId)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
@@ -381,10 +387,18 @@ class ResourceSearchApiIntegrationTest {
 
     private long insertResource(String name, String type, String status, Instant createdAt) {
         return jdbcTemplate.queryForObject("""
-                INSERT INTO resources (name, type, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO resources (name, type, status, organization_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
                 RETURNING id
-                """, Long.class, name, type, status, Timestamp.from(createdAt), Timestamp.from(createdAt));
+                """, Long.class, name, type, status, organizationId,
+                Timestamp.from(createdAt), Timestamp.from(createdAt));
+    }
+
+    private long insertOrganization(String name) {
+        return jdbcTemplate.queryForObject("""
+                INSERT INTO organizations (name, created_at, updated_at)
+                VALUES (?, now(), now()) RETURNING id
+                """, Long.class, name);
     }
 
     private ResultActions search(String request) throws Exception {

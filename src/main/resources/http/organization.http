@@ -1,0 +1,47 @@
+### Create organization
+POST http://localhost:8080/api/organizations
+Content-Type: application/json
+
+{
+  "name": "Platform Team"
+}
+
+### Get organization
+GET http://localhost:8080/api/organizations/1
+
+### Search organizations
+POST http://localhost:8080/api/organizations/search
+Content-Type: application/json
+
+{
+  "start": 0,
+  "size": 20,
+  "filter": {
+    "operator": "AND",
+    "conditions": [
+      {
+        "field": "name",
+        "operation": "CONTAINS",
+        "value": "Platform"
+      }
+    ]
+  },
+  "sort": [
+    {
+      "field": "name",
+      "order": "ASC"
+    }
+  ],
+  "getTotal": true
+}
+
+### Update organization
+PUT http://localhost:8080/api/organizations/1
+Content-Type: application/json
+
+{
+  "name": "Core Platform Team"
+}
+
+### Delete organization
+DELETE http://localhost:8080/api/organizations/1

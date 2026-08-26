@@ -29,7 +29,7 @@ public class ResourceController {
     @PostMapping
     public ResponseEntity<ResourceResponse> create(@Valid @RequestBody CreateResourceRequest request) {
         ResourceResponse response = ResourceResponse.from(
-                resourceService.create(request.name(), request.type(), request.status())
+                resourceService.create(request.name(), request.type(), request.status(), request.organizationId())
         );
         URI location = URI.create("/api/resources/" + response.id());
         return ResponseEntity.created(location).body(response);
@@ -51,7 +51,9 @@ public class ResourceController {
             @Valid @RequestBody UpdateResourceRequest request
     ) {
         return ResourceResponse.from(
-                resourceService.update(id, request.name(), request.type(), request.status())
+                resourceService.update(
+                        id, request.name(), request.type(), request.status(), request.organizationId()
+                )
         );
     }
 

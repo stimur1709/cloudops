@@ -37,6 +37,18 @@ docker compose down
 
 Чтобы также удалить локальные данные PostgreSQL, выполните `docker compose down --volumes`.
 
+## API организаций
+
+Создать организацию:
+
+```shell
+curl -i -X POST http://localhost:8080/api/organizations \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Platform Team"}'
+```
+
+Доступны получение, изменение и удаление по `/api/organizations/{id}`, а также поиск через `POST /api/organizations/search`. Удалить организацию с привязанными ресурсами нельзя: API вернёт `409 Conflict`.
+
 ## API ресурсов
 
 Создать ресурс:
@@ -44,7 +56,7 @@ docker compose down
 ```shell
 curl -i -X POST http://localhost:8080/api/resources \
   -H "Content-Type: application/json" \
-  -d '{"name":"router-01","type":"NETWORK_DEVICE","status":"ACTIVE"}'
+  -d '{"name":"router-01","type":"NETWORK_DEVICE","status":"ACTIVE","organizationId":1}'
 ```
 
 Успешный ответ имеет статус `201 Created`, заголовок `Location: /api/resources/{id}` и тело:
@@ -55,6 +67,7 @@ curl -i -X POST http://localhost:8080/api/resources \
   "name": "router-01",
   "type": "NETWORK_DEVICE",
   "status": "ACTIVE",
+  "organizationId": 1,
   "createdAt": "2026-08-25T10:00:00Z",
   "updatedAt": "2026-08-25T10:00:00Z"
 }
@@ -88,7 +101,7 @@ curl -i -X POST http://localhost:8080/api/resources/search \
   }'
 ```
 
-`start` должен быть не меньше `0`, `size` — от `1` до `100`. Фильтровать и сортировать можно по полям `id`, `name`, `type`, `status`, `createdAt`, `updatedAt`. Поддерживаются операции `EQ`, `NE`, `GT`, `GE`, `LT`, `LE`, а для строк также `CONTAINS`. Если `getTotal` равен `false`, поле `total` отсутствует и отдельный запрос подсчёта не выполняется.
+`start` должен быть не меньше `0`, `size` — от `1` до `100`. Ресурсы можно фильтровать и сортировать по полям `id`, `name`, `type`, `status`, `organizationId`, `createdAt`, `updatedAt`; организации — по `id`, `name`, `createdAt`, `updatedAt`. Поддерживаются операции `EQ`, `NE`, `GT`, `GE`, `LT`, `LE`, а для строк также `CONTAINS`. Если `getTotal` равен `false`, поле `total` отсутствует и отдельный запрос подсчёта не выполняется.
 
 Поиск построен на общем framework в `common`: `SearchRequest` и `SearchResponse` задают единый API-контракт, а `JpaSearchExecutor` собирает Criteria-запрос, применяет смещение и ограничение, и при необходимости выполняет `count`. Для каждой новой JPA-сущности нужно создать `JpaSearchDefinition` с явной картой внешних имён на типизированные `JpaSearchField`, выбрать конвертеры значений и поле сортировки по умолчанию. Клиентские имена полей не передаются напрямую в Criteria API, а поля entity не открываются через reflection.
 
@@ -97,7 +110,7 @@ curl -i -X POST http://localhost:8080/api/resources/search \
 ```shell
 curl -i -X PUT http://localhost:8080/api/resources/1 \
   -H "Content-Type: application/json" \
-  -d '{"name":"router-core-01","type":"NETWORK_DEVICE","status":"INACTIVE"}'
+  -d '{"name":"router-core-01","type":"NETWORK_DEVICE","status":"INACTIVE","organizationId":1}'
 ```
 
 Удалить ресурс:
