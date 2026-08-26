@@ -2,6 +2,7 @@ package com.github.stimur1709.cloudops.resource.config;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import tools.jackson.databind.JsonNode;
 
 @JsonSubTypes({
         @JsonSubTypes.Type(value = ServerResourceConfig.class, name = "SERVER"),
@@ -14,7 +15,7 @@ public sealed interface ResourceConfig permits ServerResourceConfig, NetworkDevi
         DatabaseResourceConfig, ServiceResourceConfig, OtherResourceConfig {
 
     @JsonAnySetter
-    default void rejectUnknownField(String field) {
+    default void rejectUnknownField(String field, JsonNode value) {
         throw new UnknownResourceConfigFieldException(field);
     }
 }
