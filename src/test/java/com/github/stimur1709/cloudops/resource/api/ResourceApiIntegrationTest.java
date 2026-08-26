@@ -1,15 +1,20 @@
 package com.github.stimur1709.cloudops.resource.api;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
+import com.github.stimur1709.cloudops.common.api.error.ApiFieldError;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,9 +25,14 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
 
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, ResourceApiIntegrationTest.ErrorTestController.class})
 @SpringBootTest
 class ResourceApiIntegrationTest {
 
@@ -175,6 +185,110 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.errors", hasSize(0)));
     }
 
+    @Test
+    void returnsBadRequestForNonNumericResourceId() throws Exception {
+        mockMvc.perform(get("/api/resources/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.path").value("/api/resources/abc"))
+                .andExpect(jsonPath("$.errors[0].field").value("id"))
+                .andExpect(jsonPath("$.errors[0].message").value("Id must be a number"));
+    }
+
+    @Test
+    void returnsNumericMessageForAnotherNumericParameter() throws Exception {
+        mockMvc.perform(get("/api/test/count/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.errors[0].field").value("count"))
+                .andExpect(jsonPath("$.errors[0].message").value("Count must be a number"));
+    }
+
+    @Test
+    void returnsGenericMessageForNonNumericTypeMismatch() throws Exception {
+        mockMvc.perform(get("/api/test/modes/invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.errors[0].field").value("mode"))
+                .andExpect(jsonPath("$.errors[0].message").value("Mode has an invalid format"));
+    }
+
+    @Test
+    void returnsMethodNotAllowedForUnsupportedMethod() throws Exception {
+        mockMvc.perform(delete("/api/resources/1"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.message").value("HTTP method is not supported for this endpoint"))
+                .andExpect(jsonPath("$.path").value("/api/resources/1"))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(header().string("Allow", containsString("GET")))
+                .andExpect(jsonPath("$.errors", hasSize(0)));
+    }
+
+    @Test
+    void returnsUnsupportedMediaTypeForNonJsonRequest() throws Exception {
+        mockMvc.perform(post("/api/resources")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("resource"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"))
+                .andExpect(jsonPath("$.message").value("Content-Type is not supported"))
+                .andExpect(jsonPath("$.path").value("/api/resources"))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(header().string("Accept", containsString(MediaType.APPLICATION_JSON_VALUE)))
+                .andExpect(jsonPath("$.errors", hasSize(0)));
+    }
+
+    @Test
+    void returnsFullFieldPathAndEnumNamesForNestedInvalidEnum() throws Exception {
+        mockMvc.perform(post("/api/test/nested-enum")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "configuration": {
+                                    "type": "INVALID"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.errors[0].field").value("configuration.type"))
+                .andExpect(jsonPath("$.errors[0].message").value(
+                        "Configuration.type must be one of: FIRST, SECOND"
+                ));
+    }
+
+    @Test
+    void omitsNullFieldFromSerializedFieldError() throws Exception {
+        mockMvc.perform(get("/api/test/global-field-error"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Invalid value"))
+                .andExpect(jsonPath("$.field").doesNotExist());
+    }
+
+    @Test
+    void returnsNotFoundForUnknownEndpoint() throws Exception {
+        mockMvc.perform(get("/api/unknown"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ENDPOINT_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("Endpoint not found"))
+                .andExpect(jsonPath("$.path").value("/api/unknown"))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.errors", hasSize(0)));
+    }
+
+    @Test
+    void returnsSafeInternalErrorForUnexpectedException() throws Exception {
+        mockMvc.perform(get("/api/test/unexpected-error"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"))
+                .andExpect(jsonPath("$.path").value("/api/test/unexpected-error"))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.errors", hasSize(0)))
+                .andExpect(content().string(not(containsString("sensitive internal detail"))));
+    }
+
     private org.springframework.test.web.servlet.ResultActions createResource(
             String name,
             String type,
@@ -189,5 +303,47 @@ class ResourceApiIntegrationTest {
                           "status": "%s"
                         }
                         """.formatted(name, type, status)));
+    }
+
+    @RestController
+    static class ErrorTestController {
+
+        @GetMapping("/api/test/unexpected-error")
+        void fail() {
+            throw new IllegalStateException("sensitive internal detail");
+        }
+
+        @GetMapping("/api/test/count/{count}")
+        void count(@PathVariable long count) {
+        }
+
+        @GetMapping("/api/test/modes/{mode}")
+        void mode(@PathVariable TestMode mode) {
+        }
+
+        @PostMapping("/api/test/nested-enum")
+        void nestedEnum(@RequestBody NestedEnumRequest request) {
+        }
+
+        @GetMapping("/api/test/global-field-error")
+        ApiFieldError globalFieldError() {
+            return new ApiFieldError(null, "Invalid value");
+        }
+    }
+
+    record NestedEnumRequest(NestedConfiguration configuration) {
+    }
+
+    record NestedConfiguration(TestMode type) {
+    }
+
+    enum TestMode {
+        FIRST,
+        SECOND;
+
+        @Override
+        public String toString() {
+            return name().toLowerCase();
+        }
     }
 }

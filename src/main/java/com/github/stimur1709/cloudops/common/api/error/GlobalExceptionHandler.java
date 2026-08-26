@@ -14,9 +14,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import tools.jackson.core.JacksonException.Reference;
 import tools.jackson.databind.exc.InvalidFormatException;
 
@@ -71,12 +75,78 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ApiError> handleTypeMismatch(
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request
+    ) {
+        String field = exception.getName();
+        String message = isNumeric(exception.getRequiredType())
+                ? "%s must be a number".formatted(capitalize(field))
+                : "%s has an invalid format".formatted(capitalize(field));
+
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_REQUEST",
+                "Request parameter is invalid",
+                request,
+                List.of(new ApiFieldError(field, message))
+        );
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ApiError> handleMethodNotAllowed(
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+        ApiError apiError = error(
+                "METHOD_NOT_ALLOWED",
+                "HTTP method is not supported for this endpoint",
+                request,
+                List.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.METHOD_NOT_ALLOWED)
+                .headers(exception.getHeaders())
+                .body(apiError);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    ResponseEntity<ApiError> handleUnsupportedMediaType(
+            HttpMediaTypeNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+        ApiError apiError = error(
+                "UNSUPPORTED_MEDIA_TYPE",
+                "Content-Type is not supported",
+                request,
+                List.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .headers(exception.getHeaders())
+                .body(apiError);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     ResponseEntity<ApiError> handleNotFound(HttpServletRequest request) {
         return response(
                 HttpStatus.NOT_FOUND,
                 "RESOURCE_NOT_FOUND",
                 "Resource not found",
+                request,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ResponseEntity<ApiError> handleEndpointNotFound(HttpServletRequest request) {
+        return response(
+                HttpStatus.NOT_FOUND,
+                "ENDPOINT_NOT_FOUND",
+                "Endpoint not found",
                 request,
                 List.of()
         );
@@ -101,8 +171,16 @@ public class GlobalExceptionHandler {
             HttpServletRequest request,
             List<ApiFieldError> errors
     ) {
-        ApiError apiError = new ApiError(code, message, clock.instant(), request.getRequestURI(), errors);
-        return ResponseEntity.status(status).body(apiError);
+        return ResponseEntity.status(status).body(error(code, message, request, errors));
+    }
+
+    private ApiError error(
+            String code,
+            String message,
+            HttpServletRequest request,
+            List<ApiFieldError> errors
+    ) {
+        return new ApiError(code, message, clock.instant(), request.getRequestURI(), errors);
     }
 
     private InvalidFormatException findInvalidFormat(Throwable throwable) {
@@ -121,18 +199,33 @@ public class GlobalExceptionHandler {
         String field = exception.getPath().stream()
                 .map(Reference::getPropertyName)
                 .filter(propertyName -> propertyName != null && !propertyName.isBlank())
-                .reduce((_, second) -> second)
-                .orElse(null);
+                .collect(Collectors.joining("."));
 
-        if (field == null || targetType == null || !targetType.isEnum()) {
+        if (field.isBlank() || targetType == null || !targetType.isEnum()) {
             return List.of();
         }
 
         String allowedValues = Arrays.stream(targetType.getEnumConstants())
-                .map(Object::toString)
+                .map(value -> ((Enum<?>) value).name())
                 .collect(Collectors.joining(", "));
-        String displayName = Character.toUpperCase(field.charAt(0)) + field.substring(1);
+        String displayName = capitalize(field);
         return List.of(new ApiFieldError(field, displayName + " must be one of: " + allowedValues));
     }
-}
 
+    private boolean isNumeric(Class<?> type) {
+        if (type == null) {
+            return false;
+        }
+        if (type.isPrimitive()) {
+            return type != boolean.class && type != char.class && type != void.class;
+        }
+        return Number.class.isAssignableFrom(type);
+    }
+
+    private String capitalize(String value) {
+        if (value == null || value.isBlank()) {
+            return "Value";
+        }
+        return Character.toUpperCase(value.charAt(0)) + value.substring(1);
+    }
+}
