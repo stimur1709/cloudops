@@ -5,11 +5,12 @@ import java.time.Instant;
 
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
+import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
-import com.github.stimur1709.cloudops.resource.persistence.ResourceSearchRepository;
+import com.github.stimur1709.cloudops.resource.persistence.ResourceSearchDefinition;
 import com.github.stimur1709.cloudops.organization.application.OrganizationNotFoundException;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
@@ -21,18 +22,18 @@ import org.springframework.dao.DataIntegrityViolationException;
 public class ResourceService {
 
     private final ResourceJpaRepository resourceRepository;
-    private final ResourceSearchRepository resourceSearchRepository;
+    private final JpaSearchService searchService;
     private final OrganizationJpaRepository organizationRepository;
     private final Clock clock;
 
     public ResourceService(
             ResourceJpaRepository resourceRepository,
-            ResourceSearchRepository resourceSearchRepository,
+            JpaSearchService searchService,
             OrganizationJpaRepository organizationRepository,
             Clock clock
     ) {
         this.resourceRepository = resourceRepository;
-        this.resourceSearchRepository = resourceSearchRepository;
+        this.searchService = searchService;
         this.organizationRepository = organizationRepository;
         this.clock = clock;
     }
@@ -56,7 +57,7 @@ public class ResourceService {
 
     @Transactional(readOnly = true)
     public SearchResult<ResourceEntity> search(SearchQuery search) {
-        return resourceSearchRepository.search(search);
+        return searchService.search(search, ResourceSearchDefinition.DEFINITION);
     }
 
     @Transactional

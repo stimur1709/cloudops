@@ -38,7 +38,9 @@ class OrganizationApiIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
-        jdbcTemplate.execute("TRUNCATE TABLE resources, organizations RESTART IDENTITY");
+        jdbcTemplate.execute("""
+                TRUNCATE TABLE organization_memberships, resources, users, organizations RESTART IDENTITY
+                """);
     }
 
     @Test

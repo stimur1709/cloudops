@@ -14,37 +14,41 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import org.springframework.stereotype.Service;
 
-public final class JpaSearchExecutor<E> {
+@Service
+public class JpaSearchService {
 
     private final EntityManager entityManager;
-    private final JpaSearchDefinition<E> definition;
 
-    public JpaSearchExecutor(EntityManager entityManager, JpaSearchDefinition<E> definition) {
+    public JpaSearchService(EntityManager entityManager) {
         this.entityManager = entityManager;
-        this.definition = definition;
     }
 
-    public SearchResult<E> search(SearchQuery search) {
-        PreparedSearch<E> preparedSearch = prepare(search);
+    public <E> SearchResult<E> search(SearchQuery search, JpaSearchDefinition<E> definition) {
+        PreparedSearch<E> preparedSearch = prepare(search, definition);
         CriteriaBuilder builder = entityManager.getCriteriaBuilder();
 
         CriteriaQuery<E> criteria = builder.createQuery(definition.entityType());
         Root<E> root = criteria.from(definition.entityType());
         criteria.select(root);
         applyFilter(criteria, root, builder, preparedSearch.filter());
-        criteria.orderBy(toOrders(root, builder, preparedSearch.sort()));
+        criteria.orderBy(toOrders(root, builder, preparedSearch.sort(), definition));
 
         TypedQuery<E> query = entityManager.createQuery(criteria)
                 .setFirstResult(search.start())
                 .setMaxResults(search.size());
         List<E> items = query.getResultList();
 
-        Long total = search.getTotal() ? count(builder, preparedSearch.filter()) : null;
+        Long total = search.getTotal() ? count(builder, preparedSearch.filter(), definition) : null;
         return new SearchResult<>(items, total);
     }
 
-    private Long count(CriteriaBuilder builder, PreparedFilter<E> filter) {
+    private <E> Long count(
+            CriteriaBuilder builder,
+            PreparedFilter<E> filter,
+            JpaSearchDefinition<E> definition
+    ) {
         CriteriaQuery<Long> criteria = builder.createQuery(Long.class);
         Root<E> root = criteria.from(definition.entityType());
         criteria.select(builder.count(root));
@@ -52,25 +56,32 @@ public final class JpaSearchExecutor<E> {
         return entityManager.createQuery(criteria).getSingleResult();
     }
 
-    private PreparedSearch<E> prepare(SearchQuery search) {
-        PreparedFilter<E> filter = prepareFilter(search.filter());
-        List<PreparedSort<E>> sort = prepareSort(search.sort());
+    private <E> PreparedSearch<E> prepare(SearchQuery search, JpaSearchDefinition<E> definition) {
+        PreparedFilter<E> filter = prepareFilter(search.filter(), definition);
+        List<PreparedSort<E>> sort = prepareSort(search.sort(), definition);
         return new PreparedSearch<>(filter, sort);
     }
 
-    private PreparedFilter<E> prepareFilter(SearchQuery.Filter filter) {
+    private <E> PreparedFilter<E> prepareFilter(
+            SearchQuery.Filter filter,
+            JpaSearchDefinition<E> definition
+    ) {
         if (filter == null) {
             return null;
         }
 
         List<PreparedCondition<E>> conditions = IntStream
                 .range(0, filter.conditions().size())
-                .mapToObj(index -> prepareCondition(filter.conditions().get(index), index))
+                .mapToObj(index -> prepareCondition(filter.conditions().get(index), index, definition))
                 .toList();
         return new PreparedFilter<>(filter.operator(), conditions);
     }
 
-    private PreparedCondition<E> prepareCondition(SearchQuery.Condition condition, int index) {
+    private <E> PreparedCondition<E> prepareCondition(
+            SearchQuery.Condition condition,
+            int index,
+            JpaSearchDefinition<E> definition
+    ) {
         String path = "filter.conditions[%d]".formatted(index);
         JpaSearchField<E, ?> field = definition.fields().get(condition.field());
         if (field == null) {
@@ -88,7 +99,10 @@ public final class JpaSearchExecutor<E> {
         return new PreparedCondition<>(field, condition.operation(), value);
     }
 
-    private List<PreparedSort<E>> prepareSort(List<SearchQuery.Sort> sort) {
+    private <E> List<PreparedSort<E>> prepareSort(
+            List<SearchQuery.Sort> sort,
+            JpaSearchDefinition<E> definition
+    ) {
         List<PreparedSort<E>> prepared = new ArrayList<>(IntStream.range(0, sort.size())
                 .mapToObj(index -> {
                     SearchQuery.Sort item = sort.get(index);
@@ -111,7 +125,7 @@ public final class JpaSearchExecutor<E> {
         return List.copyOf(prepared);
     }
 
-    private void applyFilter(
+    private <E> void applyFilter(
             CriteriaQuery<?> criteria,
             Root<E> root,
             CriteriaBuilder builder,
@@ -135,10 +149,11 @@ public final class JpaSearchExecutor<E> {
         criteria.where(predicate);
     }
 
-    private List<Order> toOrders(
+    private <E> List<Order> toOrders(
             Root<E> root,
             CriteriaBuilder builder,
-            List<PreparedSort<E>> sort
+            List<PreparedSort<E>> sort,
+            JpaSearchDefinition<E> definition
     ) {
         if (sort.isEmpty()) {
             JpaSearchField<E, ?> field = definition.fields().get(definition.defaultSortField());

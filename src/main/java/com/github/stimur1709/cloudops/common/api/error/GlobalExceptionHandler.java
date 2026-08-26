@@ -11,7 +11,14 @@ import com.github.stimur1709.cloudops.resource.application.ResourceNotFoundExcep
 import com.github.stimur1709.cloudops.resource.application.ResourceNameConflictException;
 import com.github.stimur1709.cloudops.organization.application.OrganizationInUseException;
 import com.github.stimur1709.cloudops.organization.application.OrganizationNotFoundException;
+import com.github.stimur1709.cloudops.membership.application.LastOwnerException;
+import com.github.stimur1709.cloudops.membership.application.MembershipConflictException;
+import com.github.stimur1709.cloudops.membership.application.MembershipNotFoundException;
+import com.github.stimur1709.cloudops.user.application.UserEmailConflictException;
+import com.github.stimur1709.cloudops.user.application.UserInUseException;
+import com.github.stimur1709.cloudops.user.application.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -53,6 +60,29 @@ public class GlobalExceptionHandler {
                         .thenComparing(ApiFieldError::message))
                 .toList();
 
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Request validation failed",
+                request,
+                errors
+        );
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<ApiError> handleConstraintViolation(
+            ConstraintViolationException exception,
+            HttpServletRequest request
+    ) {
+        List<ApiFieldError> errors = exception.getConstraintViolations().stream()
+                .map(violation -> {
+                    String path = violation.getPropertyPath().toString();
+                    int separator = path.lastIndexOf('.');
+                    String field = separator < 0 ? path : path.substring(separator + 1);
+                    return new ApiFieldError(field, violation.getMessage());
+                })
+                .sorted(Comparator.comparing(ApiFieldError::field).thenComparing(ApiFieldError::message))
+                .toList();
         return response(
                 HttpStatus.BAD_REQUEST,
                 "VALIDATION_ERROR",
@@ -172,7 +202,61 @@ public class GlobalExceptionHandler {
         return response(
                 HttpStatus.CONFLICT,
                 "ORGANIZATION_IN_USE",
-                "Organization cannot be deleted while it has resources",
+                "Organization cannot be deleted while it has resources or members",
+                request,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    ResponseEntity<ApiError> handleUserNotFound(HttpServletRequest request) {
+        return response(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found", request, List.of());
+    }
+
+    @ExceptionHandler(MembershipNotFoundException.class)
+    ResponseEntity<ApiError> handleMembershipNotFound(HttpServletRequest request) {
+        return response(HttpStatus.NOT_FOUND, "MEMBERSHIP_NOT_FOUND", "Membership not found", request, List.of());
+    }
+
+    @ExceptionHandler(UserEmailConflictException.class)
+    ResponseEntity<ApiError> handleUserEmailConflict(HttpServletRequest request) {
+        return response(
+                HttpStatus.CONFLICT,
+                "USER_EMAIL_CONFLICT",
+                "Email is already used by another user",
+                request,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(UserInUseException.class)
+    ResponseEntity<ApiError> handleUserInUse(HttpServletRequest request) {
+        return response(
+                HttpStatus.CONFLICT,
+                "USER_IN_USE",
+                "User cannot be deleted while they belong to an organization",
+                request,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(MembershipConflictException.class)
+    ResponseEntity<ApiError> handleMembershipConflict(HttpServletRequest request) {
+        return response(
+                HttpStatus.CONFLICT,
+                "MEMBERSHIP_CONFLICT",
+                "User is already a member of this organization",
+                request,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(LastOwnerException.class)
+    ResponseEntity<ApiError> handleLastOwner(HttpServletRequest request) {
+        return response(
+                HttpStatus.CONFLICT,
+                "LAST_OWNER_REQUIRED",
+                "Organization must have at least one owner",
                 request,
                 List.of()
         );

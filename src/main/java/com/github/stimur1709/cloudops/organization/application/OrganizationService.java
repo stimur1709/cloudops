@@ -5,9 +5,11 @@ import java.time.Instant;
 
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
+import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
-import com.github.stimur1709.cloudops.organization.persistence.OrganizationSearchRepository;
+import com.github.stimur1709.cloudops.organization.persistence.OrganizationSearchDefinition;
+import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipJpaRepository;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -17,19 +19,22 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrganizationService {
 
     private final OrganizationJpaRepository organizationRepository;
-    private final OrganizationSearchRepository organizationSearchRepository;
+    private final JpaSearchService searchService;
     private final ResourceJpaRepository resourceRepository;
+    private final OrganizationMembershipJpaRepository membershipRepository;
     private final Clock clock;
 
     public OrganizationService(
             OrganizationJpaRepository organizationRepository,
-            OrganizationSearchRepository organizationSearchRepository,
+            JpaSearchService searchService,
             ResourceJpaRepository resourceRepository,
+            OrganizationMembershipJpaRepository membershipRepository,
             Clock clock
     ) {
         this.organizationRepository = organizationRepository;
-        this.organizationSearchRepository = organizationSearchRepository;
+        this.searchService = searchService;
         this.resourceRepository = resourceRepository;
+        this.membershipRepository = membershipRepository;
         this.clock = clock;
     }
 
@@ -46,7 +51,7 @@ public class OrganizationService {
 
     @Transactional(readOnly = true)
     public SearchResult<OrganizationEntity> search(SearchQuery search) {
-        return organizationSearchRepository.search(search);
+        return searchService.search(search, OrganizationSearchDefinition.DEFINITION);
     }
 
     @Transactional
@@ -65,7 +70,7 @@ public class OrganizationService {
     public void delete(long id) {
         OrganizationEntity organization = organizationRepository.findById(id)
                 .orElseThrow(() -> new OrganizationNotFoundException(id));
-        if (resourceRepository.existsByOrganizationId(id)) {
+        if (resourceRepository.existsByOrganizationId(id) || membershipRepository.existsByOrganizationId(id)) {
             throw new OrganizationInUseException();
         }
         try {
