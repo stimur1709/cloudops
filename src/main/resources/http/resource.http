@@ -1,0 +1,17 @@
+### create resources
+POST http://localhost:8080/api/resources
+Content-Type: application/json
+
+{
+  "name": "NEW",
+  "type": "NETWORK_DEVICE",
+  "status": "ACTIVE"
+}
+
+### get resources
+GET http://localhost:8080/api/resources/fff
+Content-Type: application/json
+
+### get resources
+PUT http://localhost:8080/api/resources/fff
+Content-Type: application/json
