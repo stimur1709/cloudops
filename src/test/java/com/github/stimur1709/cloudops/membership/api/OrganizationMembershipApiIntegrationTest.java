@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -53,15 +52,17 @@ class OrganizationMembershipApiIntegrationTest {
     }
 
     @Test
-    void addsListsUpdatesAndRemovesMembersInStableOrder() throws Exception {
+    void addsSearchesUpdatesAndRemovesMembersInStableOrder() throws Exception {
         add(firstUserId, "OWNER").andExpect(status().isCreated());
         add(secondUserId, "MEMBER").andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/organizations/{organizationId}/members", organizationId)
-                        .param("start", "0").param("size", "10"))
+        search(organizationId, """
+                {"start":0,"size":10,"getTotal":false}
+                """)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[*].userId", contains((int) firstUserId, (int) secondUserId)));
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.items[*].userId", contains((int) firstUserId, (int) secondUserId)))
+                .andExpect(jsonPath("$.total").doesNotExist());
 
         mockMvc.perform(put("/api/organizations/{organizationId}/members/{userId}",
                         organizationId, secondUserId)
@@ -76,18 +77,72 @@ class OrganizationMembershipApiIntegrationTest {
     }
 
     @Test
-    void appliesOffsetAndValidatesPageSize() throws Exception {
+    void appliesOffsetAndValidatesSearchRequest() throws Exception {
         add(firstUserId, "OWNER").andExpect(status().isCreated());
         add(secondUserId, "MEMBER").andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/organizations/{organizationId}/members", organizationId)
-                        .param("start", "1").param("size", "1"))
+        search(organizationId, """
+                {"start":1,"size":1,"getTotal":false}
+                """)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].userId").value(secondUserId));
-        mockMvc.perform(get("/api/organizations/{organizationId}/members", organizationId)
-                        .param("size", "101"))
-                .andExpect(status().isBadRequest());
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].userId").value(secondUserId));
+        search(organizationId, """
+                {"start":0,"size":101,"getTotal":false}
+                """)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("size"));
+    }
+
+    @Test
+    void filtersSortsCountsAndAlwaysRestrictsSearchToPathOrganization() throws Exception {
+        add(firstUserId, "OWNER").andExpect(status().isCreated());
+        add(secondUserId, "MEMBER").andExpect(status().isCreated());
+        long otherOrganizationId = insertOrganization("Other");
+        long otherUserId = insertUser("other@example.com", "Other");
+        insertMembership(otherOrganizationId, otherUserId, "MEMBER");
+
+        search(organizationId, """
+                {
+                  "start": 0,
+                  "size": 10,
+                  "filter": {
+                    "operator": "OR",
+                    "conditions": [
+                      {"field":"userId","operation":"EQ","value":"%d"},
+                      {"field":"role","operation":"EQ","value":"MEMBER"}
+                    ]
+                  },
+                  "sort": [{"field":"userId","order":"DESC"}],
+                  "getTotal": true
+                }
+                """.formatted(otherUserId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].userId").value(secondUserId))
+                .andExpect(jsonPath("$.total").value(1));
+    }
+
+    @Test
+    void rejectsUnknownOrganizationAndUnknownSearchField() throws Exception {
+        String request = """
+                {"start":0,"size":10,"getTotal":false}
+                """;
+        search(999999, request)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ORGANIZATION_NOT_FOUND"));
+        search(organizationId, """
+                {
+                  "start":0,
+                  "size":10,
+                  "filter":{"operator":"AND","conditions":[
+                    {"field":"unknown","operation":"EQ","value":"value"}
+                  ]},
+                  "getTotal":false
+                }
+                """)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("filter.conditions[0].field"));
     }
 
     @Test
@@ -195,6 +250,12 @@ class OrganizationMembershipApiIntegrationTest {
         return mockMvc.perform(post("/api/organizations/{organizationId}/members", organizationId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"userId\":%d,\"role\":\"%s\"}".formatted(userId, role)));
+    }
+
+    private ResultActions search(long targetOrganizationId, String request) throws Exception {
+        return mockMvc.perform(post("/api/organizations/{organizationId}/members/search", targetOrganizationId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request));
     }
 
     private long insertOrganization(String name) {

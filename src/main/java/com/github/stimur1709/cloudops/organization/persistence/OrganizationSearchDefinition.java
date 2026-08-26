@@ -1,6 +1,7 @@
 package com.github.stimur1709.cloudops.organization.persistence;
 
 import java.time.Instant;
+
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchDefinition;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchField;
 import com.github.stimur1709.cloudops.common.persistence.search.SearchValueConverter;
@@ -9,19 +10,21 @@ public final class OrganizationSearchDefinition {
 
     public static final JpaSearchDefinition<OrganizationEntity> DEFINITION =
             JpaSearchDefinition.builder(OrganizationEntity.class)
-                    .field("id", JpaSearchField.<OrganizationEntity, Long>comparable(
-                            root -> root.get("id"), SearchValueConverter.longInteger()
+                    .field(OrganizationEntity_.ID, JpaSearchField.<OrganizationEntity, Long>comparable(
+                            root -> root.get(OrganizationEntity_.id), SearchValueConverter.longInteger()
                     ).sortable())
-                    .field("name", JpaSearchField.<OrganizationEntity>text(
-                            root -> root.get("name")
+                    .field(OrganizationEntity_.NAME, JpaSearchField.<OrganizationEntity>text(
+                            root -> root.get(OrganizationEntity_.name)
                     ).sortable())
-                    .field("createdAt", JpaSearchField.<OrganizationEntity, Instant>comparable(
-                            root -> root.get("createdAt"), SearchValueConverter.instant()
+                    .field(OrganizationEntity_.CREATED_AT,
+                            JpaSearchField.<OrganizationEntity, Instant>comparable(
+                            root -> root.get(OrganizationEntity_.createdAt), SearchValueConverter.instant()
                     ).sortable())
-                    .field("updatedAt", JpaSearchField.<OrganizationEntity, Instant>comparable(
-                            root -> root.get("updatedAt"), SearchValueConverter.instant()
+                    .field(OrganizationEntity_.UPDATED_AT,
+                            JpaSearchField.<OrganizationEntity, Instant>comparable(
+                            root -> root.get(OrganizationEntity_.updatedAt), SearchValueConverter.instant()
                     ).sortable())
-                    .defaultSort("id")
+                    .defaultSort(OrganizationEntity_.ID)
                     .build();
 
     private OrganizationSearchDefinition() {

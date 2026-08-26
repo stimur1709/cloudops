@@ -101,6 +101,11 @@ curl -i -X POST http://localhost:8080/api/resources/search \
   }'
 ```
 
+Поиск участников конкретной организации использует тот же контракт и endpoint
+`POST /api/organizations/{organizationId}/members/search`. Фильтр по `organizationId`
+добавляется на сервере и всегда объединяется с клиентским фильтром через `AND`, поэтому
+клиент не может получить участников другой организации даже с оператором `OR`.
+
 `start` должен быть не меньше `0`, `size` — от `1` до `100`. Ресурсы можно фильтровать и сортировать по полям `id`, `name`, `type`, `status`, `organizationId`, `createdAt`, `updatedAt`; организации — по `id`, `name`, `createdAt`, `updatedAt`. Поддерживаются операции `EQ`, `NE`, `GT`, `GE`, `LT`, `LE`, а для строк также `CONTAINS`. Если `getTotal` равен `false`, поле `total` отсутствует и отдельный запрос подсчёта не выполняется.
 
 Поиск построен на общем framework в `common`: `SearchRequest` и `SearchResponse` задают единый API-контракт, а `JpaSearchExecutor` собирает Criteria-запрос, применяет смещение и ограничение, и при необходимости выполняет `count`. Для каждой новой JPA-сущности нужно создать `JpaSearchDefinition` с явной картой внешних имён на типизированные `JpaSearchField`, выбрать конвертеры значений и поле сортировки по умолчанию. Клиентские имена полей не передаются напрямую в Criteria API, а поля entity не открываются через reflection.
