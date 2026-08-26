@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
+import com.github.stimur1709.cloudops.common.application.ForbiddenException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.security.core.AuthenticationException;
 import tools.jackson.core.JacksonException.Reference;
 import tools.jackson.databind.exc.InvalidFormatException;
 
@@ -176,6 +178,16 @@ public class GlobalExceptionHandler {
                 request,
                 List.of()
         );
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    ResponseEntity<ApiError> handleAuthentication(AuthenticationException exception, HttpServletRequest request) {
+        return response(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid email or password", request, List.of());
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    ResponseEntity<ApiError> handleForbidden(ForbiddenException exception, HttpServletRequest request) {
+        return response(HttpStatus.FORBIDDEN, "FORBIDDEN", exception.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(InvalidSearchException.class)

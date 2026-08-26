@@ -26,12 +26,29 @@ public class JpaSearchService {
     }
 
     public <E> SearchResult<E> search(SearchQuery search, JpaSearchDefinition<E> definition) {
-        return search(search, null, definition);
+        return search(search, null, null, definition);
     }
 
     public <E> SearchResult<E> search(
             SearchQuery search,
             SearchQuery.Filter requiredFilter,
+            JpaSearchDefinition<E> definition
+    ) {
+        return search(search, requiredFilter, null, definition);
+    }
+
+    public <E> SearchResult<E> search(
+            SearchQuery search,
+            JpaSearchScope<E> scope,
+            JpaSearchDefinition<E> definition
+    ) {
+        return search(search, null, scope, definition);
+    }
+
+    private <E> SearchResult<E> search(
+            SearchQuery search,
+            SearchQuery.Filter requiredFilter,
+            JpaSearchScope<E> scope,
             JpaSearchDefinition<E> definition
     ) {
         PreparedSearch<E> preparedSearch = prepare(search, requiredFilter, definition);
@@ -40,7 +57,7 @@ public class JpaSearchService {
         CriteriaQuery<E> criteria = builder.createQuery(definition.entityType());
         Root<E> root = criteria.from(definition.entityType());
         criteria.select(root);
-        applyFilters(criteria, root, builder, preparedSearch.requiredFilter(), preparedSearch.filter());
+        applyFilters(criteria, root, builder, scope, preparedSearch.requiredFilter(), preparedSearch.filter());
         criteria.orderBy(toOrders(root, builder, preparedSearch.sort(), definition));
 
         TypedQuery<E> query = entityManager.createQuery(criteria)
@@ -49,13 +66,14 @@ public class JpaSearchService {
         List<E> items = query.getResultList();
 
         Long total = search.getTotal()
-                ? count(builder, preparedSearch.requiredFilter(), preparedSearch.filter(), definition)
+                ? count(builder, scope, preparedSearch.requiredFilter(), preparedSearch.filter(), definition)
                 : null;
         return new SearchResult<>(items, total);
     }
 
     private <E> Long count(
             CriteriaBuilder builder,
+            JpaSearchScope<E> scope,
             PreparedFilter<E> requiredFilter,
             PreparedFilter<E> filter,
             JpaSearchDefinition<E> definition
@@ -63,7 +81,7 @@ public class JpaSearchService {
         CriteriaQuery<Long> criteria = builder.createQuery(Long.class);
         Root<E> root = criteria.from(definition.entityType());
         criteria.select(builder.count(root));
-        applyFilters(criteria, root, builder, requiredFilter, filter);
+        applyFilters(criteria, root, builder, scope, requiredFilter, filter);
         return entityManager.createQuery(criteria).getSingleResult();
     }
 
@@ -145,27 +163,25 @@ public class JpaSearchService {
             CriteriaQuery<?> criteria,
             Root<E> root,
             CriteriaBuilder builder,
+            JpaSearchScope<E> scope,
             PreparedFilter<E> requiredFilter,
             PreparedFilter<E> filter
     ) {
-        if (requiredFilter == null && filter == null) {
+        Predicate scopePredicate = scope == null ? null : scope.toPredicate(root, criteria, builder);
+        if (requiredFilter == null && filter == null && scopePredicate == null) {
             return;
         }
-
-        if (requiredFilter == null) {
-            criteria.where(toPredicate(root, builder, filter));
-            return;
+        List<Predicate> predicates = new ArrayList<>();
+        if (scopePredicate != null) {
+            predicates.add(scopePredicate);
         }
-
-        if (filter == null) {
-            criteria.where(toPredicate(root, builder, requiredFilter));
-            return;
+        if (requiredFilter != null) {
+            predicates.add(toPredicate(root, builder, requiredFilter));
         }
-
-        criteria.where(builder.and(
-                toPredicate(root, builder, requiredFilter),
-                toPredicate(root, builder, filter)
-        ));
+        if (filter != null) {
+            predicates.add(toPredicate(root, builder, filter));
+        }
+        criteria.where(builder.and(predicates.toArray(Predicate[]::new)));
     }
 
     private <E> Predicate toPredicate(

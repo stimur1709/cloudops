@@ -3,11 +3,13 @@ package com.github.stimur1709.cloudops.user.application;
 import java.time.Clock;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
+import com.github.stimur1709.cloudops.common.application.ForbiddenException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipJpaRepository;
+import com.github.stimur1709.cloudops.membership.MembershipRole;
 import com.github.stimur1709.cloudops.user.persistence.UserEntity;
 import com.github.stimur1709.cloudops.user.persistence.UserJpaRepository;
 import com.github.stimur1709.cloudops.user.persistence.UserSearchDefinition;
@@ -36,8 +38,8 @@ public class UserService {
     }
 
     @Transactional
-    public UserEntity create(String email, String displayName) {
-        return save(UserEntity.create(email, displayName, clock.instant()));
+    public UserEntity register(String email, String displayName, String passwordHash) {
+        return save(UserEntity.create(email, displayName, passwordHash, clock.instant()));
     }
 
     @Transactional(readOnly = true)
@@ -46,19 +48,32 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public SearchResult<UserEntity> search(SearchQuery search) {
+    public UserEntity getOwn(long id, long currentUserId) {
+        requireSelf(id, currentUserId);
+        return get(id);
+    }
+
+    @Transactional(readOnly = true)
+    public SearchResult<UserEntity> search(SearchQuery search, long currentUserId) {
+        if (!membershipRepository.existsByUserIdAndRoleIn(
+                currentUserId, java.util.List.of(MembershipRole.OWNER, MembershipRole.ADMIN)
+        )) {
+            throw new ForbiddenException();
+        }
         return searchService.search(search, UserSearchDefinition.DEFINITION);
     }
 
     @Transactional
-    public UserEntity update(long id, String email, String displayName) {
+    public UserEntity update(long id, String email, String displayName, long currentUserId) {
+        requireSelf(id, currentUserId);
         UserEntity user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
         user.update(email, displayName, clock.instant());
         return save(user);
     }
 
     @Transactional
-    public void delete(long id) {
+    public void delete(long id, long currentUserId) {
+        requireSelf(id, currentUserId);
         UserEntity user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
         if (membershipRepository.existsByUserId(id)) {
             throw userInUse();
@@ -87,5 +102,11 @@ public class UserService {
                 "USER_IN_USE",
                 "User cannot be deleted while they belong to an organization"
         );
+    }
+
+    private void requireSelf(long id, long currentUserId) {
+        if (id != currentUserId) {
+            throw new ForbiddenException();
+        }
     }
 }

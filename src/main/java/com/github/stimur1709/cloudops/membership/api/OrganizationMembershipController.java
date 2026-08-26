@@ -4,9 +4,11 @@ import java.net.URI;
 
 import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
 import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
+import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.membership.application.OrganizationMembershipService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,10 +32,13 @@ public class OrganizationMembershipController {
     @PostMapping
     public ResponseEntity<OrganizationMemberResponse> add(
             @PathVariable long organizationId,
-            @Valid @RequestBody AddOrganizationMemberRequest request
+            @Valid @RequestBody AddOrganizationMemberRequest request,
+            Authentication authentication
     ) {
         OrganizationMemberResponse response = OrganizationMemberResponse.from(
-                membershipService.add(organizationId, request.userId(), request.role())
+                membershipService.add(
+                        organizationId, request.userId(), request.role(), CurrentUser.id(authentication)
+                )
         );
         URI location = URI.create("/api/organizations/%d/members/%d"
                 .formatted(organizationId, response.userId()));
@@ -43,10 +48,11 @@ public class OrganizationMembershipController {
     @PostMapping("/search")
     public SearchResponse<OrganizationMemberResponse> search(
             @PathVariable long organizationId,
-            @Valid @RequestBody SearchRequest request
+            @Valid @RequestBody SearchRequest request,
+            Authentication authentication
     ) {
         return SearchResponse.from(
-                membershipService.search(organizationId, request.toQuery()),
+                membershipService.search(organizationId, request.toQuery(), CurrentUser.id(authentication)),
                 OrganizationMemberResponse::from
         );
     }
@@ -55,16 +61,23 @@ public class OrganizationMembershipController {
     public OrganizationMemberResponse updateRole(
             @PathVariable long organizationId,
             @PathVariable long userId,
-            @Valid @RequestBody UpdateOrganizationMemberRequest request
+            @Valid @RequestBody UpdateOrganizationMemberRequest request,
+            Authentication authentication
     ) {
         return OrganizationMemberResponse.from(
-                membershipService.updateRole(organizationId, userId, request.role())
+                membershipService.updateRole(
+                        organizationId, userId, request.role(), CurrentUser.id(authentication)
+                )
         );
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<Void> remove(@PathVariable long organizationId, @PathVariable long userId) {
-        membershipService.remove(organizationId, userId);
+    public ResponseEntity<Void> remove(
+            @PathVariable long organizationId,
+            @PathVariable long userId,
+            Authentication authentication
+    ) {
+        membershipService.remove(organizationId, userId, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();
     }
 }

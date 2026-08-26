@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
+import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.common.api.error.ApiFieldError;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +25,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,14 +48,23 @@ class ResourceApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
+        mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
                 TRUNCATE TABLE organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
+        jdbcTemplate.update("""
+                INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
+                VALUES (?, 'test@example.com', 'Test', '{noop}unused-password', now(), now())
+                """, TestAuthentication.USER_ID);
         organizationId = jdbcTemplate.queryForObject("""
                 INSERT INTO organizations (name, created_at, updated_at)
                 VALUES ('Test', now(), now()) RETURNING id
                 """, Long.class);
+        jdbcTemplate.update("""
+                INSERT INTO organization_memberships
+                    (organization_id, user_id, role, created_at, updated_at)
+                VALUES (?, ?, 'OWNER', now(), now())
+                """, organizationId, TestAuthentication.USER_ID);
     }
 
     @Test

@@ -15,3 +15,10 @@ spring:
           time_zone: UTC
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+
+cloudops:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      issuer: ${JWT_ISSUER:cloudops}
+      access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:15m}
