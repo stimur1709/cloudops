@@ -70,13 +70,14 @@ class OrganizationApiIntegrationTest {
                   AND constraint_type = 'UNIQUE'
                 """, Integer.class)).isEqualTo(1);
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbcTemplate.update("""
-                INSERT INTO resources (name, type, status, created_at, updated_at)
-                VALUES ('missing-organization', 'SERVER', 'ACTIVE', now(), now())
+                INSERT INTO resources (name, type, status, config, created_at, updated_at)
+                VALUES ('missing-organization', 'SERVER', 'ACTIVE', '{"host":"server.internal"}', now(), now())
                 """))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbcTemplate.update("""
-                INSERT INTO resources (name, type, status, organization_id, created_at, updated_at)
-                VALUES ('unknown-organization', 'SERVER', 'ACTIVE', 999999, now(), now())
+                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                VALUES ('unknown-organization', 'SERVER', 'ACTIVE', 999999,
+                        '{"host":"server.internal"}', now(), now())
                 """))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
@@ -110,7 +111,7 @@ class OrganizationApiIntegrationTest {
                 .andExpect(jsonPath("$.errors[0].field").value("name"));
         mockMvc.perform(get("/api/organizations/999999"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("ORGANIZATION_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
         mockMvc.perform(put("/api/organizations/999999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Missing\"}"))
@@ -194,7 +195,7 @@ class OrganizationApiIntegrationTest {
         long organization = insertOrganization("Existing", Instant.now());
         createResource("router", 999999)
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("ORGANIZATION_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
         long resource = insertResource("server", organization);
         mockMvc.perform(put("/api/resources/{id}", resource)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -260,7 +261,8 @@ class OrganizationApiIntegrationTest {
 
     private String resourceBody(String name, long organizationId) {
         return """
-                {"name":"%s","type":"SERVER","status":"ACTIVE","organizationId":%d}
+                {"name":"%s","type":"SERVER","status":"ACTIVE","organizationId":%d,
+                 "config":{"host":"server.internal"}}
                 """.formatted(name, organizationId);
     }
 
@@ -279,8 +281,8 @@ class OrganizationApiIntegrationTest {
 
     private long insertResource(String name, long organizationId) {
         return jdbcTemplate.queryForObject("""
-                INSERT INTO resources (name, type, status, organization_id, created_at, updated_at)
-                VALUES (?, 'SERVER', 'ACTIVE', ?, now(), now()) RETURNING id
+                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                VALUES (?, 'SERVER', 'ACTIVE', ?, '{"host":"server.internal"}', now(), now()) RETURNING id
                 """, Long.class, name, organizationId);
     }
 }

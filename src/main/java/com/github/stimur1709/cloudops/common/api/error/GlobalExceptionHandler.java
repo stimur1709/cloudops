@@ -10,6 +10,9 @@ import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.ForbiddenException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
+import com.github.stimur1709.cloudops.resource.ResourceType;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
+import com.github.stimur1709.cloudops.resource.config.UnknownResourceConfigFieldException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -28,6 +31,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.core.AuthenticationException;
 import tools.jackson.core.JacksonException.Reference;
 import tools.jackson.databind.exc.InvalidFormatException;
+import tools.jackson.databind.exc.InvalidTypeIdException;
+import tools.jackson.databind.exc.MismatchedInputException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -92,7 +97,26 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         InvalidFormatException invalidFormat = findInvalidFormat(exception);
-        List<ApiFieldError> errors = invalidFormat == null ? List.of() : enumFieldError(invalidFormat);
+        MismatchedInputException mismatchedInput = findCause(exception, MismatchedInputException.class);
+        InvalidTypeIdException invalidTypeId = findCause(exception, InvalidTypeIdException.class);
+        UnknownResourceConfigFieldException unknownConfigField = findCause(
+                exception, UnknownResourceConfigFieldException.class
+        );
+        List<ApiFieldError> errors;
+        if (unknownConfigField != null) {
+            errors = List.of(new ApiFieldError("config." + unknownConfigField.field(), "Unknown field"));
+        } else if (isResourceConfigTypeId(invalidTypeId)) {
+            String values = Arrays.stream(ResourceType.values())
+                    .map(Enum::name)
+                    .collect(Collectors.joining(", "));
+            errors = List.of(new ApiFieldError("type", "Type must be one of: " + values));
+        } else if (invalidFormat != null) {
+            errors = enumFieldError(invalidFormat);
+        } else if (mismatchedInput != null && mismatchedInput.getMessage().contains("'config'")) {
+            errors = List.of(new ApiFieldError("config", "Config is required"));
+        } else {
+            errors = List.of();
+        }
 
         return response(
                 HttpStatus.BAD_REQUEST,
@@ -181,7 +205,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    ResponseEntity<ApiError> handleAuthentication(AuthenticationException exception, HttpServletRequest request) {
+    ResponseEntity<ApiError> handleAuthentication(HttpServletRequest request) {
         return response(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid email or password", request, List.of());
     }
 
@@ -247,14 +271,24 @@ public class GlobalExceptionHandler {
     }
 
     private InvalidFormatException findInvalidFormat(Throwable throwable) {
+        return findCause(throwable, InvalidFormatException.class);
+    }
+
+    private <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
         Throwable current = throwable;
         while (current != null) {
-            if (current instanceof InvalidFormatException invalidFormat) {
-                return invalidFormat;
+            if (type.isInstance(current)) {
+                return type.cast(current);
             }
             current = current.getCause();
         }
         return null;
+    }
+
+    private boolean isResourceConfigTypeId(InvalidTypeIdException exception) {
+        return exception != null
+                && exception.getBaseType() != null
+                && ResourceConfig.class.isAssignableFrom(exception.getBaseType().getRawClass());
     }
 
     private List<ApiFieldError> enumFieldError(InvalidFormatException exception) {

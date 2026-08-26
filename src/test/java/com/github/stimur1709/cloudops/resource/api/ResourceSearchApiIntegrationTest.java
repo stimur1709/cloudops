@@ -270,7 +270,7 @@ class ResourceSearchApiIntegrationTest {
     @Test
     void rejectsValuesThatCannotBeConvertedToFieldTypes() throws Exception {
         assertInvalidFilterValue("id", "EQ", "abc", "Value must be a valid integer number");
-        assertInvalidFilterValue("type", "EQ", "ROUTER", "Value must be one of: NETWORK_DEVICE, SERVER, DATABASE, OTHER");
+        assertInvalidFilterValue("type", "EQ", "ROUTER", "Value must be one of: NETWORK_DEVICE, SERVER, DATABASE, SERVICE, OTHER");
         assertInvalidFilterValue("createdAt", "GT", "yesterday", "Value must be a valid ISO-8601 instant");
     }
 
@@ -304,7 +304,8 @@ class ResourceSearchApiIntegrationTest {
                                   "name": "router-core-01",
                                   "type": "NETWORK_DEVICE",
                                   "status": "INACTIVE"
-                                  ,"organizationId": %d
+                                  ,"organizationId": %d,
+                                  "config": {"host": "10.0.0.1"}
                                 }
                                 """.formatted(organizationId)))
                 .andExpect(status().isOk())
@@ -336,12 +337,13 @@ class ResourceSearchApiIntegrationTest {
                                   "name": "  ",
                                   "type": null,
                                   "status": null
-                                  ,"organizationId": %d
+                                  ,"organizationId": %d,
+                                  "config": null
                                 }
                                 """.formatted(organizationId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.errors[*].field", containsInAnyOrder("name", "type", "status")));
+                .andExpect(jsonPath("$.errors[*].field", containsInAnyOrder("name", "type", "status", "config")));
     }
 
     @Test
@@ -353,11 +355,12 @@ class ResourceSearchApiIntegrationTest {
                                   "name": "router-core-01",
                                   "type": "NETWORK_DEVICE",
                                   "status": "INACTIVE"
-                                  ,"organizationId": %d
+                                  ,"organizationId": %d,
+                                  "config": {"host": "10.0.0.1"}
                                 }
                                 """.formatted(organizationId)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
     }
 
     @Test
@@ -379,7 +382,7 @@ class ResourceSearchApiIntegrationTest {
     void returnsNotFoundWhenDeletingUnknownResource() throws Exception {
         mockMvc.perform(delete("/api/resources/{id}", 999_999L))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
     }
 
     private void insertThreeResources() {
@@ -390,11 +393,21 @@ class ResourceSearchApiIntegrationTest {
 
     private long insertResource(String name, String type, String status, Instant createdAt) {
         return jdbcTemplate.queryForObject("""
-                INSERT INTO resources (name, type, status, organization_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?::jsonb, ?, ?)
                 RETURNING id
-                """, Long.class, name, type, status, organizationId,
+                """, Long.class, name, type, status, organizationId, configFor(type),
                 Timestamp.from(createdAt), Timestamp.from(createdAt));
+    }
+
+    private String configFor(String type) {
+        return switch (type) {
+            case "DATABASE" -> "{\"host\":\"db.internal\",\"port\":5432,\"database\":\"orders\"}";
+            case "NETWORK_DEVICE" -> "{\"host\":\"network.internal\"}";
+            case "SERVICE" -> "{\"url\":\"https://api.example.com\"}";
+            case "OTHER" -> "{}";
+            default -> "{\"host\":\"server.internal\"}";
+        };
     }
 
     private long insertOrganization(String name) {

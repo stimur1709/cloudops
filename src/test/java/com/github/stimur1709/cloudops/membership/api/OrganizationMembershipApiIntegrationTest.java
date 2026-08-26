@@ -145,7 +145,7 @@ class OrganizationMembershipApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"start\":0,\"size\":10,\"getTotal\":false}"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("ORGANIZATION_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
     }
 
     @Test

@@ -6,7 +6,11 @@ Content-Type: application/json
   "name": "router-01",
   "type": "NETWORK_DEVICE",
   "status": "ACTIVE",
-  "organizationId": 1
+  "organizationId": 1,
+  "config": {
+    "host": "10.0.0.1",
+    "managementPort": 22
+  }
 }
 
 ### Get resource
@@ -46,7 +50,11 @@ Content-Type: application/json
   "name": "router-01",
   "type": "NETWORK_DEVICE",
   "status": "INACTIVE",
-  "organizationId": 1
+  "organizationId": 1,
+  "config": {
+    "host": "10.0.0.1",
+    "managementPort": 2222
+  }
 }
 
 ### Delete resource

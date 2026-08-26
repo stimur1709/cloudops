@@ -12,6 +12,8 @@ import com.github.stimur1709.cloudops.membership.application.OrganizationAuthori
 import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipScopes;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity_;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
@@ -30,19 +32,22 @@ public class ResourceService {
     private final OrganizationJpaRepository organizationRepository;
     private final OrganizationAuthorization authorization;
     private final Clock clock;
+    private final ResourceConfigMapper configMapper;
 
     public ResourceService(
             ResourceJpaRepository resourceRepository,
             JpaSearchService searchService,
             OrganizationJpaRepository organizationRepository,
             OrganizationAuthorization authorization,
-            Clock clock
+            Clock clock,
+            ResourceConfigMapper configMapper
     ) {
         this.resourceRepository = resourceRepository;
         this.searchService = searchService;
         this.organizationRepository = organizationRepository;
         this.authorization = authorization;
         this.clock = clock;
+        this.configMapper = configMapper;
     }
 
     @Transactional
@@ -51,6 +56,7 @@ public class ResourceService {
             ResourceType type,
             ResourceStatus status,
             long organizationId,
+            ResourceConfig config,
             long currentUserId
     ) {
         OrganizationEntity organization = getOrganizationForUpdate(organizationId);
@@ -59,7 +65,9 @@ public class ResourceService {
             throw resourceNameConflict();
         }
         Instant now = clock.instant();
-        ResourceEntity resource = ResourceEntity.create(name, type, status, organization, now);
+        ResourceEntity resource = ResourceEntity.create(
+                name, type, status, organization, configMapper.toJson(config), now
+        );
         return save(resource);
     }
 
@@ -87,6 +95,7 @@ public class ResourceService {
             ResourceType type,
             ResourceStatus status,
             long organizationId,
+            ResourceConfig config,
             long currentUserId
     ) {
         ResourceEntity resource = resourceRepository.findByIdForUpdate(id)
@@ -101,7 +110,7 @@ public class ResourceService {
         if (resourceRepository.existsByOrganizationIdAndNameAndIdNot(organizationId, name, id)) {
             throw resourceNameConflict();
         }
-        resource.update(name, type, status, organization, clock.instant());
+        resource.update(name, type, status, organization, configMapper.toJson(config), clock.instant());
         return save(resource);
     }
 

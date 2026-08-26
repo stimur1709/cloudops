@@ -2,9 +2,9 @@ package com.github.stimur1709.cloudops.resource.persistence;
 
 import java.time.Instant;
 
+import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
-import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,6 +16,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import tools.jackson.databind.JsonNode;
 
 @Entity
 @Table(name = "resources")
@@ -43,6 +46,10 @@ public class ResourceEntity {
     @Column(name = "organization_id", nullable = false, insertable = false, updatable = false)
     private Long organizationId;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private JsonNode config;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -57,6 +64,7 @@ public class ResourceEntity {
             ResourceType type,
             ResourceStatus status,
             OrganizationEntity organization,
+            JsonNode config,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -65,6 +73,7 @@ public class ResourceEntity {
         this.status = status;
         this.organization = organization;
         this.organizationId = organization.id();
+        this.config = config;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -74,9 +83,10 @@ public class ResourceEntity {
             ResourceType type,
             ResourceStatus status,
             OrganizationEntity organization,
+            JsonNode config,
             Instant createdAt
     ) {
-        return new ResourceEntity(name, type, status, organization, createdAt, createdAt);
+        return new ResourceEntity(name, type, status, organization, config, createdAt, createdAt);
     }
 
     public void update(
@@ -84,6 +94,7 @@ public class ResourceEntity {
             ResourceType type,
             ResourceStatus status,
             OrganizationEntity organization,
+            JsonNode config,
             Instant updatedAt
     ) {
         this.name = name;
@@ -91,6 +102,7 @@ public class ResourceEntity {
         this.status = status;
         this.organization = organization;
         this.organizationId = organization.id();
+        this.config = config;
         this.updatedAt = updatedAt;
     }
 
@@ -112,6 +124,10 @@ public class ResourceEntity {
 
     public Long organizationId() {
         return organizationId;
+    }
+
+    public JsonNode config() {
+        return config;
     }
 
     public Instant createdAt() {

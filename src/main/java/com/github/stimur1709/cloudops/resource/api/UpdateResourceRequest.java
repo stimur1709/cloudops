@@ -2,10 +2,13 @@ package com.github.stimur1709.cloudops.resource.api;
 
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 public record UpdateResourceRequest(
         @NotBlank(message = "Name must not be blank")
@@ -20,6 +23,11 @@ public record UpdateResourceRequest(
 
         @NotNull(message = "Organization id is required")
         @Positive(message = "Organization id must be positive")
-        Long organizationId
+        Long organizationId,
+
+        @NotNull(message = "Config is required")
+        @Valid
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
+        ResourceConfig config
 ) {
 }
