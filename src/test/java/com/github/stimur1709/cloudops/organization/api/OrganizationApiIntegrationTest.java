@@ -10,6 +10,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
+import com.github.stimur1709.cloudops.TestAuthentication;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,6 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 @Import(TestcontainersConfiguration.class)
@@ -37,10 +37,14 @@ class OrganizationApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
+        mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
                 TRUNCATE TABLE organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
+        jdbcTemplate.update("""
+                INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
+                VALUES (?, 'test@example.com', 'Test', '{noop}unused-password', now(), now())
+                """, TestAuthentication.USER_ID);
     }
 
     @Test
@@ -216,7 +220,7 @@ class OrganizationApiIntegrationTest {
     }
 
     @Test
-    void preventsDeletingUsedOrganizationAndDeletesEmptyOne() throws Exception {
+    void preventsDeletingOrganizationWithResourcesOrMemberships() throws Exception {
         long used = insertOrganization("Used", Instant.now());
         long empty = insertOrganization("Empty", Instant.now());
         insertResource("server", used);
@@ -225,7 +229,8 @@ class OrganizationApiIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ORGANIZATION_IN_USE"));
         mockMvc.perform(delete("/api/organizations/{id}", empty))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ORGANIZATION_IN_USE"));
     }
 
     private ResultActions createOrganization(String name) throws Exception {
@@ -260,10 +265,16 @@ class OrganizationApiIntegrationTest {
     }
 
     private long insertOrganization(String name, Instant instant) {
-        return jdbcTemplate.queryForObject("""
+        long id = jdbcTemplate.queryForObject("""
                 INSERT INTO organizations (name, created_at, updated_at)
                 VALUES (?, ?, ?) RETURNING id
                 """, Long.class, name, Timestamp.from(instant), Timestamp.from(instant));
+        jdbcTemplate.update("""
+                INSERT INTO organization_memberships
+                    (organization_id, user_id, role, created_at, updated_at)
+                VALUES (?, ?, 'OWNER', now(), now())
+                """, id, TestAuthentication.USER_ID);
+        return id;
     }
 
     private long insertResource(String name, long organizationId) {

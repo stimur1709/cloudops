@@ -16,6 +16,9 @@
             <column name="display_name" type="VARCHAR(100)">
                 <constraints nullable="false"/>
             </column>
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
             <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
                 <constraints nullable="false"/>
             </column>

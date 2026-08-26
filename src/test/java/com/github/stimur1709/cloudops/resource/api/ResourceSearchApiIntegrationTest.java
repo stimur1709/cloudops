@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 import com.github.stimur1709.cloudops.SqlStatementRecorder;
+import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +31,6 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 @Import(TestcontainersConfiguration.class)
@@ -56,10 +56,11 @@ class ResourceSearchApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
+        mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
                 TRUNCATE TABLE organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
+        insertCurrentUser();
         organizationId = insertOrganization("Test organization");
         sqlStatementRecorder.clear();
     }
@@ -397,10 +398,23 @@ class ResourceSearchApiIntegrationTest {
     }
 
     private long insertOrganization(String name) {
-        return jdbcTemplate.queryForObject("""
+        long id = jdbcTemplate.queryForObject("""
                 INSERT INTO organizations (name, created_at, updated_at)
                 VALUES (?, now(), now()) RETURNING id
                 """, Long.class, name);
+        jdbcTemplate.update("""
+                INSERT INTO organization_memberships
+                    (organization_id, user_id, role, created_at, updated_at)
+                VALUES (?, ?, 'OWNER', now(), now())
+                """, id, TestAuthentication.USER_ID);
+        return id;
+    }
+
+    private void insertCurrentUser() {
+        jdbcTemplate.update("""
+                INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
+                VALUES (?, 'test@example.com', 'Test', '{noop}unused-password', now(), now())
+                """, TestAuthentication.USER_ID);
     }
 
     private ResultActions search(String request) throws Exception {
