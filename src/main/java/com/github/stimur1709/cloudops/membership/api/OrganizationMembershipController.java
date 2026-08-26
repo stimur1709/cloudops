@@ -1,22 +1,19 @@
 package com.github.stimur1709.cloudops.membership.api;
 
 import java.net.URI;
-import java.util.List;
 
+import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
+import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.membership.application.OrganizationMembershipService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Validated
@@ -43,17 +40,15 @@ public class OrganizationMembershipController {
         return ResponseEntity.created(location).body(response);
     }
 
-    @GetMapping
-    public List<OrganizationMemberResponse> list(
+    @PostMapping("/search")
+    public SearchResponse<OrganizationMemberResponse> search(
             @PathVariable long organizationId,
-            @RequestParam(defaultValue = "0") @Min(value = 0, message = "Start must not be less than 0") int start,
-            @RequestParam(defaultValue = "20")
-            @Min(value = 1, message = "Size must be greater than 0")
-            @Max(value = 100, message = "Size must not be greater than 100") int size
+            @Valid @RequestBody SearchRequest request
     ) {
-        return membershipService.list(organizationId, start, size).stream()
-                .map(OrganizationMemberResponse::from)
-                .toList();
+        return SearchResponse.from(
+                membershipService.search(organizationId, request.toQuery()),
+                OrganizationMemberResponse::from
+        );
     }
 
     @PutMapping("/{userId}")

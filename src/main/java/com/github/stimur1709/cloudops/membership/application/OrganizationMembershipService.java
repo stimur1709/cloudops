@@ -5,14 +5,18 @@ import java.util.List;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
+import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
+import com.github.stimur1709.cloudops.common.search.SearchQuery;
+import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.membership.MembershipRole;
 import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipEntity;
+import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipEntity_;
 import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipJpaRepository;
+import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipSearchDefinition;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
 import com.github.stimur1709.cloudops.user.persistence.UserEntity;
 import com.github.stimur1709.cloudops.user.persistence.UserJpaRepository;
-import jakarta.persistence.EntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,20 +27,20 @@ public class OrganizationMembershipService {
     private final OrganizationMembershipJpaRepository membershipRepository;
     private final OrganizationJpaRepository organizationRepository;
     private final UserJpaRepository userRepository;
-    private final EntityManager entityManager;
+    private final JpaSearchService searchService;
     private final Clock clock;
 
     public OrganizationMembershipService(
             OrganizationMembershipJpaRepository membershipRepository,
             OrganizationJpaRepository organizationRepository,
             UserJpaRepository userRepository,
-            EntityManager entityManager,
+            JpaSearchService searchService,
             Clock clock
     ) {
         this.membershipRepository = membershipRepository;
         this.organizationRepository = organizationRepository;
         this.userRepository = userRepository;
-        this.entityManager = entityManager;
+        this.searchService = searchService;
         this.clock = clock;
     }
 
@@ -61,17 +65,21 @@ public class OrganizationMembershipService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrganizationMembershipEntity> list(long organizationId, int start, int size) {
+    public SearchResult<OrganizationMembershipEntity> search(long organizationId, SearchQuery search) {
         getOrganization(organizationId);
-        return entityManager.createQuery("""
-                        select membership from OrganizationMembershipEntity membership
-                        where membership.organizationId = :organizationId
-                        order by membership.id
-                        """, OrganizationMembershipEntity.class)
-                .setParameter("organizationId", organizationId)
-                .setFirstResult(start)
-                .setMaxResults(size)
-                .getResultList();
+        SearchQuery.Filter organizationFilter = new SearchQuery.Filter(
+                SearchQuery.LogicalOperator.AND,
+                List.of(new SearchQuery.Condition(
+                        OrganizationMembershipEntity_.ORGANIZATION_ID,
+                        SearchQuery.Operation.EQ,
+                        Long.toString(organizationId)
+                ))
+        );
+        return searchService.search(
+                search,
+                organizationFilter,
+                OrganizationMembershipSearchDefinition.DEFINITION
+        );
     }
 
     @Transactional
