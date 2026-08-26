@@ -6,7 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.github.stimur1709.cloudops.resource.application.InvalidResourceSearchException;
+import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
 import com.github.stimur1709.cloudops.resource.application.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -142,9 +142,9 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(InvalidResourceSearchException.class)
+    @ExceptionHandler(InvalidSearchException.class)
     ResponseEntity<ApiError> handleInvalidSearch(
-            InvalidResourceSearchException exception,
+            InvalidSearchException exception,
             HttpServletRequest request
     ) {
         return response(

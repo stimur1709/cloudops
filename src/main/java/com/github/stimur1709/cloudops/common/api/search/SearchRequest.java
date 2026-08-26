@@ -1,8 +1,8 @@
-package com.github.stimur1709.cloudops.resource.api;
+package com.github.stimur1709.cloudops.common.api.search;
 
 import java.util.List;
 
-import com.github.stimur1709.cloudops.resource.application.ResourceSearch;
+import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
-public record SearchResourcesRequest(
+public record SearchRequest(
         @NotNull(message = "Start is required")
         @Min(value = 0, message = "Start must not be less than 0")
         Integer start,
@@ -28,26 +28,26 @@ public record SearchResourcesRequest(
         boolean getTotal
 ) {
 
-    ResourceSearch toSearch() {
-        ResourceSearch.Filter searchFilter = filter == null ? null : filter.toSearch();
-        List<ResourceSearch.Sort> searchSort = sort == null
+    public SearchQuery toQuery() {
+        SearchQuery.Filter searchFilter = filter == null ? null : filter.toQuery();
+        List<SearchQuery.Sort> searchSort = sort == null
                 ? List.of()
-                : sort.stream().map(Sort::toSearch).toList();
-        return new ResourceSearch(start, size, searchFilter, searchSort, getTotal);
+                : sort.stream().map(Sort::toQuery).toList();
+        return new SearchQuery(start, size, searchFilter, searchSort, getTotal);
     }
 
     public record Filter(
             @NotNull(message = "Filter operator is required")
-            ResourceSearch.LogicalOperator operator,
+            SearchQuery.LogicalOperator operator,
 
             @NotEmpty(message = "Filter conditions must not be empty")
             List<@Valid Condition> conditions
     ) {
 
-        ResourceSearch.Filter toSearch() {
-            return new ResourceSearch.Filter(
+        SearchQuery.Filter toQuery() {
+            return new SearchQuery.Filter(
                     operator,
-                    conditions.stream().map(Condition::toSearch).toList()
+                    conditions.stream().map(Condition::toQuery).toList()
             );
         }
     }
@@ -57,14 +57,14 @@ public record SearchResourcesRequest(
             String field,
 
             @NotNull(message = "Filter operation is required")
-            ResourceSearch.Operation operation,
+            SearchQuery.Operation operation,
 
             @NotNull(message = "Filter value is required")
             String value
     ) {
 
-        ResourceSearch.Condition toSearch() {
-            return new ResourceSearch.Condition(field, operation, value);
+        SearchQuery.Condition toQuery() {
+            return new SearchQuery.Condition(field, operation, value);
         }
     }
 
@@ -73,11 +73,11 @@ public record SearchResourcesRequest(
             String field,
 
             @NotNull(message = "Sort order is required")
-            ResourceSearch.Direction order
+            SearchQuery.Direction order
     ) {
 
-        ResourceSearch.Sort toSearch() {
-            return new ResourceSearch.Sort(field, order);
+        SearchQuery.Sort toQuery() {
+            return new SearchQuery.Sort(field, order);
         }
     }
 }

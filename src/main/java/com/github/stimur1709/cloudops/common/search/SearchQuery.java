@@ -1,8 +1,8 @@
-package com.github.stimur1709.cloudops.resource.application;
+package com.github.stimur1709.cloudops.common.search;
 
 import java.util.List;
 
-public record ResourceSearch(
+public record SearchQuery(
         int start,
         int size,
         Filter filter,
@@ -10,7 +10,7 @@ public record ResourceSearch(
         boolean getTotal
 ) {
 
-    public ResourceSearch {
+    public SearchQuery {
         sort = sort == null ? List.of() : List.copyOf(sort);
     }
 

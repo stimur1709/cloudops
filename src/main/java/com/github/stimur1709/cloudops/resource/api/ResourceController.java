@@ -2,6 +2,8 @@ package com.github.stimur1709.cloudops.resource.api;
 
 import java.net.URI;
 
+import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
+import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.resource.application.ResourceService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -39,8 +41,8 @@ public class ResourceController {
     }
 
     @PostMapping("/search")
-    public SearchResourcesResponse search(@Valid @RequestBody SearchResourcesRequest request) {
-        return SearchResourcesResponse.from(resourceService.search(request.toSearch()));
+    public SearchResponse<ResourceResponse> search(@Valid @RequestBody SearchRequest request) {
+        return SearchResponse.from(resourceService.search(request.toQuery()), ResourceResponse::from);
     }
 
     @PutMapping("/{id}")

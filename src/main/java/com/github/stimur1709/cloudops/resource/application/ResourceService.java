@@ -3,6 +3,8 @@ package com.github.stimur1709.cloudops.resource.application;
 import java.time.Clock;
 import java.time.Instant;
 
+import com.github.stimur1709.cloudops.common.search.SearchQuery;
+import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
@@ -42,7 +44,7 @@ public class ResourceService {
     }
 
     @Transactional(readOnly = true)
-    public ResourceSearchResult search(ResourceSearch search) {
+    public SearchResult<ResourceEntity> search(SearchQuery search) {
         return resourceSearchRepository.search(search);
     }
 

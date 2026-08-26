@@ -90,6 +90,8 @@ curl -i -X POST http://localhost:8080/api/resources/search \
 
 `start` должен быть не меньше `0`, `size` — от `1` до `100`. Фильтровать и сортировать можно по полям `id`, `name`, `type`, `status`, `createdAt`, `updatedAt`. Поддерживаются операции `EQ`, `NE`, `GT`, `GE`, `LT`, `LE`, а для строк также `CONTAINS`. Если `getTotal` равен `false`, поле `total` отсутствует и отдельный запрос подсчёта не выполняется.
 
+Поиск построен на общем framework в `common`: `SearchRequest` и `SearchResponse` задают единый API-контракт, а `JpaSearchExecutor` собирает Criteria-запрос, применяет смещение и ограничение, и при необходимости выполняет `count`. Для каждой новой JPA-сущности нужно создать `JpaSearchDefinition` с явной картой внешних имён на типизированные `JpaSearchField`, выбрать конвертеры значений и поле сортировки по умолчанию. Клиентские имена полей не передаются напрямую в Criteria API, а поля entity не открываются через reflection.
+
 Обновить ресурс:
 
 ```shell
