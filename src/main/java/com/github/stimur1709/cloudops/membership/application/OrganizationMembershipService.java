@@ -1,7 +1,6 @@
 package com.github.stimur1709.cloudops.membership.application;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
@@ -89,11 +88,7 @@ public class OrganizationMembershipService {
                 && ownerCount(memberships) == 1) {
             throw lastOwnerConflict();
         }
-        Instant now = clock.instant();
-        Instant updatedAt = now.isAfter(membership.updatedAt())
-                ? now
-                : membership.updatedAt().plusNanos(1_000);
-        membership.changeRole(role, updatedAt);
+        membership.changeRole(role, clock.instant());
         return membership;
     }
 

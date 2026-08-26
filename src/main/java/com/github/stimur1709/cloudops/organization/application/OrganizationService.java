@@ -1,7 +1,6 @@
 package com.github.stimur1709.cloudops.organization.application;
 
 import java.time.Clock;
-import java.time.Instant;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
@@ -60,11 +59,7 @@ public class OrganizationService {
     public OrganizationEntity update(long id, String name) {
         OrganizationEntity organization = organizationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Organization"));
-        Instant now = clock.instant();
-        Instant updatedAt = now.isAfter(organization.updatedAt())
-                ? now
-                : organization.updatedAt().plusNanos(1_000);
-        organization.update(name, updatedAt);
+        organization.update(name, clock.instant());
         return organization;
     }
 

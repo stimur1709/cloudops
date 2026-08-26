@@ -75,11 +75,7 @@ public class ResourceService {
         if (resourceRepository.existsByOrganizationIdAndNameAndIdNot(organizationId, name, id)) {
             throw resourceNameConflict();
         }
-        Instant now = clock.instant();
-        Instant updatedAt = now.isAfter(resource.updatedAt())
-                ? now
-                : resource.updatedAt().plusNanos(1_000);
-        resource.update(name, type, status, organization, updatedAt);
+        resource.update(name, type, status, organization, clock.instant());
         return save(resource);
     }
 

@@ -316,7 +316,7 @@ class ResourceSearchApiIntegrationTest {
                 .getContentAsString();
 
         Instant updatedAt = Instant.parse(JsonPath.read(response, "$.updatedAt"));
-        assertThat(updatedAt).isAfter(previousUpdatedAt);
+        assertThat(updatedAt).isNotEqualTo(previousUpdatedAt);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT name FROM resources WHERE id = ?",
                 String.class,

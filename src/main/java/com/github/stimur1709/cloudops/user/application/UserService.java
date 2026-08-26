@@ -1,7 +1,6 @@
 package com.github.stimur1709.cloudops.user.application;
 
 import java.time.Clock;
-import java.time.Instant;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
@@ -54,9 +53,7 @@ public class UserService {
     @Transactional
     public UserEntity update(long id, String email, String displayName) {
         UserEntity user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
-        Instant now = clock.instant();
-        Instant updatedAt = now.isAfter(user.updatedAt()) ? now : user.updatedAt().plusNanos(1_000);
-        user.update(email, displayName, updatedAt);
+        user.update(email, displayName, clock.instant());
         return save(user);
     }
 
