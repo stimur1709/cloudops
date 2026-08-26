@@ -6,12 +6,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.stimur1709.cloudops.common.application.ConflictException;
+import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
-import com.github.stimur1709.cloudops.resource.application.ResourceNotFoundException;
-import com.github.stimur1709.cloudops.resource.application.ResourceNameConflictException;
-import com.github.stimur1709.cloudops.organization.application.OrganizationInUseException;
-import com.github.stimur1709.cloudops.organization.application.OrganizationNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -53,6 +52,29 @@ public class GlobalExceptionHandler {
                         .thenComparing(ApiFieldError::message))
                 .toList();
 
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Request validation failed",
+                request,
+                errors
+        );
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<ApiError> handleConstraintViolation(
+            ConstraintViolationException exception,
+            HttpServletRequest request
+    ) {
+        List<ApiFieldError> errors = exception.getConstraintViolations().stream()
+                .map(violation -> {
+                    String path = violation.getPropertyPath().toString();
+                    int separator = path.lastIndexOf('.');
+                    String field = separator < 0 ? path : path.substring(separator + 1);
+                    return new ApiFieldError(field, violation.getMessage());
+                })
+                .sorted(Comparator.comparing(ApiFieldError::field).thenComparing(ApiFieldError::message))
+                .toList();
         return response(
                 HttpStatus.BAD_REQUEST,
                 "VALIDATION_ERROR",
@@ -134,45 +156,23 @@ public class GlobalExceptionHandler {
                 .body(apiError);
     }
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    ResponseEntity<ApiError> handleNotFound(HttpServletRequest request) {
+    @ExceptionHandler(NotFoundException.class)
+    ResponseEntity<ApiError> handleNotFound(NotFoundException exception, HttpServletRequest request) {
         return response(
                 HttpStatus.NOT_FOUND,
-                "RESOURCE_NOT_FOUND",
-                "Resource not found",
+                exception.code(),
+                exception.getMessage(),
                 request,
                 List.of()
         );
     }
 
-    @ExceptionHandler(OrganizationNotFoundException.class)
-    ResponseEntity<ApiError> handleOrganizationNotFound(HttpServletRequest request) {
-        return response(
-                HttpStatus.NOT_FOUND,
-                "ORGANIZATION_NOT_FOUND",
-                "Organization not found",
-                request,
-                List.of()
-        );
-    }
-
-    @ExceptionHandler(ResourceNameConflictException.class)
-    ResponseEntity<ApiError> handleResourceNameConflict(HttpServletRequest request) {
+    @ExceptionHandler(ConflictException.class)
+    ResponseEntity<ApiError> handleConflict(ConflictException exception, HttpServletRequest request) {
         return response(
                 HttpStatus.CONFLICT,
-                "RESOURCE_NAME_CONFLICT",
-                "Resource name is already used in this organization",
-                request,
-                List.of()
-        );
-    }
-
-    @ExceptionHandler(OrganizationInUseException.class)
-    ResponseEntity<ApiError> handleOrganizationInUse(HttpServletRequest request) {
-        return response(
-                HttpStatus.CONFLICT,
-                "ORGANIZATION_IN_USE",
-                "Organization cannot be deleted while it has resources",
+                exception.code(),
+                exception.getMessage(),
                 request,
                 List.of()
         );
