@@ -3,6 +3,8 @@ package com.github.stimur1709.cloudops.user.application;
 import java.time.Clock;
 import java.time.Instant;
 
+import com.github.stimur1709.cloudops.common.application.ConflictException;
+import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
@@ -41,7 +43,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserEntity get(long id) {
-        return userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+        return userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +53,7 @@ public class UserService {
 
     @Transactional
     public UserEntity update(long id, String email, String displayName) {
-        UserEntity user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+        UserEntity user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
         Instant now = clock.instant();
         Instant updatedAt = now.isAfter(user.updatedAt()) ? now : user.updatedAt().plusNanos(1_000);
         user.update(email, displayName, updatedAt);
@@ -60,15 +62,15 @@ public class UserService {
 
     @Transactional
     public void delete(long id) {
-        UserEntity user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+        UserEntity user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User"));
         if (membershipRepository.existsByUserId(id)) {
-            throw new UserInUseException();
+            throw userInUse();
         }
         try {
             userRepository.delete(user);
             userRepository.flush();
         } catch (DataIntegrityViolationException exception) {
-            throw new UserInUseException();
+            throw userInUse();
         }
     }
 
@@ -76,7 +78,17 @@ public class UserService {
         try {
             return userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException exception) {
-            throw new UserEmailConflictException();
+            throw new ConflictException(
+                    "USER_EMAIL_CONFLICT",
+                    "Email is already used by another user"
+            );
         }
+    }
+
+    private ConflictException userInUse() {
+        return new ConflictException(
+                "USER_IN_USE",
+                "User cannot be deleted while they belong to an organization"
+        );
     }
 }

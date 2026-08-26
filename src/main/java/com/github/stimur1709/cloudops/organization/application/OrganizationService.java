@@ -3,6 +3,8 @@ package com.github.stimur1709.cloudops.organization.application;
 import java.time.Clock;
 import java.time.Instant;
 
+import com.github.stimur1709.cloudops.common.application.ConflictException;
+import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
@@ -46,7 +48,7 @@ public class OrganizationService {
     @Transactional(readOnly = true)
     public OrganizationEntity get(long id) {
         return organizationRepository.findById(id)
-                .orElseThrow(() -> new OrganizationNotFoundException(id));
+                .orElseThrow(() -> new NotFoundException("Organization"));
     }
 
     @Transactional(readOnly = true)
@@ -57,7 +59,7 @@ public class OrganizationService {
     @Transactional
     public OrganizationEntity update(long id, String name) {
         OrganizationEntity organization = organizationRepository.findById(id)
-                .orElseThrow(() -> new OrganizationNotFoundException(id));
+                .orElseThrow(() -> new NotFoundException("Organization"));
         Instant now = clock.instant();
         Instant updatedAt = now.isAfter(organization.updatedAt())
                 ? now
@@ -69,15 +71,22 @@ public class OrganizationService {
     @Transactional
     public void delete(long id) {
         OrganizationEntity organization = organizationRepository.findById(id)
-                .orElseThrow(() -> new OrganizationNotFoundException(id));
+                .orElseThrow(() -> new NotFoundException("Organization"));
         if (resourceRepository.existsByOrganizationId(id) || membershipRepository.existsByOrganizationId(id)) {
-            throw new OrganizationInUseException();
+            throw organizationInUse();
         }
         try {
             organizationRepository.delete(organization);
             organizationRepository.flush();
         } catch (DataIntegrityViolationException exception) {
-            throw new OrganizationInUseException();
+            throw organizationInUse();
         }
+    }
+
+    private ConflictException organizationInUse() {
+        return new ConflictException(
+                "ORGANIZATION_IN_USE",
+                "Organization cannot be deleted while it has resources or members"
+        );
     }
 }

@@ -6,17 +6,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.stimur1709.cloudops.common.application.ConflictException;
+import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
-import com.github.stimur1709.cloudops.resource.application.ResourceNotFoundException;
-import com.github.stimur1709.cloudops.resource.application.ResourceNameConflictException;
-import com.github.stimur1709.cloudops.organization.application.OrganizationInUseException;
-import com.github.stimur1709.cloudops.organization.application.OrganizationNotFoundException;
-import com.github.stimur1709.cloudops.membership.application.LastOwnerException;
-import com.github.stimur1709.cloudops.membership.application.MembershipConflictException;
-import com.github.stimur1709.cloudops.membership.application.MembershipNotFoundException;
-import com.github.stimur1709.cloudops.user.application.UserEmailConflictException;
-import com.github.stimur1709.cloudops.user.application.UserInUseException;
-import com.github.stimur1709.cloudops.user.application.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -164,99 +156,23 @@ public class GlobalExceptionHandler {
                 .body(apiError);
     }
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    ResponseEntity<ApiError> handleNotFound(HttpServletRequest request) {
+    @ExceptionHandler(NotFoundException.class)
+    ResponseEntity<ApiError> handleNotFound(NotFoundException exception, HttpServletRequest request) {
         return response(
                 HttpStatus.NOT_FOUND,
-                "RESOURCE_NOT_FOUND",
-                "Resource not found",
+                exception.code(),
+                exception.getMessage(),
                 request,
                 List.of()
         );
     }
 
-    @ExceptionHandler(OrganizationNotFoundException.class)
-    ResponseEntity<ApiError> handleOrganizationNotFound(HttpServletRequest request) {
-        return response(
-                HttpStatus.NOT_FOUND,
-                "ORGANIZATION_NOT_FOUND",
-                "Organization not found",
-                request,
-                List.of()
-        );
-    }
-
-    @ExceptionHandler(ResourceNameConflictException.class)
-    ResponseEntity<ApiError> handleResourceNameConflict(HttpServletRequest request) {
+    @ExceptionHandler(ConflictException.class)
+    ResponseEntity<ApiError> handleConflict(ConflictException exception, HttpServletRequest request) {
         return response(
                 HttpStatus.CONFLICT,
-                "RESOURCE_NAME_CONFLICT",
-                "Resource name is already used in this organization",
-                request,
-                List.of()
-        );
-    }
-
-    @ExceptionHandler(OrganizationInUseException.class)
-    ResponseEntity<ApiError> handleOrganizationInUse(HttpServletRequest request) {
-        return response(
-                HttpStatus.CONFLICT,
-                "ORGANIZATION_IN_USE",
-                "Organization cannot be deleted while it has resources or members",
-                request,
-                List.of()
-        );
-    }
-
-    @ExceptionHandler(UserNotFoundException.class)
-    ResponseEntity<ApiError> handleUserNotFound(HttpServletRequest request) {
-        return response(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found", request, List.of());
-    }
-
-    @ExceptionHandler(MembershipNotFoundException.class)
-    ResponseEntity<ApiError> handleMembershipNotFound(HttpServletRequest request) {
-        return response(HttpStatus.NOT_FOUND, "MEMBERSHIP_NOT_FOUND", "Membership not found", request, List.of());
-    }
-
-    @ExceptionHandler(UserEmailConflictException.class)
-    ResponseEntity<ApiError> handleUserEmailConflict(HttpServletRequest request) {
-        return response(
-                HttpStatus.CONFLICT,
-                "USER_EMAIL_CONFLICT",
-                "Email is already used by another user",
-                request,
-                List.of()
-        );
-    }
-
-    @ExceptionHandler(UserInUseException.class)
-    ResponseEntity<ApiError> handleUserInUse(HttpServletRequest request) {
-        return response(
-                HttpStatus.CONFLICT,
-                "USER_IN_USE",
-                "User cannot be deleted while they belong to an organization",
-                request,
-                List.of()
-        );
-    }
-
-    @ExceptionHandler(MembershipConflictException.class)
-    ResponseEntity<ApiError> handleMembershipConflict(HttpServletRequest request) {
-        return response(
-                HttpStatus.CONFLICT,
-                "MEMBERSHIP_CONFLICT",
-                "User is already a member of this organization",
-                request,
-                List.of()
-        );
-    }
-
-    @ExceptionHandler(LastOwnerException.class)
-    ResponseEntity<ApiError> handleLastOwner(HttpServletRequest request) {
-        return response(
-                HttpStatus.CONFLICT,
-                "LAST_OWNER_REQUIRED",
-                "Organization must have at least one owner",
+                exception.code(),
+                exception.getMessage(),
                 request,
                 List.of()
         );
