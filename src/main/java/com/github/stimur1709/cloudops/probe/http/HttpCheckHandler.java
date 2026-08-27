@@ -23,11 +23,6 @@ public class HttpCheckHandler implements ProbeHandler {
     }
 
     @Override
-    public void validate(ResourceConfig config) {
-        serviceConfig(config);
-    }
-
-    @Override
     public ProbeExecutionResult execute(ProbeExecutionContext context) {
         HttpCheckOutcome outcome = httpCheckClient.execute(serviceConfig(context.resourceConfig()));
         if (outcome.completed()) {

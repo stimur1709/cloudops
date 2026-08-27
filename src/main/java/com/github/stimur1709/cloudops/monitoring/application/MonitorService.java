@@ -19,10 +19,7 @@ import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultEnt
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultSearchDefinition;
 import com.github.stimur1709.cloudops.probe.ProbeType;
-import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
-import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
-import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,8 +33,6 @@ public class MonitorService {
     private final MonitoringResultJpaRepository resultRepository;
     private final ResourceJpaRepository resourceRepository;
     private final OrganizationAuthorization authorization;
-    private final ProbeHandlerRegistry handlerRegistry;
-    private final ResourceConfigMapper configMapper;
     private final MonitoringProperties properties;
     private final JpaSearchService searchService;
     private final Clock clock;
@@ -47,8 +42,6 @@ public class MonitorService {
             MonitoringResultJpaRepository resultRepository,
             ResourceJpaRepository resourceRepository,
             OrganizationAuthorization authorization,
-            ProbeHandlerRegistry handlerRegistry,
-            ResourceConfigMapper configMapper,
             MonitoringProperties properties,
             JpaSearchService searchService,
             Clock clock
@@ -57,8 +50,6 @@ public class MonitorService {
         this.resultRepository = resultRepository;
         this.resourceRepository = resourceRepository;
         this.authorization = authorization;
-        this.handlerRegistry = handlerRegistry;
-        this.configMapper = configMapper;
         this.properties = properties;
         this.searchService = searchService;
         this.clock = clock;
@@ -157,12 +148,6 @@ public class MonitorService {
                     "MONITOR_TYPE_NOT_SUPPORTED",
                     "Probe type %s is not supported for resource type %s".formatted(type, resource.type())
             );
-        }
-        ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
-        try {
-            handlerRegistry.get(type).validate(config);
-        } catch (IllegalArgumentException exception) {
-            throw new ConflictException("MONITOR_CONFIG_NOT_SUPPORTED", "Resource config is not valid for probe " + type);
         }
     }
 
