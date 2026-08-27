@@ -226,6 +226,35 @@ unroutable message оставляют её неопубликованной дл
 в `RUNNING` не позволяет повторно запустить handler для `RUNNING`, `COMPLETED` или `FAILED`.
 Опубликованные outbox-записи автоматически не удаляются.
 
+### Execution lease и recovery
+
+При захвате Task consumer создаёт внутренний `executionId` и ограниченный по времени lease.
+Общий heartbeat-планировщик продлевает lease активных локальных выполнений, включая время
+retry backoff. Если процесс завершился после claim или во время handler-а, heartbeat пропадает,
+и recovery job выбирает истёкшую `RUNNING` Task через PostgreSQL `FOR UPDATE SKIP LOCKED`.
+В одной транзакции Task возвращается в `PENDING`, увеличивает `recoveryCount`, а в outbox
+добавляется команда следующего поколения. Поэтому crash после recovery commit, но до RabbitMQ
+publish обрабатывается обычным outbox relay.
+
+`executionId` служит fencing token: запись attempt, продление lease и terminal update разрешены
+только текущему выполнению. Вернувшийся старый consumer не перезапишет результат нового, однако
+fencing защищает только состояние PostgreSQL. Внешний HTTP GET всё ещё может повториться;
+гарантия всей цепочки остаётся **at-least-once**, а exactly-once для будущих side effects требует
+отдельной бизнес-идемпотентности.
+
+`recoveryCount` в Task API — число восстановлений после потерянного lease и не входит в
+`attemptCount`, который считает фактические вызовы handler-а. После исчерпания лимита Task
+получает `FAILED / RECOVERY_EXHAUSTED` и безопасное сообщение без новой execution command.
+
+Параметры lease/recovery:
+
+- `TASK_LEASE_ENABLED` (`true`);
+- `TASK_LEASE_DURATION` (`30s`);
+- `TASK_LEASE_HEARTBEAT_INTERVAL` (`10s`, строго меньше duration);
+- `TASK_LEASE_RECOVERY_POLL_INTERVAL` (`15s`);
+- `TASK_LEASE_RECOVERY_BATCH_SIZE` (`50`);
+- `TASK_LEASE_MAX_RECOVERIES` (`3`).
+
 Параметры relay:
 
 - `TASK_OUTBOX_ENABLED` (`true`) — включает периодический relay;

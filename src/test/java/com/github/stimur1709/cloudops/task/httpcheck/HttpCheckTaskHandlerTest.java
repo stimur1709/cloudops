@@ -5,6 +5,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.UUID;
+
 import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
 import com.github.stimur1709.cloudops.task.TaskType;
 import com.github.stimur1709.cloudops.task.execution.TaskExecutionContext;
@@ -22,7 +24,7 @@ class HttpCheckTaskHandlerTest {
         HttpCheckTaskHandler handler = new HttpCheckTaskHandler(client);
 
         TaskExecutionResult result = handler.execute(
-                new TaskExecutionContext(1, 2, TaskType.HTTP_CHECK, config)
+                new TaskExecutionContext(1, 2, TaskType.HTTP_CHECK, config, UUID.randomUUID())
         );
 
         assertThat(handler.supports()).isEqualTo(TaskType.HTTP_CHECK);

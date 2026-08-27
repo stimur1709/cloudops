@@ -1,6 +1,7 @@
 package com.github.stimur1709.cloudops.task.persistence;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
@@ -68,6 +69,15 @@ public class TaskEntity {
     @Column(name = "last_attempt_at")
     private Instant lastAttemptAt;
 
+    @Column(name = "execution_id")
+    private UUID executionId;
+
+    @Column(name = "lease_expires_at")
+    private Instant leaseExpiresAt;
+
+    @Column(name = "recovery_count", nullable = false)
+    private int recoveryCount;
+
     protected TaskEntity() {
     }
 
@@ -95,6 +105,8 @@ public class TaskEntity {
         this.status = TaskStatus.COMPLETED;
         this.result = result;
         this.completedAt = now;
+        this.executionId = null;
+        this.leaseExpiresAt = null;
     }
 
     public void fail(TaskErrorCode errorCode, String errorMessage, Instant now) {
@@ -103,6 +115,27 @@ public class TaskEntity {
         this.errorCode = errorCode;
         this.errorMessage = errorMessage;
         this.completedAt = now;
+        this.executionId = null;
+        this.leaseExpiresAt = null;
+    }
+
+    public void recover() {
+        requireStatus(TaskStatus.RUNNING);
+        status = TaskStatus.PENDING;
+        startedAt = null;
+        executionId = null;
+        leaseExpiresAt = null;
+        recoveryCount++;
+    }
+
+    public void failRecovery(String message, Instant now) {
+        requireStatus(TaskStatus.RUNNING);
+        status = TaskStatus.FAILED;
+        errorCode = TaskErrorCode.RECOVERY_EXHAUSTED;
+        errorMessage = message;
+        completedAt = now;
+        executionId = null;
+        leaseExpiresAt = null;
     }
 
     private void requireStatus(TaskStatus expected) {
@@ -125,4 +158,7 @@ public class TaskEntity {
     public String errorMessage() { return errorMessage; }
     public int attemptCount() { return attemptCount; }
     public Instant lastAttemptAt() { return lastAttemptAt; }
+    public UUID executionId() { return executionId; }
+    public Instant leaseExpiresAt() { return leaseExpiresAt; }
+    public int recoveryCount() { return recoveryCount; }
 }

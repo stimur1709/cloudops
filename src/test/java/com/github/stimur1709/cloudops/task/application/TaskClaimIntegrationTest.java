@@ -3,6 +3,7 @@ package com.github.stimur1709.cloudops.task.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -66,6 +67,12 @@ class TaskClaimIntegrationTest {
             assertThat(jdbcTemplate.queryForObject(
                     "SELECT status FROM tasks WHERE id = ?", String.class, taskId
             )).isEqualTo("RUNNING");
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT execution_id FROM tasks WHERE id = ?", UUID.class, taskId
+            )).isNotNull();
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT lease_expires_at > started_at FROM tasks WHERE id = ?", Boolean.class, taskId
+            )).isTrue();
         }
     }
 

@@ -1,6 +1,8 @@
 package com.github.stimur1709.cloudops.task.application;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.util.UUID;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
@@ -14,6 +16,7 @@ import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.TaskType;
+import com.github.stimur1709.cloudops.task.config.TaskLeaseProperties;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
 import com.github.stimur1709.cloudops.task.persistence.TaskJpaRepository;
 import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageEntity;
@@ -37,6 +40,7 @@ public class TaskPersistenceService {
     private final Clock clock;
     private final OutboxMessageJpaRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final TaskLeaseProperties leaseProperties;
 
     public TaskPersistenceService(
             TaskJpaRepository taskRepository,
@@ -45,7 +49,8 @@ public class TaskPersistenceService {
             ResourceConfigMapper configMapper,
             Clock clock,
             OutboxMessageJpaRepository outboxRepository,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            TaskLeaseProperties leaseProperties
     ) {
         this.taskRepository = taskRepository;
         this.resourceRepository = resourceRepository;
@@ -54,6 +59,7 @@ public class TaskPersistenceService {
         this.clock = clock;
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
+        this.leaseProperties = leaseProperties;
     }
 
     @Transactional
@@ -69,7 +75,9 @@ public class TaskPersistenceService {
         );
         taskRepository.saveAndFlush(task);
         var payload = objectMapper.createObjectNode().put("taskId", task.id());
-        OutboxMessageEntity message = OutboxMessageEntity.taskExecutionRequested(task.id(), payload, clock.instant());
+        OutboxMessageEntity message = OutboxMessageEntity.taskExecutionRequested(
+                task.id(), task.recoveryCount(), payload, clock.instant()
+        );
         outboxRepository.saveAndFlush(message);
         log.info("Created outbox message: messageId={}, messageType={}, aggregateId={}",
                 message.id(), message.messageType(), message.aggregateId());
@@ -78,8 +86,11 @@ public class TaskPersistenceService {
 
     @Transactional
     public ClaimedTask claim(long taskId) {
+        Instant now = clock.instant();
+        UUID executionId = UUID.randomUUID();
         int updated = taskRepository.claimPending(
-                taskId, clock.instant(), TaskStatus.PENDING, TaskStatus.RUNNING
+                taskId, now, executionId, now.plus(leaseProperties.duration()),
+                TaskStatus.PENDING, TaskStatus.RUNNING
         );
         if (updated == 0) {
             return null;
@@ -87,30 +98,30 @@ public class TaskPersistenceService {
         TaskEntity task = taskRepository.findById(taskId).orElseThrow(NotFoundException::new);
         ResourceEntity resource = resourceRepository.findById(task.resourceId()).orElseThrow(NotFoundException::new);
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
-        return new ClaimedTask(task.id(), task.resourceId(), task.type(), config);
+        log.info("event=task_lease_acquired taskId={} executionId={} leaseExpiresAt={}",
+                taskId, executionId, task.leaseExpiresAt());
+        return new ClaimedTask(task.id(), task.resourceId(), task.type(), config, executionId);
     }
 
     @Transactional
-    public TaskEntity complete(long taskId, JsonNode result) {
-        TaskEntity task = taskRepository.findById(taskId).orElseThrow(NotFoundException::new);
-        task.complete(result, clock.instant());
-        taskRepository.flush();
-        return task;
+    public boolean complete(long taskId, UUID executionId, JsonNode result) {
+        return taskRepository.completeRunning(
+                taskId, executionId, result, clock.instant(), TaskStatus.RUNNING, TaskStatus.COMPLETED
+        ) == 1;
     }
 
     @Transactional
-    public TaskEntity fail(long taskId, TaskErrorCode errorCode, String errorMessage) {
-        TaskEntity task = taskRepository.findById(taskId).orElseThrow(NotFoundException::new);
-        task.fail(errorCode, errorMessage, clock.instant());
-        taskRepository.flush();
-        return task;
+    public boolean fail(long taskId, UUID executionId, TaskErrorCode errorCode, String errorMessage) {
+        return taskRepository.failRunning(
+                taskId, executionId, errorCode, errorMessage, clock.instant(), TaskStatus.RUNNING, TaskStatus.FAILED
+        ) == 1;
     }
 
     @Transactional
-    public int recordAttempt(long taskId) {
-        int updated = taskRepository.recordAttempt(taskId, clock.instant(), TaskStatus.RUNNING);
+    public int recordAttempt(long taskId, UUID executionId) {
+        int updated = taskRepository.recordAttempt(taskId, clock.instant(), executionId, TaskStatus.RUNNING);
         if (updated != 1) {
-            throw new IllegalStateException("Cannot record an attempt for a task that is not running");
+            throw new StaleTaskExecutionException(taskId, executionId);
         }
         return taskRepository.findById(taskId).orElseThrow(NotFoundException::new).attemptCount();
     }
@@ -118,6 +129,13 @@ public class TaskPersistenceService {
     @Transactional(readOnly = true)
     public TaskStatus status(long taskId) {
         return taskRepository.findStatus(taskId);
+    }
+
+    @Transactional
+    public boolean renewLease(long taskId, UUID executionId) {
+        return taskRepository.renewLease(
+                taskId, executionId, clock.instant().plus(leaseProperties.duration()), TaskStatus.RUNNING
+        ) == 1;
     }
 
     private void requireSupported(TaskType taskType, ResourceType resourceType) {
@@ -129,6 +147,8 @@ public class TaskPersistenceService {
         }
     }
 
-    public record ClaimedTask(long taskId, long resourceId, TaskType type, ResourceConfig resourceConfig) {
+    public record ClaimedTask(
+            long taskId, long resourceId, TaskType type, ResourceConfig resourceConfig, UUID executionId
+    ) {
     }
 }

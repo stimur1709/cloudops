@@ -43,20 +43,29 @@ public class OutboxMessageEntity {
     @Column(name = "published_at")
     private Instant publishedAt;
 
+    @Column(name = "deduplication_key", nullable = false, length = 150)
+    private String deduplicationKey;
+
     protected OutboxMessageEntity() {
     }
 
-    private OutboxMessageEntity(UUID id, long taskId, JsonNode payload, Instant createdAt) {
+    private OutboxMessageEntity(UUID id, long taskId, JsonNode payload, Instant createdAt, String deduplicationKey) {
         this.id = id;
         this.messageType = OutboxMessageType.TASK_EXECUTION_REQUESTED;
         this.aggregateType = OutboxAggregateType.TASK;
         this.aggregateId = taskId;
         this.payload = payload;
         this.createdAt = createdAt;
+        this.deduplicationKey = deduplicationKey;
     }
 
-    public static OutboxMessageEntity taskExecutionRequested(long taskId, JsonNode payload, Instant createdAt) {
-        return new OutboxMessageEntity(UUID.randomUUID(), taskId, payload, createdAt);
+    public static OutboxMessageEntity taskExecutionRequested(
+            long taskId, int recoveryCount, JsonNode payload, Instant createdAt
+    ) {
+        return new OutboxMessageEntity(
+                UUID.randomUUID(), taskId, payload, createdAt,
+                "task:%d:execution:%d".formatted(taskId, recoveryCount)
+        );
     }
 
     public void markPublished(Instant now) {
@@ -73,4 +82,5 @@ public class OutboxMessageEntity {
     public JsonNode payload() { return payload; }
     public Instant createdAt() { return createdAt; }
     public Instant publishedAt() { return publishedAt; }
+    public String deduplicationKey() { return deduplicationKey; }
 }
