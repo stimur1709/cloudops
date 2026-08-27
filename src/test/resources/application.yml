@@ -20,6 +20,15 @@ cloudops:
       exchange: cloudops.tasks.test
       queue: cloudops.task.execute.test
       routing-key: task.execute.test
+      dead-letter-exchange: cloudops.tasks.dlx.test
+      dead-letter-queue: cloudops.task.execute.dlq.test
+      dead-letter-routing-key: task.execute.dead.test
+    retry:
+      enabled: true
+      max-attempts: 3
+      initial-interval: 10ms
+      multiplier: 2.0
+      max-interval: 20ms
     outbox:
       enabled: true
       poll-interval: 100ms

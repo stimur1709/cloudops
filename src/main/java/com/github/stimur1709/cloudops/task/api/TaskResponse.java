@@ -20,13 +20,15 @@ public record TaskResponse(
         Instant completedAt,
         JsonNode result,
         TaskErrorCode errorCode,
-        String errorMessage
+        String errorMessage,
+        int attemptCount,
+        Instant lastAttemptAt
 ) {
     public static TaskResponse from(TaskEntity task) {
         return new TaskResponse(
                 task.id(), task.organizationId(), task.resourceId(), task.type(), task.status(), task.createdBy(),
                 task.createdAt(), task.startedAt(), task.completedAt(), task.result(), task.errorCode(),
-                task.errorMessage()
+                task.errorMessage(), task.attemptCount(), task.lastAttemptAt()
         );
     }
 }

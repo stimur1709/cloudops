@@ -121,7 +121,9 @@ class OutboxRelayIntegrationTest {
     @Test
     void unroutableRabbitMessageIsNotConsideredPublished() throws Exception {
         var unroutableProperties = new TaskMessagingProperties(
-                messagingProperties.exchange(), messagingProperties.queue(), "missing." + UUID.randomUUID()
+                messagingProperties.exchange(), messagingProperties.queue(), "missing." + UUID.randomUUID(),
+                messagingProperties.deadLetterExchange(), messagingProperties.deadLetterQueue(),
+                messagingProperties.deadLetterRoutingKey()
         );
         var rabbitPublisher = new RabbitOutboxMessagePublisher(rabbitTemplate, unroutableProperties);
 

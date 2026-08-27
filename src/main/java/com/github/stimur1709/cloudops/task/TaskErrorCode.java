@@ -7,5 +7,6 @@ public enum TaskErrorCode {
     TLS_ERROR,
     HTTP_CLIENT_ERROR,
     HANDLER_NOT_FOUND,
-    EXECUTION_ERROR
+    EXECUTION_ERROR,
+    RETRY_EXHAUSTED
 }

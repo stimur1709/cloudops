@@ -22,4 +22,19 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
             @Param("pending") TaskStatus pending,
             @Param("running") TaskStatus running
     );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update TaskEntity task
+               set task.attemptCount = task.attemptCount + 1, task.lastAttemptAt = :attemptedAt
+             where task.id = :taskId and task.status = :running
+            """)
+    int recordAttempt(
+            @Param("taskId") long taskId,
+            @Param("attemptedAt") Instant attemptedAt,
+            @Param("running") TaskStatus running
+    );
+
+    @Query("select task.status from TaskEntity task where task.id = :taskId")
+    TaskStatus findStatus(@Param("taskId") long taskId);
 }
