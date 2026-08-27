@@ -62,6 +62,12 @@ public class TaskEntity {
     @Column(name = "error_message", length = 255)
     private String errorMessage;
 
+    @Column(name = "attempt_count", nullable = false)
+    private int attemptCount;
+
+    @Column(name = "last_attempt_at")
+    private Instant lastAttemptAt;
+
     protected TaskEntity() {
     }
 
@@ -117,4 +123,6 @@ public class TaskEntity {
     public JsonNode result() { return result; }
     public TaskErrorCode errorCode() { return errorCode; }
     public String errorMessage() { return errorMessage; }
+    public int attemptCount() { return attemptCount; }
+    public Instant lastAttemptAt() { return lastAttemptAt; }
 }

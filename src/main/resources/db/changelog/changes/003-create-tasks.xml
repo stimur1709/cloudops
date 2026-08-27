@@ -33,6 +33,10 @@
             <column name="result" type="JSONB"/>
             <column name="error_code" type="VARCHAR(30)"/>
             <column name="error_message" type="VARCHAR(255)"/>
+            <column name="attempt_count" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_attempt_at" type="TIMESTAMP WITH TIME ZONE"/>
         </createTable>
 
         <addForeignKeyConstraint baseTableName="tasks" baseColumnNames="organization_id"
@@ -67,6 +71,8 @@
                     OR (status = 'RUNNING' AND started_at IS NOT NULL AND completed_at IS NULL)
                     OR (status IN ('COMPLETED', 'FAILED') AND started_at IS NOT NULL AND completed_at IS NOT NULL)
                 );
+            ALTER TABLE tasks
+                ADD CONSTRAINT tasks_attempt_count_check CHECK (attempt_count &gt;= 0);
         </sql>
 
         <rollback>

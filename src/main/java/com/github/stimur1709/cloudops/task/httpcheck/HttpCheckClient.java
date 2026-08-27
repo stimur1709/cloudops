@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.httpcheck;
 
 import java.io.IOException;
 import java.net.ConnectException;

@@ -43,8 +43,11 @@ $env:JWT_ISSUER = "cloudops-local"
 
 `RABBITMQ_PASSWORD` обязателен. По умолчанию приложение подключается к
 `localhost:5672` пользователем `cloudops`. Имена exchange, queue и routing key можно
-переопределить через `TASK_EXCHANGE`, `TASK_QUEUE` и `TASK_ROUTING_KEY`. RabbitMQ Management UI
-доступен по адресу `http://localhost:15672` и используется только для локальной диагностики.
+переопределить через `TASK_EXCHANGE`, `TASK_QUEUE` и `TASK_ROUTING_KEY`. Для необрабатываемых
+команд создаются durable DLX `cloudops.tasks.dlx` и DLQ `cloudops.task.execute.dlq` с routing key
+`task.execute.dead`; их имена настраиваются через `TASK_DEAD_LETTER_EXCHANGE`,
+`TASK_DEAD_LETTER_QUEUE` и `TASK_DEAD_LETTER_ROUTING_KEY`. RabbitMQ Management UI доступен по
+адресу `http://localhost:15672` и используется только для локальной диагностики.
 
 При старте Liquibase автоматически создаёт схему, а Hibernate только проверяет её.
 
@@ -228,6 +231,35 @@ unroutable message оставляют её неопубликованной дл
 - `TASK_OUTBOX_ENABLED` (`true`) — включает периодический relay;
 - `TASK_OUTBOX_POLL_INTERVAL` (`500ms`) — пауза между циклами;
 - `TASK_OUTBOX_BATCH_SIZE` (`50`) — максимальное число записей за цикл.
+
+### Retry и Dead Letter Queue
+
+Consumer захватывает Task один раз и выполняет retry только вокруг вызова handler-а. Retry
+применяется к явно помеченным временным внутренним ошибкам CloudOps; обычный отрицательный
+результат `HTTP_CHECK` (`TIMEOUT`, DNS, connection, TLS или контролируемая ошибка HTTP-клиента)
+сразу сохраняется как `FAILED` и подтверждается без retry и DLQ. Несовпадение ожидаемого HTTP
+status остаётся корректно завершённой проверкой `COMPLETED` с отрицательным значением
+`matchedExpectedStatus`.
+
+Параметры exponential backoff:
+
+- `TASK_RETRY_ENABLED` (`true`);
+- `TASK_RETRY_MAX_ATTEMPTS` (`3`) — общее число вызовов handler-а, включая первоначальный;
+- `TASK_RETRY_INITIAL_INTERVAL` (`250ms`);
+- `TASK_RETRY_MULTIPLIER` (`2.0`);
+- `TASK_RETRY_MAX_INTERVAL` (`5s`).
+
+Перед каждым вызовом handler-а Task атомарно увеличивает `attemptCount` и обновляет
+`lastAttemptAt`. После исчерпания попыток Task получает `FAILED / RETRY_EXHAUSTED` с безопасным
+общим сообщением, а исходная RabbitMQ-команда отклоняется без requeue и попадает в DLQ.
+Non-retryable poison messages также сразу направляются в DLQ; terminal duplicate подтверждается
+без повторного вызова handler-а.
+
+Посмотреть сообщения можно в RabbitMQ Management UI: откройте `Queues and Streams`, затем очередь
+`cloudops.task.execute.dlq` (или имя из `TASK_DEAD_LETTER_QUEUE`) и используйте `Get messages`.
+Сообщение сохраняет исходный payload, outbox UUID в `message_id` и стандартный заголовок
+`x-death`. Автоматического consumer-а и replay для DLQ пока нет: сообщения предназначены для
+диагностики и остаются в очереди до ручного удаления.
 
 ## Тесты
 

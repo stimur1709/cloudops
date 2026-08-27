@@ -106,6 +106,20 @@ public class TaskPersistenceService {
         return task;
     }
 
+    @Transactional
+    public int recordAttempt(long taskId) {
+        int updated = taskRepository.recordAttempt(taskId, clock.instant(), TaskStatus.RUNNING);
+        if (updated != 1) {
+            throw new IllegalStateException("Cannot record an attempt for a task that is not running");
+        }
+        return taskRepository.findById(taskId).orElseThrow(NotFoundException::new).attemptCount();
+    }
+
+    @Transactional(readOnly = true)
+    public TaskStatus status(long taskId) {
+        return taskRepository.findStatus(taskId);
+    }
+
     private void requireSupported(TaskType taskType, ResourceType resourceType) {
         if (taskType != TaskType.HTTP_CHECK || resourceType != ResourceType.SERVICE) {
             throw new ConflictException(

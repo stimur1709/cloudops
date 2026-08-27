@@ -1,7 +1,10 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.httpcheck;
 
 import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
 import com.github.stimur1709.cloudops.task.TaskType;
+import com.github.stimur1709.cloudops.task.execution.TaskExecutionContext;
+import com.github.stimur1709.cloudops.task.execution.TaskExecutionResult;
+import com.github.stimur1709.cloudops.task.execution.TaskHandler;
 import org.springframework.stereotype.Component;
 
 @Component

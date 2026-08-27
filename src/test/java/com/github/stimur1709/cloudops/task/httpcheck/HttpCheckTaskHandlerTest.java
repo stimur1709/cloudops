@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.httpcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
 import com.github.stimur1709.cloudops.task.TaskType;
+import com.github.stimur1709.cloudops.task.execution.TaskExecutionContext;
+import com.github.stimur1709.cloudops.task.execution.TaskExecutionResult;
 import org.junit.jupiter.api.Test;
 
 class HttpCheckTaskHandlerTest {

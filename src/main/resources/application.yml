@@ -34,6 +34,15 @@ cloudops:
       exchange: ${TASK_EXCHANGE:cloudops.tasks}
       queue: ${TASK_QUEUE:cloudops.task.execute}
       routing-key: ${TASK_ROUTING_KEY:task.execute}
+      dead-letter-exchange: ${TASK_DEAD_LETTER_EXCHANGE:cloudops.tasks.dlx}
+      dead-letter-queue: ${TASK_DEAD_LETTER_QUEUE:cloudops.task.execute.dlq}
+      dead-letter-routing-key: ${TASK_DEAD_LETTER_ROUTING_KEY:task.execute.dead}
+    retry:
+      enabled: ${TASK_RETRY_ENABLED:true}
+      max-attempts: ${TASK_RETRY_MAX_ATTEMPTS:3}
+      initial-interval: ${TASK_RETRY_INITIAL_INTERVAL:250ms}
+      multiplier: ${TASK_RETRY_MULTIPLIER:2.0}
+      max-interval: ${TASK_RETRY_MAX_INTERVAL:5s}
     outbox:
       enabled: ${TASK_OUTBOX_ENABLED:true}
       poll-interval: ${TASK_OUTBOX_POLL_INTERVAL:500ms}

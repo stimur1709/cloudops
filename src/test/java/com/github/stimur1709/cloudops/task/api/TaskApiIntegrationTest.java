@@ -123,6 +123,8 @@ class TaskApiIntegrationTest {
                 .andExpect(jsonPath("$.type").value("HTTP_CHECK"))
                 .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.createdBy").value(TestAuthentication.USER_ID))
+                .andExpect(jsonPath("$.attemptCount").value(0))
+                .andExpect(jsonPath("$.lastAttemptAt").doesNotExist())
                 .andExpect(jsonPath("$.startedAt").doesNotExist())
                 .andExpect(jsonPath("$.completedAt").doesNotExist())
                 .andReturn().getResponse().getContentAsString();
@@ -134,6 +136,8 @@ class TaskApiIntegrationTest {
                 .andExpect(jsonPath("$.result.expectedStatus").value(200))
                 .andExpect(jsonPath("$.result.responseTimeMs", greaterThanOrEqualTo(50)))
                 .andExpect(jsonPath("$.result.matchedExpectedStatus").value(true))
+                .andExpect(jsonPath("$.attemptCount").value(1))
+                .andExpect(jsonPath("$.lastAttemptAt").isNotEmpty())
                 .andExpect(jsonPath("$.errorCode").doesNotExist());
         assertThat(jdbcTemplate.queryForObject("""
                 SELECT published_at IS NOT NULL FROM outbox_messages WHERE aggregate_id = ?
