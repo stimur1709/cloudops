@@ -23,10 +23,12 @@ import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.UUID;
 
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
-import com.github.stimur1709.cloudops.task.application.TaskCommandPublisher;
+import com.github.stimur1709.cloudops.task.messaging.TaskExecutionCommand;
+import com.github.stimur1709.cloudops.task.outbox.TaskExecutionCommandPublisher;
 import com.jayway.jsonpath.JsonPath;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -65,7 +67,7 @@ class TaskApiIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
-    private TaskCommandPublisher commandPublisher;
+    private TaskExecutionCommandPublisher commandPublisher;
 
     private long organizationId;
 
@@ -99,7 +101,7 @@ class TaskApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         insertUser(TestAuthentication.USER_ID, "current@example.com");
         insertUser(OTHER_USER_ID, "other@example.com");
@@ -133,6 +135,9 @@ class TaskApiIntegrationTest {
                 .andExpect(jsonPath("$.result.responseTimeMs", greaterThanOrEqualTo(50)))
                 .andExpect(jsonPath("$.result.matchedExpectedStatus").value(true))
                 .andExpect(jsonPath("$.errorCode").doesNotExist());
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT published_at IS NOT NULL FROM outbox_messages WHERE aggregate_id = ?
+                """, Boolean.class, taskId)).isTrue();
     }
 
     @Test
@@ -226,7 +231,7 @@ class TaskApiIntegrationTest {
         awaitTask(taskId, "COMPLETED");
         assertThat(countedRequests).hasValue(1);
 
-        commandPublisher.publish(taskId);
+        commandPublisher.publish(UUID.randomUUID(), new TaskExecutionCommand(taskId));
 
         await().during(Duration.ofMillis(500)).atMost(Duration.ofSeconds(2))
                 .untilAsserted(() -> assertThat(countedRequests).hasValue(1));
@@ -234,7 +239,7 @@ class TaskApiIntegrationTest {
 
     @Test
     void unknownTaskMessageDoesNotStopListenerContainer() throws Exception {
-        commandPublisher.publish(Long.MAX_VALUE);
+        commandPublisher.publish(UUID.randomUUID(), new TaskExecutionCommand(Long.MAX_VALUE));
         long resourceId = insertResource(
                 organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/ok", 200, 1000
         );

@@ -6,6 +6,10 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
   rabbitmq:
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
     listener:
       simple:
         default-requeue-rejected: false
@@ -16,6 +20,10 @@ cloudops:
       exchange: cloudops.tasks.test
       queue: cloudops.task.execute.test
       routing-key: task.execute.test
+    outbox:
+      enabled: true
+      poll-interval: 100ms
+      batch-size: 20
 
   security:
     jwt:

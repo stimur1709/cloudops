@@ -20,6 +20,10 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:cloudops}
     password: ${RABBITMQ_PASSWORD}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
     listener:
       simple:
         default-requeue-rejected: false
@@ -30,6 +34,10 @@ cloudops:
       exchange: ${TASK_EXCHANGE:cloudops.tasks}
       queue: ${TASK_QUEUE:cloudops.task.execute}
       routing-key: ${TASK_ROUTING_KEY:task.execute}
+    outbox:
+      enabled: ${TASK_OUTBOX_ENABLED:true}
+      poll-interval: ${TASK_OUTBOX_POLL_INTERVAL:500ms}
+      batch-size: ${TASK_OUTBOX_BATCH_SIZE:50}
   security:
     jwt:
       secret: ${JWT_SECRET}

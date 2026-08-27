@@ -60,7 +60,7 @@ class AuthApiIntegrationTest {
                 .apply(springSecurity())
                 .build();
         jdbcTemplate.execute("""
-                TRUNCATE TABLE tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
     }
 

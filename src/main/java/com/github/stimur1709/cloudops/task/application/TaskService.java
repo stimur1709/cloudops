@@ -18,29 +18,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskService {
 
     private final TaskPersistenceService persistenceService;
-    private final TaskCommandPublisher commandPublisher;
     private final TaskJpaRepository taskRepository;
     private final OrganizationAuthorization authorization;
     private final JpaSearchService searchService;
 
     public TaskService(
             TaskPersistenceService persistenceService,
-            TaskCommandPublisher commandPublisher,
             TaskJpaRepository taskRepository,
             OrganizationAuthorization authorization,
             JpaSearchService searchService
     ) {
         this.persistenceService = persistenceService;
-        this.commandPublisher = commandPublisher;
         this.taskRepository = taskRepository;
         this.authorization = authorization;
         this.searchService = searchService;
     }
 
     public TaskEntity create(long resourceId, TaskType type, long currentUserId) {
-        TaskEntity task = persistenceService.create(resourceId, type, currentUserId);
-        commandPublisher.publish(task.id());
-        return task;
+        return persistenceService.create(resourceId, type, currentUserId);
     }
 
     @Transactional(readOnly = true)
