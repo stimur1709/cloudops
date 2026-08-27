@@ -11,7 +11,6 @@ import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.monitoring.StorageMode;
-import com.github.stimur1709.cloudops.monitoring.config.MonitoringProperties;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorEntity;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultEntity;
@@ -33,7 +32,6 @@ public class MonitorService {
     private final MonitoringResultJpaRepository resultRepository;
     private final ResourceJpaRepository resourceRepository;
     private final OrganizationAuthorization authorization;
-    private final MonitoringProperties properties;
     private final JpaSearchService searchService;
     private final Clock clock;
 
@@ -42,7 +40,6 @@ public class MonitorService {
             MonitoringResultJpaRepository resultRepository,
             ResourceJpaRepository resourceRepository,
             OrganizationAuthorization authorization,
-            MonitoringProperties properties,
             JpaSearchService searchService,
             Clock clock
     ) {
@@ -50,7 +47,6 @@ public class MonitorService {
         this.resultRepository = resultRepository;
         this.resourceRepository = resourceRepository;
         this.authorization = authorization;
-        this.properties = properties;
         this.searchService = searchService;
         this.clock = clock;
     }
@@ -68,7 +64,6 @@ public class MonitorService {
         ResourceEntity resource = resourceRepository.findByIdForUpdate(resourceId)
                 .orElseThrow(NotFoundException::new);
         authorization.requireManager(resource.organizationId(), currentUserId);
-        validateSettings(intervalSeconds, storageMode, retentionDays);
         requireSupported(resource, type);
         if (resource.status() != ResourceStatus.ACTIVE) {
             throw new ConflictException("RESOURCE_INACTIVE", "Monitoring requires an active resource");
@@ -105,7 +100,6 @@ public class MonitorService {
         MonitorEntity monitor = monitorRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
         ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         authorization.requireManager(resource.organizationId(), currentUserId);
-        validateSettings(intervalSeconds, storageMode, retentionDays);
         if (monitor.storageMode() == StorageMode.HISTORY && storageMode == StorageMode.LATEST_ONLY) {
             resultRepository.deleteAllByMonitorId(id);
         }
@@ -147,25 +141,6 @@ public class MonitorService {
             throw new ConflictException(
                     "MONITOR_TYPE_NOT_SUPPORTED",
                     "Probe type %s is not supported for resource type %s".formatted(type, resource.type())
-            );
-        }
-    }
-
-    private void validateSettings(int intervalSeconds, StorageMode storageMode, Integer retentionDays) {
-        if (intervalSeconds < properties.minimumIntervalSeconds()) {
-            throw new InvalidMonitorConfigurationException(
-                    "intervalSeconds",
-                    "Interval must be at least %d seconds".formatted(properties.minimumIntervalSeconds())
-            );
-        }
-        if (storageMode == StorageMode.HISTORY && (retentionDays == null || retentionDays < 1 || retentionDays > 365)) {
-            throw new InvalidMonitorConfigurationException(
-                    "retentionDays", "Retention days must be between 1 and 365 for HISTORY"
-            );
-        }
-        if (storageMode == StorageMode.LATEST_ONLY && retentionDays != null) {
-            throw new InvalidMonitorConfigurationException(
-                    "retentionDays", "Retention days must be null for LATEST_ONLY"
             );
         }
     }

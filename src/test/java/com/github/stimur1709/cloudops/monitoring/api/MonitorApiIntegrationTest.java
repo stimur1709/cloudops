@@ -151,6 +151,22 @@ class MonitorApiIntegrationTest {
     }
 
     @Test
+    void rejectsInvalidSettingsOnUpdate() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30")
+                .andReturn().getResponse().getContentAsString());
+
+        mockMvc.perform(put("/api/monitors/{id}", monitorId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"intervalSeconds":29,"enabled":true,"storageMode":"HISTORY","retentionDays":null}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("intervalSeconds"))
+                .andExpect(jsonPath("$.errors[1].field").value("retentionDays"));
+    }
+
+    @Test
     void schedulerStoresCompletedSuccessAndHistoryWithoutTaskOrOutbox() throws Exception {
         long resourceId = insertService("ACTIVE", baseUrl + "/database-probe", 200, 1000);
         long monitorId = monitorId(create(resourceId, "HISTORY", 30, "30")
