@@ -169,7 +169,10 @@ class MonitorApiIntegrationTest {
 
         mockMvc.perform(post("/api/monitors/{id}/results/search", monitorId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"start\":0,\"size\":20,\"sort\":[{\"field\":\"checkedAt\",\"order\":\"DESC\"}]}"))
+                        .content("""
+                                {"start":0,"size":20,"sort":[{"field":"checkedAt","order":"DESC"}],
+                                "getTotal":false}
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].result.success").value(true));
     }

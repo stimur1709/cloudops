@@ -37,7 +37,7 @@ public class MonitorClaimService {
         for (long id : ids) {
             jdbcTemplate.update("""
                     UPDATE monitors
-                    SET next_run_at = ? + interval_seconds * INTERVAL '1 second'
+                    SET next_run_at = CAST(? AS TIMESTAMPTZ) + interval_seconds * INTERVAL '1 second'
                     WHERE id = ?
                     """, Timestamp.from(now), id);
         }

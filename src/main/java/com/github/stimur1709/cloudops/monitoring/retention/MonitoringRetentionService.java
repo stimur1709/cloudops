@@ -29,7 +29,7 @@ public class MonitoringRetentionService {
                     FROM monitoring_results result
                     JOIN monitors monitor ON monitor.id = result.monitor_id
                     WHERE monitor.storage_mode = 'HISTORY'
-                      AND result.checked_at < ? - monitor.retention_days * INTERVAL '1 day'
+                      AND result.checked_at < CAST(? AS TIMESTAMPTZ) - monitor.retention_days * INTERVAL '1 day'
                     ORDER BY result.checked_at, result.id
                     LIMIT ?
                     FOR UPDATE OF result SKIP LOCKED
