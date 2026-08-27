@@ -29,6 +29,13 @@ spring:
         default-requeue-rejected: false
 
 cloudops:
+  monitoring:
+    scheduler-enabled: ${MONITORING_SCHEDULER_ENABLED:true}
+    poll-interval: ${MONITORING_POLL_INTERVAL:5s}
+    batch-size: ${MONITORING_BATCH_SIZE:50}
+    minimum-interval-seconds: ${MONITORING_MINIMUM_INTERVAL_SECONDS:30}
+    retention-poll-interval: ${MONITORING_RETENTION_POLL_INTERVAL:1h}
+    retention-batch-size: ${MONITORING_RETENTION_BATCH_SIZE:500}
   task:
     messaging:
       exchange: ${TASK_EXCHANGE:cloudops.tasks}

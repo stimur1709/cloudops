@@ -11,6 +11,7 @@ import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
+import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
@@ -41,6 +42,7 @@ public class TaskPersistenceService {
     private final OutboxMessageJpaRepository outboxRepository;
     private final ObjectMapper objectMapper;
     private final TaskLeaseProperties leaseProperties;
+    private final ProbeHandlerRegistry probeHandlerRegistry;
 
     public TaskPersistenceService(
             TaskJpaRepository taskRepository,
@@ -50,7 +52,8 @@ public class TaskPersistenceService {
             Clock clock,
             OutboxMessageJpaRepository outboxRepository,
             ObjectMapper objectMapper,
-            TaskLeaseProperties leaseProperties
+            TaskLeaseProperties leaseProperties,
+            ProbeHandlerRegistry probeHandlerRegistry
     ) {
         this.taskRepository = taskRepository;
         this.resourceRepository = resourceRepository;
@@ -60,6 +63,7 @@ public class TaskPersistenceService {
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
         this.leaseProperties = leaseProperties;
+        this.probeHandlerRegistry = probeHandlerRegistry;
     }
 
     @Transactional
@@ -67,6 +71,7 @@ public class TaskPersistenceService {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
         requireSupported(type, resource.type());
+        probeHandlerRegistry.get(type.probeType()).validate(configMapper.fromJson(resource.type(), resource.config()));
         if (resource.status() != ResourceStatus.ACTIVE) {
             throw new ConflictException("RESOURCE_INACTIVE", "HTTP check requires an active resource");
         }
@@ -139,7 +144,7 @@ public class TaskPersistenceService {
     }
 
     private void requireSupported(TaskType taskType, ResourceType resourceType) {
-        if (taskType != TaskType.HTTP_CHECK || resourceType != ResourceType.SERVICE) {
+        if (!taskType.probeType().supports(resourceType)) {
             throw new ConflictException(
                     "TASK_TYPE_NOT_SUPPORTED",
                     "Task type %s is not supported for resource type %s".formatted(taskType, resourceType)

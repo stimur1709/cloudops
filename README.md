@@ -178,7 +178,7 @@ curl -i -X DELETE http://localhost:8080/api/resources/1 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-Допустимые типы: `NETWORK_DEVICE`, `SERVER`, `DATABASE`, `OTHER`.
+Допустимые типы: `NETWORK_DEVICE`, `SERVER`, `DATABASE`, `SERVICE`, `OTHER`.
 Допустимые статусы: `ACTIVE`, `INACTIVE`.
 
 ## API задач
@@ -289,6 +289,37 @@ Non-retryable poison messages также сразу направляются в 
 Сообщение сохраняет исходный payload, outbox UUID в `message_id` и стандартный заголовок
 `x-death`. Автоматического consumer-а и replay для DLQ пока нет: сообщения предназначены для
 диагностики и остаются в очереди до ручного удаления.
+
+## HTTP monitoring
+
+Для активного ресурса `SERVICE` можно создать один периодический monitor типа `HTTP_CHECK`:
+
+```shell
+curl -i -X POST http://localhost:8080/api/resources/1/monitors \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"HTTP_CHECK","intervalSeconds":60,"enabled":true,"storageMode":"HISTORY","retentionDays":30}'
+```
+
+Настройки и последний результат возвращает `GET /api/resources/{resourceId}/monitors`.
+Monitor изменяется через `PUT /api/monitors/{id}` и удаляется через
+`DELETE /api/monitors/{id}`. История monitor-а в режиме `HISTORY` доступна через
+`POST /api/monitors/{id}/results/search`; переход на `LATEST_ONLY` удаляет накопленную историю.
+
+Monitoring выполняет общий с manual Task HTTP probe напрямую, без создания Task, outbox-записи
+или RabbitMQ-команды. Несовпадение HTTP status сохраняется как завершённый probe с
+`success=false`; timeout, DNS, connection и TLS ошибки сохраняются как failed probe result.
+Планировщик заранее сдвигает `nextRunAt` и координирует экземпляры приложения через PostgreSQL
+`FOR UPDATE SKIP LOCKED`. Пропущенные во время downtime интервалы не воспроизводятся.
+
+Параметры monitoring:
+
+- `MONITORING_SCHEDULER_ENABLED` (`true`);
+- `MONITORING_POLL_INTERVAL` (`5s`);
+- `MONITORING_BATCH_SIZE` (`50`);
+- `MONITORING_MINIMUM_INTERVAL_SECONDS` (`30`);
+- `MONITORING_RETENTION_POLL_INTERVAL` (`1h`);
+- `MONITORING_RETENTION_BATCH_SIZE` (`500`).
 
 ## Тесты
 

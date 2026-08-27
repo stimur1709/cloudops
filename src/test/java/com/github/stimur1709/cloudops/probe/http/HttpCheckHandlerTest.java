@@ -1,19 +1,17 @@
-package com.github.stimur1709.cloudops.task.httpcheck;
+package com.github.stimur1709.cloudops.probe.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.UUID;
-
+import com.github.stimur1709.cloudops.probe.ProbeType;
+import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionContext;
+import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
 import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
-import com.github.stimur1709.cloudops.task.TaskType;
-import com.github.stimur1709.cloudops.task.execution.TaskExecutionContext;
-import com.github.stimur1709.cloudops.task.execution.TaskExecutionResult;
 import org.junit.jupiter.api.Test;
 
-class HttpCheckTaskHandlerTest {
+class HttpCheckHandlerTest {
 
     @Test
     void executesHttpCheckAndReturnsTypedResult() {
@@ -21,14 +19,14 @@ class HttpCheckTaskHandlerTest {
         ServiceResourceConfig config = new ServiceResourceConfig("https://example.com", 204, 1000);
         HttpCheckResult checkResult = new HttpCheckResult("https://example.com", 204, 204, 10, true);
         when(client.execute(config)).thenReturn(HttpCheckOutcome.completed(checkResult));
-        HttpCheckTaskHandler handler = new HttpCheckTaskHandler(client);
+        HttpCheckHandler handler = new HttpCheckHandler(client);
 
-        TaskExecutionResult result = handler.execute(
-                new TaskExecutionContext(1, 2, TaskType.HTTP_CHECK, config, UUID.randomUUID())
+        ProbeExecutionResult result = handler.execute(
+                new ProbeExecutionContext(2, ProbeType.HTTP_CHECK, config)
         );
 
-        assertThat(handler.supports()).isEqualTo(TaskType.HTTP_CHECK);
-        assertThat(result).isEqualTo(TaskExecutionResult.completed(checkResult));
+        assertThat(handler.supports()).isEqualTo(ProbeType.HTTP_CHECK);
+        assertThat(result).isEqualTo(ProbeExecutionResult.completed(true, checkResult));
         verify(client).execute(config);
     }
 }

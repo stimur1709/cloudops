@@ -10,6 +10,7 @@ import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.ForbiddenException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
+import com.github.stimur1709.cloudops.monitoring.application.InvalidMonitorConfigurationException;
 import com.github.stimur1709.cloudops.resource.ResourceType;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.UnknownResourceConfigFieldException;
@@ -223,6 +224,20 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "INVALID_REQUEST",
                 "Search request is invalid",
+                request,
+                List.of(new ApiFieldError(exception.field(), exception.getMessage()))
+        );
+    }
+
+    @ExceptionHandler(InvalidMonitorConfigurationException.class)
+    ResponseEntity<ApiError> handleInvalidMonitorConfiguration(
+            InvalidMonitorConfigurationException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Request validation failed",
                 request,
                 List.of(new ApiFieldError(exception.field(), exception.getMessage()))
         );

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="005-create-monitoring" author="stimur1709">
+        <createTable tableName="monitors">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="monitors_pkey"/>
+            </column>
+            <column name="resource_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="type" type="VARCHAR(30)"><constraints nullable="false"/></column>
+            <column name="enabled" type="BOOLEAN"><constraints nullable="false"/></column>
+            <column name="interval_seconds" type="INTEGER"><constraints nullable="false"/></column>
+            <column name="next_run_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="storage_mode" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="retention_days" type="INTEGER"/>
+            <column name="last_checked_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="last_result" type="JSONB"/>
+        </createTable>
+
+        <createTable tableName="monitoring_results">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="monitoring_results_pkey"/>
+            </column>
+            <column name="monitor_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="checked_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="result" type="JSONB"><constraints nullable="false"/></column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="monitors" baseColumnNames="resource_id"
+                                 constraintName="monitors_resource_fk" referencedTableName="resources"
+                                 referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="monitoring_results" baseColumnNames="monitor_id"
+                                 constraintName="monitoring_results_monitor_fk" referencedTableName="monitors"
+                                 referencedColumnNames="id" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="monitors" columnNames="resource_id,type"
+                             constraintName="monitors_resource_type_key"/>
+        <createIndex tableName="monitoring_results" indexName="monitoring_results_monitor_checked_idx">
+            <column name="monitor_id"/>
+            <column name="checked_at" descending="true"/>
+        </createIndex>
+
+        <sql dbms="postgresql">
+            ALTER TABLE monitors ADD CONSTRAINT monitors_type_check CHECK (type IN ('HTTP_CHECK'));
+            ALTER TABLE monitors ADD CONSTRAINT monitors_storage_mode_check
+                CHECK (storage_mode IN ('LATEST_ONLY', 'HISTORY'));
+            ALTER TABLE monitors ADD CONSTRAINT monitors_interval_check CHECK (interval_seconds &gt; 0);
+            ALTER TABLE monitors ADD CONSTRAINT monitors_retention_check CHECK (
+                (storage_mode = 'LATEST_ONLY' AND retention_days IS NULL)
+                OR (storage_mode = 'HISTORY' AND retention_days BETWEEN 1 AND 365)
+            );
+            CREATE INDEX monitors_due_idx ON monitors (next_run_at, id) WHERE enabled = true;
+        </sql>
+
+        <rollback>
+            <dropTable tableName="monitoring_results"/>
+            <dropTable tableName="monitors"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
