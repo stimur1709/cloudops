@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.config;
 
 import java.time.Duration;
 
@@ -27,7 +27,7 @@ public record TaskRetryProperties(
                 && maxInterval.compareTo(initialInterval) >= 0;
     }
 
-    Duration intervalAfterFailure(int failureNumber) {
+    public Duration intervalAfterFailure(int failureNumber) {
         double factor = Math.pow(multiplier, Math.max(0, failureNumber - 1));
         long millis = Math.min(maxInterval.toMillis(), (long) (initialInterval.toMillis() * factor));
         return Duration.ofMillis(millis);

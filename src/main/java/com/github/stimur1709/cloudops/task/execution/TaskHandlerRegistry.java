@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.execution;
 
 import java.util.EnumMap;
 import java.util.List;

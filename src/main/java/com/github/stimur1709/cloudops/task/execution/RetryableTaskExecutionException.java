@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.execution;
 
 /**
  * Marks a temporary internal handler failure that can succeed when invoked again.

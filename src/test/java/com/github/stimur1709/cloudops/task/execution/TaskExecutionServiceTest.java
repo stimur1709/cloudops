@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.execution;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
@@ -14,6 +14,9 @@ import com.github.stimur1709.cloudops.resource.config.OtherResourceConfig;
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.TaskType;
+import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
+import com.github.stimur1709.cloudops.task.config.TaskRetryConfiguration;
+import com.github.stimur1709.cloudops.task.config.TaskRetryProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.retry.support.RetryTemplate;

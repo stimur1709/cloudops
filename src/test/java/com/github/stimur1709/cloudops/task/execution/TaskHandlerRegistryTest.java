@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.execution;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;

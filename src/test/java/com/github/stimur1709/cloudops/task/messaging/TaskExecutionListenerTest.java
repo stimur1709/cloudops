@@ -6,8 +6,8 @@ import static org.mockito.Mockito.when;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.github.stimur1709.cloudops.task.application.TaskExecutionOutcome;
-import com.github.stimur1709.cloudops.task.application.TaskExecutionService;
+import com.github.stimur1709.cloudops.task.execution.TaskExecutionOutcome;
+import com.github.stimur1709.cloudops.task.execution.TaskExecutionService;
 import org.junit.jupiter.api.Test;
 
 class TaskExecutionListenerTest {

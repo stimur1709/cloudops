@@ -1,7 +1,9 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.execution;
 
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
+import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
+import com.github.stimur1709.cloudops.task.config.TaskRetryProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.retry.support.RetryTemplate;

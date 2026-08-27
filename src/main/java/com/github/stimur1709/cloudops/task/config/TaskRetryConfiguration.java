@@ -1,5 +1,6 @@
-package com.github.stimur1709.cloudops.task.application;
+package com.github.stimur1709.cloudops.task.config;
 
+import com.github.stimur1709.cloudops.task.execution.RetryableTaskExecutionException;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,7 +11,7 @@ import org.springframework.retry.support.RetryTemplate;
 public class TaskRetryConfiguration {
 
     @Bean
-    RetryTemplate taskRetryTemplate(TaskRetryProperties properties) {
+    public RetryTemplate taskRetryTemplate(TaskRetryProperties properties) {
         int maxAttempts = properties.enabled() ? properties.maxAttempts() : 1;
         return RetryTemplate.builder()
                 .maxAttempts(maxAttempts)
