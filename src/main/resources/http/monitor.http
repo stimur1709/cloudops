@@ -1,0 +1,38 @@
+### Create resources task
+POST http://localhost:8080//api/resources/1/monitors
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "HTTP_CHECK",
+  "intervalSeconds": 30,
+  "enabled": true,
+  "storageMode": "HISTORY",
+  "retentionDays": 1
+}
+
+> {%
+    client.global.set("taskId", response.body.id);
+%}
+
+### Get current task state/result
+POST http://localhost:8080/api/monitors/1/results/search
+Authorization: Bearer {{accessToken}}
+
+{
+  "start": 0,
+  "size": 20,
+  "filter": {
+    "operator": "AND",
+    "conditions": [
+      {
+        "field": "name",
+        "operation": "EQ",
+        "value": "router-01"
+      }
+    ]
+  },
+  "sort": [
+  ],
+  "getTotal": true
+}
