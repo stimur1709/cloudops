@@ -16,31 +16,44 @@ import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.TaskType;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
 import com.github.stimur1709.cloudops.task.persistence.TaskJpaRepository;
+import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageEntity;
+import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageJpaRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class TaskPersistenceService {
+
+    private static final Logger log = LoggerFactory.getLogger(TaskPersistenceService.class);
 
     private final TaskJpaRepository taskRepository;
     private final ResourceJpaRepository resourceRepository;
     private final OrganizationAuthorization authorization;
     private final ResourceConfigMapper configMapper;
     private final Clock clock;
+    private final OutboxMessageJpaRepository outboxRepository;
+    private final ObjectMapper objectMapper;
 
     public TaskPersistenceService(
             TaskJpaRepository taskRepository,
             ResourceJpaRepository resourceRepository,
             OrganizationAuthorization authorization,
             ResourceConfigMapper configMapper,
-            Clock clock
+            Clock clock,
+            OutboxMessageJpaRepository outboxRepository,
+            ObjectMapper objectMapper
     ) {
         this.taskRepository = taskRepository;
         this.resourceRepository = resourceRepository;
         this.authorization = authorization;
         this.configMapper = configMapper;
         this.clock = clock;
+        this.outboxRepository = outboxRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -55,6 +68,11 @@ public class TaskPersistenceService {
                 resource.organizationId(), resource.id(), type, currentUserId, clock.instant()
         );
         taskRepository.saveAndFlush(task);
+        var payload = objectMapper.createObjectNode().put("taskId", task.id());
+        OutboxMessageEntity message = OutboxMessageEntity.taskExecutionRequested(task.id(), payload, clock.instant());
+        outboxRepository.saveAndFlush(message);
+        log.info("Created outbox message: messageId={}, messageType={}, aggregateId={}",
+                message.id(), message.messageType(), message.aggregateId());
         return task;
     }
 

@@ -189,9 +189,12 @@ curl -i -X POST http://localhost:8080/api/resources/1/tasks \
   -d '{"type":"HTTP_CHECK"}'
 ```
 
-API сохраняет Task, публикует команду в RabbitMQ и сразу возвращает `202 Accepted`,
-`Location: /api/tasks/{id}` и Task в статусе `PENDING`. HTTP-проверка выполняется асинхронно;
-итоговый статус и результат нужно читать отдельно:
+API атомарно сохраняет Task и команду в PostgreSQL Transactional Outbox, после чего сразу
+возвращает `202 Accepted`, `Location: /api/tasks/{id}` и Task в статусе `PENDING`.
+Доступность RabbitMQ не влияет на создание Task: пока брокер недоступен, Task остаётся
+`PENDING`, а relay периодически пытается опубликовать сохранённую команду. После
+восстановления RabbitMQ HTTP-проверка выполняется асинхронно; итоговый статус и результат
+нужно читать отдельно:
 
 ```shell
 curl -i http://localhost:8080/api/tasks/1 \
@@ -200,6 +203,31 @@ curl -i http://localhost:8080/api/tasks/1 \
 
 Возможные переходы статуса: `PENDING -> RUNNING -> COMPLETED` или
 `PENDING -> RUNNING -> FAILED`. Поиск задач остаётся доступен через `POST /api/tasks/search`.
+
+### Transactional Outbox
+
+Relay читает неопубликованные записи ограниченными batch-ами в порядке `created_at, id`.
+Каждая запись захватывается отдельной короткой транзакцией через PostgreSQL
+`FOR UPDATE SKIP LOCKED`, поэтому несколько экземпляров приложения не публикуют одну строку
+одновременно, а ошибка одной записи не блокирует остальные записи batch-а. Запись получает
+`published_at` только после положительного RabbitMQ publisher confirm; exception, nack и
+unroutable message оставляют её неопубликованной для следующего цикла.
+
+Доставка имеет семантику **at-least-once**. Возможны следующие crash-сценарии:
+
+- до publish транзакция освобождает блокировку, и relay повторяет попытку;
+- после publish, но до сохранения `published_at`, команда может быть доставлена повторно;
+- после commit `published_at` relay больше не выбирает запись.
+
+Повторная доставка безопасна для текущего consumer-а: атомарный переход Task из `PENDING`
+в `RUNNING` не позволяет повторно запустить handler для `RUNNING`, `COMPLETED` или `FAILED`.
+Опубликованные outbox-записи автоматически не удаляются.
+
+Параметры relay:
+
+- `TASK_OUTBOX_ENABLED` (`true`) — включает периодический relay;
+- `TASK_OUTBOX_POLL_INTERVAL` (`500ms`) — пауза между циклами;
+- `TASK_OUTBOX_BATCH_SIZE` (`50`) — максимальное число записей за цикл.
 
 ## Тесты
 
