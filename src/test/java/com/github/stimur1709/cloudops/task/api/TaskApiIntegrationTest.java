@@ -275,7 +275,8 @@ class TaskApiIntegrationTest {
 
         run(resourceId)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("RESOURCE_INACTIVE"));
+                .andExpect(jsonPath("$.code").value("RESOURCE_INACTIVE"))
+                .andExpect(jsonPath("$.message").value("Task requires an active resource"));
     }
 
     @Test
