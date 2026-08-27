@@ -13,44 +13,34 @@ import com.github.stimur1709.cloudops.task.persistence.TaskJpaRepository;
 import com.github.stimur1709.cloudops.task.persistence.TaskSearchDefinition;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class TaskService {
 
     private final TaskPersistenceService persistenceService;
-    private final HttpCheckClient httpCheckClient;
+    private final TaskCommandPublisher commandPublisher;
     private final TaskJpaRepository taskRepository;
     private final OrganizationAuthorization authorization;
     private final JpaSearchService searchService;
-    private final ObjectMapper objectMapper;
 
     public TaskService(
             TaskPersistenceService persistenceService,
-            HttpCheckClient httpCheckClient,
+            TaskCommandPublisher commandPublisher,
             TaskJpaRepository taskRepository,
             OrganizationAuthorization authorization,
-            JpaSearchService searchService,
-            ObjectMapper objectMapper
+            JpaSearchService searchService
     ) {
         this.persistenceService = persistenceService;
-        this.httpCheckClient = httpCheckClient;
+        this.commandPublisher = commandPublisher;
         this.taskRepository = taskRepository;
         this.authorization = authorization;
         this.searchService = searchService;
-        this.objectMapper = objectMapper;
     }
 
-    public TaskEntity run(long resourceId, TaskType type, long currentUserId) {
-        TaskPersistenceService.PreparedHttpCheck prepared = persistenceService.create(resourceId, type, currentUserId);
-        persistenceService.start(prepared.taskId());
-        HttpCheckOutcome outcome = httpCheckClient.execute(prepared.config());
-        if (outcome.successfulCall()) {
-            JsonNode result = objectMapper.valueToTree(outcome.result());
-            return persistenceService.complete(prepared.taskId(), result);
-        }
-        return persistenceService.fail(prepared.taskId(), outcome.errorCode(), outcome.errorMessage());
+    public TaskEntity create(long resourceId, TaskType type, long currentUserId) {
+        TaskEntity task = persistenceService.create(resourceId, type, currentUserId);
+        commandPublisher.publish(task.id());
+        return task;
     }
 
     @Transactional(readOnly = true)

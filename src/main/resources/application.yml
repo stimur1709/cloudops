@@ -15,8 +15,21 @@ spring:
           time_zone: UTC
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:cloudops}
+    password: ${RABBITMQ_PASSWORD}
+    listener:
+      simple:
+        default-requeue-rejected: false
 
 cloudops:
+  task:
+    messaging:
+      exchange: ${TASK_EXCHANGE:cloudops.tasks}
+      queue: ${TASK_QUEUE:cloudops.task.execute}
+      routing-key: ${TASK_ROUTING_KEY:task.execute}
   security:
     jwt:
       secret: ${JWT_SECRET}

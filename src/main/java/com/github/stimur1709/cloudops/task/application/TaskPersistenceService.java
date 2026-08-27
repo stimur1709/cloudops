@@ -8,10 +8,11 @@ import com.github.stimur1709.cloudops.membership.application.OrganizationAuthori
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
-import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
+import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.TaskType;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
 import com.github.stimur1709.cloudops.task.persistence.TaskJpaRepository;
@@ -43,26 +44,32 @@ public class TaskPersistenceService {
     }
 
     @Transactional
-    public PreparedHttpCheck create(long resourceId, TaskType type, long currentUserId) {
+    public TaskEntity create(long resourceId, TaskType type, long currentUserId) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
         requireSupported(type, resource.type());
         if (resource.status() != ResourceStatus.ACTIVE) {
             throw new ConflictException("RESOURCE_INACTIVE", "HTTP check requires an active resource");
         }
-        ServiceResourceConfig config = (ServiceResourceConfig) configMapper.fromJson(resource.type(), resource.config());
         TaskEntity task = TaskEntity.create(
                 resource.organizationId(), resource.id(), type, currentUserId, clock.instant()
         );
         taskRepository.saveAndFlush(task);
-        return new PreparedHttpCheck(task.id(), config);
+        return task;
     }
 
     @Transactional
-    public void start(long taskId) {
+    public ClaimedTask claim(long taskId) {
+        int updated = taskRepository.claimPending(
+                taskId, clock.instant(), TaskStatus.PENDING, TaskStatus.RUNNING
+        );
+        if (updated == 0) {
+            return null;
+        }
         TaskEntity task = taskRepository.findById(taskId).orElseThrow(NotFoundException::new);
-        task.start(clock.instant());
-        taskRepository.flush();
+        ResourceEntity resource = resourceRepository.findById(task.resourceId()).orElseThrow(NotFoundException::new);
+        ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
+        return new ClaimedTask(task.id(), task.resourceId(), task.type(), config);
     }
 
     @Transactional
@@ -90,6 +97,6 @@ public class TaskPersistenceService {
         }
     }
 
-    public record PreparedHttpCheck(long taskId, ServiceResourceConfig config) {
+    public record ClaimedTask(long taskId, long resourceId, TaskType type, ResourceConfig resourceConfig) {
     }
 }

@@ -3,6 +3,8 @@ package com.github.stimur1709.cloudops.task.api;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.awaitility.Awaitility.await;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,11 +19,14 @@ import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
+import com.github.stimur1709.cloudops.task.application.TaskCommandPublisher;
 import com.jayway.jsonpath.JsonPath;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -49,6 +54,7 @@ class TaskApiIntegrationTest {
     private static ExecutorService httpExecutor;
     private static String baseUrl;
     private static volatile Runnable databaseProbe;
+    private static final AtomicInteger countedRequests = new AtomicInteger();
 
     private MockMvc mockMvc;
 
@@ -58,6 +64,9 @@ class TaskApiIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private TaskCommandPublisher commandPublisher;
+
     private long organizationId;
 
     @BeforeAll
@@ -65,9 +74,13 @@ class TaskApiIntegrationTest {
         httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         httpServer.createContext("/ok", exchange -> respond(exchange, 200, 80));
         httpServer.createContext("/unexpected", exchange -> respond(exchange, 503, 0));
-        httpServer.createContext("/slow", exchange -> respond(exchange, 200, 400));
+        httpServer.createContext("/slow", exchange -> respond(exchange, 200, 1200));
         httpServer.createContext("/database-probe", exchange -> {
             databaseProbe.run();
+            respond(exchange, 200, 0);
+        });
+        httpServer.createContext("/counted", exchange -> {
+            countedRequests.incrementAndGet();
             respond(exchange, 200, 0);
         });
         httpExecutor = Executors.newVirtualThreadPerTaskExecutor();
@@ -93,22 +106,27 @@ class TaskApiIntegrationTest {
         organizationId = insertOrganization("Current organization");
         addMember(organizationId, TestAuthentication.USER_ID, "OWNER");
         databaseProbe = () -> jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+        countedRequests.set(0);
     }
 
     @Test
-    void runsHttpCheckAndReturnsMeasuredCompletedTask() throws Exception {
+    void createsPendingTaskImmediatelyAndCompletesItAsynchronously() throws Exception {
         long resourceId = insertResource(organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/ok", 200, 1000);
 
-        run(resourceId)
-                .andExpect(status().isCreated())
+        String response = run(resourceId)
+                .andExpect(status().isAccepted())
                 .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/api/tasks/\\d+")))
                 .andExpect(jsonPath("$.organizationId").value(organizationId))
                 .andExpect(jsonPath("$.resourceId").value(resourceId))
                 .andExpect(jsonPath("$.type").value("HTTP_CHECK"))
-                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.createdBy").value(TestAuthentication.USER_ID))
-                .andExpect(jsonPath("$.startedAt").isNotEmpty())
-                .andExpect(jsonPath("$.completedAt").isNotEmpty())
+                .andExpect(jsonPath("$.startedAt").doesNotExist())
+                .andExpect(jsonPath("$.completedAt").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+        long taskId = taskId(response);
+
+        awaitTask(taskId, "COMPLETED")
                 .andExpect(jsonPath("$.result.url").value(baseUrl + "/ok"))
                 .andExpect(jsonPath("$.result.statusCode").value(200))
                 .andExpect(jsonPath("$.result.expectedStatus").value(200))
@@ -123,9 +141,11 @@ class TaskApiIntegrationTest {
                 organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/unexpected", 200, 1000
         );
 
-        run(resourceId)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("COMPLETED"))
+        long taskId = taskId(run(resourceId).andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString());
+
+        awaitTask(taskId, "COMPLETED")
                 .andExpect(jsonPath("$.result.statusCode").value(503))
                 .andExpect(jsonPath("$.result.matchedExpectedStatus").value(false));
     }
@@ -136,9 +156,11 @@ class TaskApiIntegrationTest {
                 organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/slow", 200, 100
         );
 
-        run(resourceId)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("FAILED"))
+        long taskId = taskId(run(resourceId).andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString());
+
+        awaitTask(taskId, "FAILED")
                 .andExpect(jsonPath("$.errorCode").value("TIMEOUT"))
                 .andExpect(jsonPath("$.errorMessage").value("HTTP check timed out"))
                 .andExpect(jsonPath("$.result").doesNotExist())
@@ -157,9 +179,10 @@ class TaskApiIntegrationTest {
                 "http://127.0.0.1:" + unusedPort + "/unavailable", 200, 1000
         );
 
-        run(resourceId)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("FAILED"))
+        long taskId = taskId(run(resourceId).andExpect(status().isAccepted())
+                .andReturn().getResponse().getContentAsString());
+
+        awaitTask(taskId, "FAILED")
                 .andExpect(jsonPath("$.errorCode").value("CONNECTION_ERROR"));
     }
 
@@ -169,10 +192,57 @@ class TaskApiIntegrationTest {
                 organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/database-probe", 200, 1000
         );
 
-        run(resourceId)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("COMPLETED"))
+        long taskId = taskId(run(resourceId).andExpect(status().isAccepted())
+                .andReturn().getResponse().getContentAsString());
+
+        awaitTask(taskId, "COMPLETED")
                 .andExpect(jsonPath("$.result.statusCode").value(200));
+    }
+
+    @Test
+    void requestDoesNotWaitForHttpCheck() throws Exception {
+        long resourceId = insertResource(
+                organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/slow", 200, 3000
+        );
+
+        long started = System.nanoTime();
+        String response = run(resourceId)
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString();
+        Duration requestDuration = Duration.ofNanos(System.nanoTime() - started);
+
+        assertThat(requestDuration).isLessThan(Duration.ofMillis(800));
+        awaitTask(taskId(response), "COMPLETED");
+    }
+
+    @Test
+    void duplicateDeliveryDoesNotExecuteCompletedTaskAgain() throws Exception {
+        long resourceId = insertResource(
+                organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/counted", 200, 1000
+        );
+        long taskId = taskId(run(resourceId).andExpect(status().isAccepted())
+                .andReturn().getResponse().getContentAsString());
+        awaitTask(taskId, "COMPLETED");
+        assertThat(countedRequests).hasValue(1);
+
+        commandPublisher.publish(taskId);
+
+        await().during(Duration.ofMillis(500)).atMost(Duration.ofSeconds(2))
+                .untilAsserted(() -> assertThat(countedRequests).hasValue(1));
+    }
+
+    @Test
+    void unknownTaskMessageDoesNotStopListenerContainer() throws Exception {
+        commandPublisher.publish(Long.MAX_VALUE);
+        long resourceId = insertResource(
+                organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/ok", 200, 1000
+        );
+
+        long taskId = taskId(run(resourceId).andExpect(status().isAccepted())
+                .andReturn().getResponse().getContentAsString());
+
+        awaitTask(taskId, "COMPLETED");
     }
 
     @ParameterizedTest
@@ -217,20 +287,18 @@ class TaskApiIntegrationTest {
     void memberCanRunAndGetTask() throws Exception {
         jdbcTemplate.update("UPDATE organization_memberships SET role = 'MEMBER' WHERE organization_id = ?", organizationId);
         long resourceId = insertResource(organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/unexpected", 200, 1000);
-        String response = run(resourceId).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        long taskId = ((Number) JsonPath.read(response, "$.id")).longValue();
+        String response = run(resourceId).andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        long taskId = taskId(response);
 
-        mockMvc.perform(get("/api/tasks/{id}", taskId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(taskId))
-                .andExpect(jsonPath("$.status").value("COMPLETED"));
+        awaitTask(taskId, "COMPLETED").andExpect(jsonPath("$.id").value(taskId));
     }
 
     @Test
     void userFromAnotherOrganizationCannotRunOrGetTask() throws Exception {
         long resourceId = insertResource(organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/unexpected", 200, 1000);
         String response = run(resourceId).andReturn().getResponse().getContentAsString();
-        long taskId = ((Number) JsonPath.read(response, "$.id")).longValue();
+        long taskId = taskId(response);
+        awaitTask(taskId, "COMPLETED");
         long otherOrganization = insertOrganization("Other organization");
         addMember(otherOrganization, OTHER_USER_ID, "OWNER");
 
@@ -249,7 +317,9 @@ class TaskApiIntegrationTest {
         long firstResource = insertResource(
                 organizationId, "first", "SERVICE", "ACTIVE", baseUrl + "/unexpected", 200, 1000
         );
-        run(firstResource).andExpect(status().isCreated());
+        long firstTask = taskId(run(firstResource).andExpect(status().isAccepted())
+                .andReturn().getResponse().getContentAsString());
+        awaitTask(firstTask, "COMPLETED");
         long otherOrganization = insertOrganization("Other organization");
         addMember(otherOrganization, OTHER_USER_ID, "OWNER");
         long otherResource = insertResource(
@@ -291,6 +361,23 @@ class TaskApiIntegrationTest {
         return mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"type\":\"HTTP_CHECK\"}"));
+    }
+
+    private long taskId(String response) {
+        return ((Number) JsonPath.read(response, "$.id")).longValue();
+    }
+
+    private ResultActions awaitTask(long taskId, String expectedStatus) {
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                mockMvc.perform(get("/api/tasks/{id}", taskId))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.status").value(expectedStatus))
+        );
+        try {
+            return mockMvc.perform(get("/api/tasks/{id}", taskId));
+        } catch (Exception exception) {
+            throw new AssertionError(exception);
+        }
     }
 
     private void insertUser(long id, String email) {
