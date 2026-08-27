@@ -1,0 +1,11 @@
+### Create resources task
+POST http://localhost:8080/api/resources/4/tasks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "HTTP_CHECK"
+}
+
+###
+GET https://httpbin.io/status/200

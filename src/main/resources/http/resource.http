@@ -1,23 +1,27 @@
 ### Create resource
 POST http://localhost:8080/api/resources
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "name": "router-01",
-  "type": "NETWORK_DEVICE",
+  "name": "service-03",
+  "type": "SERVICE",
   "status": "ACTIVE",
   "organizationId": 1,
   "config": {
-    "host": "10.0.0.1",
-    "managementPort": 22
+    "url": "https://httpbin.io/status/200",
+    "expectedStatus": 200,
+    "timeoutMs": 5000
   }
 }
 
 ### Get resource
 GET http://localhost:8080/api/resources/1
+Authorization: Bearer {{accessToken}}
 
 ### Search resources
 POST http://localhost:8080/api/resources/search
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -44,6 +48,7 @@ Content-Type: application/json
 
 ### Update resource
 PUT http://localhost:8080/api/resources/1
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -59,3 +64,4 @@ Content-Type: application/json
 
 ### Delete resource
 DELETE http://localhost:8080/api/resources/1
+Authorization: Bearer {{accessToken}}
