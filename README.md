@@ -11,16 +11,21 @@
 
 ## Локальный запуск
 
-Задайте параметры PostgreSQL. Пример для PowerShell:
+Задайте параметры PostgreSQL и RabbitMQ. Пример для PowerShell:
 
 ```powershell
 $env:POSTGRES_DB = "cloudops"
 $env:POSTGRES_USER = "cloudops"
 $env:POSTGRES_PASSWORD = Read-Host "PostgreSQL password"
 $env:POSTGRES_PORT = "5432"
+$env:RABBITMQ_USER = "cloudops"
+$env:RABBITMQ_PASSWORD = Read-Host "RabbitMQ password"
+$env:RABBITMQ_PORT = "5672"
+$env:RABBITMQ_MANAGEMENT_PORT = "15672"
 docker compose up -d
 
 $env:POSTGRES_HOST = "localhost"
+$env:RABBITMQ_HOST = "localhost"
 $jwtKey = New-Object byte[] 32
 [Security.Cryptography.RandomNumberGenerator]::Fill($jwtKey)
 $env:JWT_SECRET = [Convert]::ToBase64String($jwtKey)
@@ -36,9 +41,14 @@ $env:JWT_ISSUER = "cloudops-local"
 и не имеет значения по умолчанию. `JWT_ISSUER` по умолчанию равен `cloudops`,
 `JWT_ACCESS_TOKEN_TTL` — `15m`.
 
+`RABBITMQ_PASSWORD` обязателен. По умолчанию приложение подключается к
+`localhost:5672` пользователем `cloudops`. Имена exchange, queue и routing key можно
+переопределить через `TASK_EXCHANGE`, `TASK_QUEUE` и `TASK_ROUTING_KEY`. RabbitMQ Management UI
+доступен по адресу `http://localhost:15672` и используется только для локальной диагностики.
+
 При старте Liquibase автоматически создаёт схему, а Hibernate только проверяет её.
 
-Остановить локальную базу:
+Остановить локальную инфраструктуру:
 
 ```shell
 docker compose down
@@ -168,9 +178,32 @@ curl -i -X DELETE http://localhost:8080/api/resources/1 \
 Допустимые типы: `NETWORK_DEVICE`, `SERVER`, `DATABASE`, `OTHER`.
 Допустимые статусы: `ACTIVE`, `INACTIVE`.
 
+## API задач
+
+Запустить HTTP-проверку активного ресурса типа `SERVICE`:
+
+```shell
+curl -i -X POST http://localhost:8080/api/resources/1/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"HTTP_CHECK"}'
+```
+
+API сохраняет Task, публикует команду в RabbitMQ и сразу возвращает `202 Accepted`,
+`Location: /api/tasks/{id}` и Task в статусе `PENDING`. HTTP-проверка выполняется асинхронно;
+итоговый статус и результат нужно читать отдельно:
+
+```shell
+curl -i http://localhost:8080/api/tasks/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Возможные переходы статуса: `PENDING -> RUNNING -> COMPLETED` или
+`PENDING -> RUNNING -> FAILED`. Поиск задач остаётся доступен через `POST /api/tasks/search`.
+
 ## Тесты
 
-Интеграционные тесты сами запускают PostgreSQL в Testcontainers, поэтому Docker должен быть доступен.
+Интеграционные тесты сами запускают PostgreSQL и RabbitMQ в Testcontainers, поэтому Docker должен быть доступен.
 
 Windows:
 

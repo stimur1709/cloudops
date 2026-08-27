@@ -5,8 +5,18 @@ spring:
     open-in-view: false
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+  rabbitmq:
+    listener:
+      simple:
+        default-requeue-rejected: false
 
 cloudops:
+  task:
+    messaging:
+      exchange: cloudops.tasks.test
+      queue: cloudops.task.execute.test
+      routing-key: task.execute.test
+
   security:
     jwt:
       secret: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
