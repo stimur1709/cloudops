@@ -21,7 +21,7 @@ Authorization: Bearer {{accessToken}}
 
 ### Search resources
 POST http://localhost:8080/api/resources/search
-Authorization: Bearer {{accessToken}}
+Authorization: Bearer {{accessToken2}}
 Content-Type: application/json
 
 {

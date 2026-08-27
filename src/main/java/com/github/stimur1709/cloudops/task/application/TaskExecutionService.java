@@ -51,11 +51,11 @@ public class TaskExecutionService {
     }
 
     private void save(long taskId, TaskExecutionResult result) {
-        if (result instanceof TaskExecutionResult.Completed completed) {
-            JsonNode json = objectMapper.valueToTree(completed.result());
+        if (result instanceof TaskExecutionResult.Completed(Object completed)) {
+            JsonNode json = objectMapper.valueToTree(completed);
             persistenceService.complete(taskId, json);
-        } else if (result instanceof TaskExecutionResult.Failed failed) {
-            persistenceService.fail(taskId, failed.errorCode(), failed.errorMessage());
+        } else if (result instanceof TaskExecutionResult.Failed(TaskErrorCode errorCode, String errorMessage)) {
+            persistenceService.fail(taskId, errorCode, errorMessage);
         }
     }
 }
