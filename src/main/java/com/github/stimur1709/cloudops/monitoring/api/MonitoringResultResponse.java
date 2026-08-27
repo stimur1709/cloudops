@@ -1,0 +1,13 @@
+package com.github.stimur1709.cloudops.monitoring.api;
+
+import java.time.Instant;
+
+import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultEntity;
+import tools.jackson.databind.JsonNode;
+
+public record MonitoringResultResponse(long id, long monitorId, Instant checkedAt, JsonNode result) {
+
+    public static MonitoringResultResponse from(MonitoringResultEntity result) {
+        return new MonitoringResultResponse(result.id(), result.monitorId(), result.checkedAt(), result.result());
+    }
+}

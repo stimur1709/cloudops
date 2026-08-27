@@ -15,6 +15,13 @@ spring:
         default-requeue-rejected: false
 
 cloudops:
+  monitoring:
+    scheduler-enabled: false
+    poll-interval: 100ms
+    batch-size: 20
+    minimum-interval-seconds: 30
+    retention-poll-interval: 1h
+    retention-batch-size: 50
   task:
     messaging:
       exchange: cloudops.tasks.test

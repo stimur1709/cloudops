@@ -58,7 +58,7 @@ class ResourceSearchApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE monitoring_results, monitors, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         insertCurrentUser();
         organizationId = insertOrganization("Test organization");

@@ -101,7 +101,7 @@ class TaskApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE monitoring_results, monitors, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         insertUser(TestAuthentication.USER_ID, "current@example.com");
         insertUser(OTHER_USER_ID, "other@example.com");
@@ -275,7 +275,8 @@ class TaskApiIntegrationTest {
 
         run(resourceId)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("RESOURCE_INACTIVE"));
+                .andExpect(jsonPath("$.code").value("RESOURCE_INACTIVE"))
+                .andExpect(jsonPath("$.message").value("Task requires an active resource"));
     }
 
     @Test

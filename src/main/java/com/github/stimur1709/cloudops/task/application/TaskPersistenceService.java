@@ -68,7 +68,7 @@ public class TaskPersistenceService {
         authorization.requireMember(resource.organizationId(), currentUserId);
         requireSupported(type, resource.type());
         if (resource.status() != ResourceStatus.ACTIVE) {
-            throw new ConflictException("RESOURCE_INACTIVE", "HTTP check requires an active resource");
+            throw new ConflictException("RESOURCE_INACTIVE", "Task requires an active resource");
         }
         TaskEntity task = TaskEntity.create(
                 resource.organizationId(), resource.id(), type, currentUserId, clock.instant()
@@ -139,7 +139,7 @@ public class TaskPersistenceService {
     }
 
     private void requireSupported(TaskType taskType, ResourceType resourceType) {
-        if (taskType != TaskType.HTTP_CHECK || resourceType != ResourceType.SERVICE) {
+        if (!taskType.probeType().supports(resourceType)) {
             throw new ConflictException(
                     "TASK_TYPE_NOT_SUPPORTED",
                     "Task type %s is not supported for resource type %s".formatted(taskType, resourceType)

@@ -5,6 +5,11 @@ import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
 import com.github.stimur1709.cloudops.task.application.StaleTaskExecutionException;
 import com.github.stimur1709.cloudops.task.config.TaskRetryProperties;
+import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionContext;
+import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
+import com.github.stimur1709.cloudops.probe.execution.ProbeHandler;
+import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerNotFoundException;
+import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.retry.support.RetryTemplate;
@@ -20,7 +25,7 @@ public class TaskExecutionService {
     private static final String RETRY_EXHAUSTED_MESSAGE = "Task execution failed after retry attempts";
 
     private final TaskPersistenceService persistenceService;
-    private final TaskHandlerRegistry handlerRegistry;
+    private final ProbeHandlerRegistry handlerRegistry;
     private final ObjectMapper objectMapper;
     private final RetryTemplate retryTemplate;
     private final TaskRetryProperties retryProperties;
@@ -28,7 +33,7 @@ public class TaskExecutionService {
 
     public TaskExecutionService(
             TaskPersistenceService persistenceService,
-            TaskHandlerRegistry handlerRegistry,
+            ProbeHandlerRegistry handlerRegistry,
             ObjectMapper objectMapper,
             RetryTemplate retryTemplate,
             TaskRetryProperties retryProperties,
@@ -65,22 +70,24 @@ public class TaskExecutionService {
 
     private TaskExecutionOutcome executeClaimed(TaskPersistenceService.ClaimedTask claimed) {
         long taskId = claimed.taskId();
-        TaskHandler handler;
+        ProbeHandler handler;
         try {
-            handler = handlerRegistry.get(claimed.type());
-        } catch (TaskHandlerNotFoundException exception) {
+            handler = handlerRegistry.get(claimed.type().probeType());
+        } catch (ProbeHandlerNotFoundException exception) {
             LOGGER.error("event=task_non_retryable_rejection taskId={} reason=handler_not_found", taskId, exception);
             return outcomeAfterFailureSave(taskId, claimed.executionId(), TaskErrorCode.HANDLER_NOT_FOUND,
                     "Task handler is not configured");
         }
 
-        TaskExecutionContext executionContext = new TaskExecutionContext(
-                claimed.taskId(), claimed.resourceId(), claimed.type(), claimed.resourceConfig(), claimed.executionId()
+        ProbeExecutionContext executionContext = new ProbeExecutionContext(
+                claimed.resourceId(), claimed.type().probeType(), claimed.resourceConfig()
         );
-        TaskExecutionResult result;
+        ProbeExecutionResult result;
         try {
             result = retryTemplate.execute(
-                    retryContext -> executeAttempt(handler, executionContext, retryContext.getRetryCount())
+                    retryContext -> executeAttempt(
+                            handler, executionContext, taskId, claimed.executionId(), retryContext.getRetryCount()
+                    )
             );
         } catch (RetryableTaskExecutionException exception) {
             LOGGER.error("event=task_retry_exhausted taskId={} taskType={} attempts={}",
@@ -112,21 +119,23 @@ public class TaskExecutionService {
         }
     }
 
-    private TaskExecutionResult executeAttempt(
-            TaskHandler handler,
-            TaskExecutionContext executionContext,
+    private ProbeExecutionResult executeAttempt(
+            ProbeHandler handler,
+            ProbeExecutionContext executionContext,
+            long taskId,
+            java.util.UUID executionId,
             int priorFailureCount
     ) {
-        int attempt = persistenceService.recordAttempt(executionContext.taskId(), executionContext.executionId());
+        int attempt = persistenceService.recordAttempt(taskId, executionId);
         LOGGER.info("event=task_attempt_started taskId={} taskType={} attempt={}",
-                executionContext.taskId(), executionContext.type(), attempt);
+                taskId, executionContext.type(), attempt);
         try {
             return handler.execute(executionContext);
         } catch (RetryableTaskExecutionException exception) {
             int failureNumber = priorFailureCount + 1;
             if (failureNumber < effectiveMaxAttempts()) {
                 LOGGER.warn("event=task_retry_scheduled taskId={} attempt={} nextInterval={} exceptionType={}",
-                        executionContext.taskId(), attempt,
+                        taskId, attempt,
                         retryProperties.intervalAfterFailure(failureNumber), exception.getClass().getSimpleName());
             }
             throw exception;
@@ -167,12 +176,14 @@ public class TaskExecutionService {
         }
     }
 
-    private boolean save(long taskId, java.util.UUID executionId, TaskExecutionResult result) {
-        if (result instanceof TaskExecutionResult.Completed(Object completed)) {
-            JsonNode json = objectMapper.valueToTree(completed);
+    private boolean save(long taskId, java.util.UUID executionId, ProbeExecutionResult result) {
+        if (result instanceof ProbeExecutionResult.Completed(boolean ignored, Object data)) {
+            JsonNode json = objectMapper.valueToTree(data);
             return persistenceService.complete(taskId, executionId, json);
-        } else if (result instanceof TaskExecutionResult.Failed(TaskErrorCode errorCode, String errorMessage)) {
-            return persistenceService.fail(taskId, executionId, errorCode, errorMessage);
+        } else if (result instanceof ProbeExecutionResult.Failed(boolean ignored, ProbeExecutionResult.Error error)) {
+            return persistenceService.fail(
+                    taskId, executionId, TaskErrorCode.valueOf(error.code().name()), error.message()
+            );
         }
         throw new IllegalStateException("Unsupported task execution result: " + result);
     }

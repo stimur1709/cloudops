@@ -1,4 +1,4 @@
-package com.github.stimur1709.cloudops.task.httpcheck;
+package com.github.stimur1709.cloudops.probe.http;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -11,8 +11,8 @@ import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import javax.net.ssl.SSLException;
 
+import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
-import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -36,26 +36,26 @@ public class HttpCheckClient {
                     response.statusCode() == config.expectedStatus()
             ));
         } catch (HttpTimeoutException exception) {
-            return failure(TaskErrorCode.TIMEOUT, "HTTP check timed out");
+            return failure(ProbeErrorCode.TIMEOUT, "HTTP check timed out");
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            return failure(TaskErrorCode.HTTP_CLIENT_ERROR, "HTTP check was interrupted");
+            return failure(ProbeErrorCode.HTTP_CLIENT_ERROR, "HTTP check was interrupted");
         } catch (IOException exception) {
             return classify(exception);
         }
     }
 
-    private HttpCheckOutcome classify(IOException exception) {
+    HttpCheckOutcome classify(IOException exception) {
         if (hasCause(exception, UnknownHostException.class)) {
-            return failure(TaskErrorCode.DNS_ERROR, "Host name could not be resolved");
+            return failure(ProbeErrorCode.DNS_ERROR, "Host name could not be resolved");
         }
         if (hasCause(exception, SSLException.class)) {
-            return failure(TaskErrorCode.TLS_ERROR, "TLS connection could not be established");
+            return failure(ProbeErrorCode.TLS_ERROR, "TLS connection could not be established");
         }
         if (hasCause(exception, ConnectException.class)) {
-            return failure(TaskErrorCode.CONNECTION_ERROR, "Connection could not be established");
+            return failure(ProbeErrorCode.CONNECTION_ERROR, "Connection could not be established");
         }
-        return failure(TaskErrorCode.HTTP_CLIENT_ERROR, "HTTP check could not be completed");
+        return failure(ProbeErrorCode.HTTP_CLIENT_ERROR, "HTTP check could not be completed");
     }
 
     private boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {
@@ -69,7 +69,7 @@ public class HttpCheckClient {
         return false;
     }
 
-    private HttpCheckOutcome failure(TaskErrorCode code, String message) {
+    private HttpCheckOutcome failure(ProbeErrorCode code, String message) {
         return HttpCheckOutcome.failed(code, message);
     }
 }
