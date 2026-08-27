@@ -7,4 +7,5 @@
 
     <include file="db/changelog/changes/001-create-resources.xml"/>
     <include file="db/changelog/changes/002-create-users-and-memberships.xml"/>
+    <include file="db/changelog/changes/003-create-tasks.xml"/>
 </databaseChangeLog>

@@ -1,5 +1,6 @@
 ### Create organization
 POST http://localhost:8080/api/organizations
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -8,9 +9,11 @@ Content-Type: application/json
 
 ### Get organization
 GET http://localhost:8080/api/organizations/1
+Authorization: Bearer {{accessToken}}
 
 ### Search organizations
 POST http://localhost:8080/api/organizations/search
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -37,6 +40,7 @@ Content-Type: application/json
 
 ### Update organization
 PUT http://localhost:8080/api/organizations/1
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -45,3 +49,4 @@ Content-Type: application/json
 
 ### Delete organization
 DELETE http://localhost:8080/api/organizations/1
+Authorization: Bearer {{accessToken}}

@@ -1,0 +1,26 @@
+### Register user
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "displayName": "Example User",
+  "password": "correct-horse-battery-staple"
+}
+
+### Login and save access token
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "correct-horse-battery-staple"
+}
+
+> {%
+    client.global.set("accessToken", response.body.accessToken);
+%}
+
+### Get current user
+GET http://localhost:8080/api/auth/me
+Authorization: Bearer {{accessToken}}
