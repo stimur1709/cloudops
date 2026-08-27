@@ -29,6 +29,13 @@ cloudops:
       initial-interval: 10ms
       multiplier: 2.0
       max-interval: 20ms
+    lease:
+      enabled: false
+      duration: 30s
+      heartbeat-interval: 10s
+      recovery-poll-interval: 15s
+      recovery-batch-size: 20
+      max-recoveries: 3
     outbox:
       enabled: true
       poll-interval: 100ms

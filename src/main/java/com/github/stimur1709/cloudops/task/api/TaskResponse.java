@@ -22,13 +22,14 @@ public record TaskResponse(
         TaskErrorCode errorCode,
         String errorMessage,
         int attemptCount,
-        Instant lastAttemptAt
+        Instant lastAttemptAt,
+        int recoveryCount
 ) {
     public static TaskResponse from(TaskEntity task) {
         return new TaskResponse(
                 task.id(), task.organizationId(), task.resourceId(), task.type(), task.status(), task.createdBy(),
                 task.createdAt(), task.startedAt(), task.completedAt(), task.result(), task.errorCode(),
-                task.errorMessage(), task.attemptCount(), task.lastAttemptAt()
+                task.errorMessage(), task.attemptCount(), task.lastAttemptAt(), task.recoveryCount()
         );
     }
 }

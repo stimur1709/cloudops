@@ -3,6 +3,7 @@ package com.github.stimur1709.cloudops.task.execution;
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
+import com.github.stimur1709.cloudops.task.application.StaleTaskExecutionException;
 import com.github.stimur1709.cloudops.task.config.TaskRetryProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,19 +24,22 @@ public class TaskExecutionService {
     private final ObjectMapper objectMapper;
     private final RetryTemplate retryTemplate;
     private final TaskRetryProperties retryProperties;
+    private final TaskLeaseManager leaseManager;
 
     public TaskExecutionService(
             TaskPersistenceService persistenceService,
             TaskHandlerRegistry handlerRegistry,
             ObjectMapper objectMapper,
             RetryTemplate retryTemplate,
-            TaskRetryProperties retryProperties
+            TaskRetryProperties retryProperties,
+            TaskLeaseManager leaseManager
     ) {
         this.persistenceService = persistenceService;
         this.handlerRegistry = handlerRegistry;
         this.objectMapper = objectMapper;
         this.retryTemplate = retryTemplate;
         this.retryProperties = retryProperties;
+        this.leaseManager = leaseManager;
     }
 
     public TaskExecutionOutcome execute(long taskId) {
@@ -44,7 +48,6 @@ public class TaskExecutionService {
             claimed = persistenceService.claim(taskId);
         } catch (RuntimeException exception) {
             LOGGER.error("event=task_non_retryable_rejection taskId={} phase=claim", taskId, exception);
-            failSafely(taskId, TaskErrorCode.EXECUTION_ERROR, EXECUTION_FAILURE_MESSAGE);
             return TaskExecutionOutcome.DEAD_LETTER;
         }
 
@@ -52,17 +55,27 @@ public class TaskExecutionService {
             return outcomeForUnclaimed(taskId);
         }
 
+        leaseManager.register(taskId, claimed.executionId());
+        try {
+            return executeClaimed(claimed);
+        } finally {
+            leaseManager.unregister(taskId, claimed.executionId());
+        }
+    }
+
+    private TaskExecutionOutcome executeClaimed(TaskPersistenceService.ClaimedTask claimed) {
+        long taskId = claimed.taskId();
         TaskHandler handler;
         try {
             handler = handlerRegistry.get(claimed.type());
         } catch (TaskHandlerNotFoundException exception) {
             LOGGER.error("event=task_non_retryable_rejection taskId={} reason=handler_not_found", taskId, exception);
-            failSafely(taskId, TaskErrorCode.HANDLER_NOT_FOUND, "Task handler is not configured");
-            return TaskExecutionOutcome.DEAD_LETTER;
+            return outcomeAfterFailureSave(taskId, claimed.executionId(), TaskErrorCode.HANDLER_NOT_FOUND,
+                    "Task handler is not configured");
         }
 
         TaskExecutionContext executionContext = new TaskExecutionContext(
-                claimed.taskId(), claimed.resourceId(), claimed.type(), claimed.resourceConfig()
+                claimed.taskId(), claimed.resourceId(), claimed.type(), claimed.resourceConfig(), claimed.executionId()
         );
         TaskExecutionResult result;
         try {
@@ -72,17 +85,25 @@ public class TaskExecutionService {
         } catch (RetryableTaskExecutionException exception) {
             LOGGER.error("event=task_retry_exhausted taskId={} taskType={} attempts={}",
                     taskId, claimed.type(), effectiveMaxAttempts(), exception);
-            failSafely(taskId, TaskErrorCode.RETRY_EXHAUSTED, RETRY_EXHAUSTED_MESSAGE);
-            return TaskExecutionOutcome.DEAD_LETTER;
+            return outcomeAfterFailureSave(
+                    taskId, claimed.executionId(), TaskErrorCode.RETRY_EXHAUSTED, RETRY_EXHAUSTED_MESSAGE
+            );
+        } catch (StaleTaskExecutionException exception) {
+            LOGGER.warn("event=task_lease_lost taskId={} executionId={}", taskId, claimed.executionId());
+            return TaskExecutionOutcome.ACKNOWLEDGE;
         } catch (RuntimeException exception) {
             LOGGER.error("event=task_non_retryable_rejection taskId={} taskType={}",
                     taskId, claimed.type(), exception);
-            failSafely(taskId, TaskErrorCode.EXECUTION_ERROR, EXECUTION_FAILURE_MESSAGE);
-            return TaskExecutionOutcome.DEAD_LETTER;
+            return outcomeAfterFailureSave(
+                    taskId, claimed.executionId(), TaskErrorCode.EXECUTION_ERROR, EXECUTION_FAILURE_MESSAGE
+            );
         }
 
         try {
-            save(taskId, result);
+            if (!save(taskId, claimed.executionId(), result)) {
+                LOGGER.warn("event=stale_execution_result_ignored taskId={} executionId={}",
+                        taskId, claimed.executionId());
+            }
             return TaskExecutionOutcome.ACKNOWLEDGE;
         } catch (RuntimeException exception) {
             LOGGER.error("event=task_terminal_persistence_failure taskId={} taskType={}",
@@ -96,7 +117,7 @@ public class TaskExecutionService {
             TaskExecutionContext executionContext,
             int priorFailureCount
     ) {
-        int attempt = persistenceService.recordAttempt(executionContext.taskId());
+        int attempt = persistenceService.recordAttempt(executionContext.taskId(), executionContext.executionId());
         LOGGER.info("event=task_attempt_started taskId={} taskType={} attempt={}",
                 executionContext.taskId(), executionContext.type(), attempt);
         try {
@@ -130,21 +151,29 @@ public class TaskExecutionService {
         return retryProperties.enabled() ? retryProperties.maxAttempts() : 1;
     }
 
-    private void failSafely(long taskId, TaskErrorCode errorCode, String message) {
+    private TaskExecutionOutcome outcomeAfterFailureSave(
+            long taskId, java.util.UUID executionId, TaskErrorCode errorCode, String message
+    ) {
         try {
-            persistenceService.fail(taskId, errorCode, message);
+            if (!persistenceService.fail(taskId, executionId, errorCode, message)) {
+                LOGGER.warn("event=stale_execution_result_ignored taskId={} executionId={}", taskId, executionId);
+                return TaskExecutionOutcome.ACKNOWLEDGE;
+            }
+            return TaskExecutionOutcome.DEAD_LETTER;
         } catch (RuntimeException persistenceException) {
             LOGGER.error("event=task_failure_persistence_error taskId={} errorCode={}",
                     taskId, errorCode, persistenceException);
+            return TaskExecutionOutcome.DEAD_LETTER;
         }
     }
 
-    private void save(long taskId, TaskExecutionResult result) {
+    private boolean save(long taskId, java.util.UUID executionId, TaskExecutionResult result) {
         if (result instanceof TaskExecutionResult.Completed(Object completed)) {
             JsonNode json = objectMapper.valueToTree(completed);
-            persistenceService.complete(taskId, json);
+            return persistenceService.complete(taskId, executionId, json);
         } else if (result instanceof TaskExecutionResult.Failed(TaskErrorCode errorCode, String errorMessage)) {
-            persistenceService.fail(taskId, errorCode, errorMessage);
+            return persistenceService.fail(taskId, executionId, errorCode, errorMessage);
         }
+        throw new IllegalStateException("Unsupported task execution result: " + result);
     }
 }

@@ -134,9 +134,10 @@ class OutboxRelayIntegrationTest {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update("""
                 INSERT INTO outbox_messages
-                    (id, message_type, aggregate_type, aggregate_id, payload, created_at)
-                VALUES (?, 'TASK_EXECUTION_REQUESTED', 'TASK', ?, CAST(? AS jsonb), ?)
-                """, id, taskId, "{\"taskId\":" + taskId + "}", java.sql.Timestamp.from(createdAt));
+                    (id, message_type, aggregate_type, aggregate_id, payload, created_at, deduplication_key)
+                VALUES (?, 'TASK_EXECUTION_REQUESTED', 'TASK', ?, CAST(? AS jsonb), ?, ?)
+                """, id, taskId, "{\"taskId\":" + taskId + "}", java.sql.Timestamp.from(createdAt),
+                "test:" + id);
         return id;
     }
 

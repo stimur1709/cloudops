@@ -43,6 +43,13 @@ cloudops:
       initial-interval: ${TASK_RETRY_INITIAL_INTERVAL:250ms}
       multiplier: ${TASK_RETRY_MULTIPLIER:2.0}
       max-interval: ${TASK_RETRY_MAX_INTERVAL:5s}
+    lease:
+      enabled: ${TASK_LEASE_ENABLED:true}
+      duration: ${TASK_LEASE_DURATION:30s}
+      heartbeat-interval: ${TASK_LEASE_HEARTBEAT_INTERVAL:10s}
+      recovery-poll-interval: ${TASK_LEASE_RECOVERY_POLL_INTERVAL:15s}
+      recovery-batch-size: ${TASK_LEASE_RECOVERY_BATCH_SIZE:50}
+      max-recoveries: ${TASK_LEASE_MAX_RECOVERIES:3}
     outbox:
       enabled: ${TASK_OUTBOX_ENABLED:true}
       poll-interval: ${TASK_OUTBOX_POLL_INTERVAL:500ms}
