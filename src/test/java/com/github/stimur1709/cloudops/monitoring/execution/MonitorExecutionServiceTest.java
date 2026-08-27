@@ -12,7 +12,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 
-import com.github.stimur1709.cloudops.monitoring.StorageMode;
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
 import com.github.stimur1709.cloudops.probe.execution.ProbeHandler;
@@ -31,8 +30,8 @@ class MonitorExecutionServiceTest {
         ProbeHandlerRegistry registry = mock(ProbeHandlerRegistry.class);
         ProbeHandler handler = mock(ProbeHandler.class);
         ServiceResourceConfig config = new ServiceResourceConfig("https://example.com", 200, 1000);
-        when(persistence.load(7)).thenReturn(new MonitorExecutionContext(
-                7, 8, ProbeType.HTTP_CHECK, StorageMode.HISTORY, config
+        when(persistence.loadIfExecutable(7)).thenReturn(new MonitorExecutionContext(
+                7, 8, ProbeType.HTTP_CHECK, config
         ));
         when(registry.get(ProbeType.HTTP_CHECK)).thenReturn(handler);
         when(handler.execute(any())).thenReturn(ProbeExecutionResult.completed(true, "ok"));
@@ -52,8 +51,8 @@ class MonitorExecutionServiceTest {
         MonitorExecutionPersistenceService persistence = mock(MonitorExecutionPersistenceService.class);
         ProbeHandlerRegistry registry = mock(ProbeHandlerRegistry.class);
         ProbeHandler handler = mock(ProbeHandler.class);
-        when(persistence.load(7)).thenReturn(new MonitorExecutionContext(
-                7, 8, ProbeType.HTTP_CHECK, StorageMode.LATEST_ONLY,
+        when(persistence.loadIfExecutable(7)).thenReturn(new MonitorExecutionContext(
+                7, 8, ProbeType.HTTP_CHECK,
                 new ServiceResourceConfig("https://example.com", 200, 1000)
         ));
         when(registry.get(ProbeType.HTTP_CHECK)).thenReturn(handler);

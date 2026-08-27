@@ -38,7 +38,7 @@ public class MonitorExecutionPersistenceService {
     }
 
     @Transactional(readOnly = true)
-    public MonitorExecutionContext load(long monitorId) {
+    public MonitorExecutionContext loadIfExecutable(long monitorId) {
         MonitorEntity monitor = monitorRepository.findById(monitorId).orElse(null);
         if (monitor == null || !monitor.enabled()) {
             return null;
@@ -49,7 +49,7 @@ public class MonitorExecutionPersistenceService {
         }
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
         return new MonitorExecutionContext(
-                monitor.id(), resource.id(), monitor.type(), monitor.storageMode(), config
+                monitor.id(), resource.id(), monitor.type(), config
         );
     }
 

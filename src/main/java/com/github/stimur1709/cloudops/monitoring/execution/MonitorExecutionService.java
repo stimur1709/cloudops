@@ -37,7 +37,7 @@ public class MonitorExecutionService {
 
     public void execute(long monitorId) {
         try {
-            MonitorExecutionContext monitor = persistenceService.load(monitorId);
+            MonitorExecutionContext monitor = persistenceService.loadIfExecutable(monitorId);
             if (monitor == null) {
                 return;
             }

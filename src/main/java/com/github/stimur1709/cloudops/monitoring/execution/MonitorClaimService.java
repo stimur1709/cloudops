@@ -26,21 +26,22 @@ public class MonitorClaimService {
     @Transactional
     public List<Long> claimDue() {
         Instant now = clock.instant();
-        List<Long> ids = jdbcTemplate.queryForList("""
-                SELECT id
-                FROM monitors
-                WHERE enabled = true AND next_run_at <= ?
-                ORDER BY next_run_at, id
-                LIMIT ?
-                FOR UPDATE SKIP LOCKED
-                """, Long.class, Timestamp.from(now), properties.batchSize());
-        for (long id : ids) {
-            jdbcTemplate.update("""
-                    UPDATE monitors
-                    SET next_run_at = CAST(? AS TIMESTAMPTZ) + interval_seconds * INTERVAL '1 second'
-                    WHERE id = ?
-                    """, Timestamp.from(now), id);
-        }
-        return ids;
+        Timestamp claimedAt = Timestamp.from(now);
+        return jdbcTemplate.queryForList("""
+                WITH due AS (
+                    SELECT id
+                    FROM monitors
+                    WHERE enabled = true AND next_run_at <= ?
+                    ORDER BY next_run_at, id
+                    LIMIT ?
+                    FOR UPDATE SKIP LOCKED
+                )
+                UPDATE monitors monitor
+                SET next_run_at = CAST(? AS TIMESTAMPTZ)
+                        + monitor.interval_seconds * INTERVAL '1 second'
+                FROM due
+                WHERE monitor.id = due.id
+                RETURNING monitor.id
+                """, Long.class, claimedAt, properties.batchSize(), claimedAt);
     }
 }
