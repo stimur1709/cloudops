@@ -9,5 +9,4 @@
     <include file="db/changelog/changes/002-create-users-and-memberships.xml"/>
     <include file="db/changelog/changes/003-create-tasks.xml"/>
     <include file="db/changelog/changes/004-create-outbox-messages.xml"/>
-    <include file="db/changelog/changes/005-add-task-attempts.xml"/>
 </databaseChangeLog>
