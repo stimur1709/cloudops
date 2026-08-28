@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.github.stimur1709.cloudops.probe.ProbeType;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,10 +16,10 @@ public class ProbeHandlerRegistry {
     public ProbeHandlerRegistry(List<ProbeHandler> handlers) {
         Map<ProbeType, ProbeHandler> registered = new EnumMap<>(ProbeType.class);
         for (ProbeHandler handler : handlers) {
-            ProbeHandler duplicate = registered.putIfAbsent(handler.supports(), handler);
+            ProbeHandler duplicate = registered.putIfAbsent(handler.type(), handler);
             if (duplicate != null) {
                 throw new IllegalStateException(
-                        "Multiple ProbeHandler beans support probe type " + handler.supports()
+                        "Multiple ProbeHandler beans support probe type " + handler.type()
                 );
             }
         }
@@ -31,5 +32,9 @@ public class ProbeHandlerRegistry {
             throw new ProbeHandlerNotFoundException(type);
         }
         return handler;
+    }
+
+    public boolean supports(ProbeType type, ResourceConfig resourceConfig) {
+        return get(type).isCompatibleWith(resourceConfig);
     }
 }

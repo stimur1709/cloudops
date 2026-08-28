@@ -20,7 +20,10 @@ import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultEnt
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultSearchDefinition;
 import com.github.stimur1709.cloudops.probe.ProbeType;
+import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -37,6 +40,8 @@ public class MonitorService {
     private final JpaSearchService searchService;
     private final ResourceHealthService resourceHealthService;
     private final Clock clock;
+    private final ResourceConfigMapper configMapper;
+    private final ProbeHandlerRegistry handlerRegistry;
 
     public MonitorService(
             MonitorJpaRepository monitorRepository,
@@ -45,7 +50,9 @@ public class MonitorService {
             OrganizationAuthorization authorization,
             JpaSearchService searchService,
             ResourceHealthService resourceHealthService,
-            Clock clock
+            Clock clock,
+            ResourceConfigMapper configMapper,
+            ProbeHandlerRegistry handlerRegistry
     ) {
         this.monitorRepository = monitorRepository;
         this.resultRepository = resultRepository;
@@ -54,6 +61,8 @@ public class MonitorService {
         this.searchService = searchService;
         this.resourceHealthService = resourceHealthService;
         this.clock = clock;
+        this.configMapper = configMapper;
+        this.handlerRegistry = handlerRegistry;
     }
 
     @Transactional
@@ -149,7 +158,8 @@ public class MonitorService {
     }
 
     private void requireSupported(ResourceEntity resource, ProbeType type) {
-        if (!type.supports(resource.type())) {
+        ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
+        if (!handlerRegistry.supports(type, config)) {
             throw new ConflictException(
                     "MONITOR_TYPE_NOT_SUPPORTED",
                     "Probe type %s is not supported for resource type %s".formatted(type, resource.type())

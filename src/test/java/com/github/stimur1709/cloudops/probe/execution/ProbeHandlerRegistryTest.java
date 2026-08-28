@@ -42,7 +42,7 @@ class ProbeHandlerRegistryTest {
 
     private ProbeHandler handler(ProbeType type) {
         ProbeHandler handler = mock(ProbeHandler.class);
-        when(handler.supports()).thenReturn(type);
+        when(handler.type()).thenReturn(type);
         return handler;
     }
 }

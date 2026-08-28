@@ -25,7 +25,8 @@ class HttpCheckHandlerTest {
                 new ProbeExecutionContext(2, ProbeType.HTTP_CHECK, config)
         );
 
-        assertThat(handler.supports()).isEqualTo(ProbeType.HTTP_CHECK);
+        assertThat(handler.type()).isEqualTo(ProbeType.HTTP_CHECK);
+        assertThat(handler.isCompatibleWith(config)).isTrue();
         assertThat(result).isEqualTo(ProbeExecutionResult.completed(true, checkResult));
         verify(client).execute(config);
     }
