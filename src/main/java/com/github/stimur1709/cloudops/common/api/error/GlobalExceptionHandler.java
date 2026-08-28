@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.ForbiddenException;
-import com.github.stimur1709.cloudops.common.application.InvalidRequestException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
 import com.github.stimur1709.cloudops.resource.ResourceType;
@@ -240,20 +239,6 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "INVALID_REQUEST",
                 "Search request is invalid",
-                request,
-                List.of(new ApiFieldError(exception.field(), exception.getMessage()))
-        );
-    }
-
-    @ExceptionHandler(InvalidRequestException.class)
-    ResponseEntity<ApiError> handleInvalidRequest(
-            InvalidRequestException exception,
-            HttpServletRequest request
-    ) {
-        return response(
-                HttpStatus.BAD_REQUEST,
-                "INVALID_REQUEST",
-                "Request parameters are invalid",
                 request,
                 List.of(new ApiFieldError(exception.field(), exception.getMessage()))
         );

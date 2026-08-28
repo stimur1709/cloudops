@@ -10,8 +10,11 @@ import java.util.List;
 import com.github.stimur1709.cloudops.SqlStatementRecorder;
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
+import com.github.stimur1709.cloudops.resource.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -49,9 +52,10 @@ class ResourceAvailabilityApiIntegrationTest {
                 """, organizationId, TestAuthentication.USER_ID);
     }
 
-    @Test
-    void returnsUnknownForResourceWithoutHealthHistory() throws Exception {
-        long resourceId = insertResource(organizationId, "unknown-resource");
+    @ParameterizedTest
+    @EnumSource(ResourceType.class)
+    void returnsUnknownForEveryResourceTypeWithoutHealthHistory(ResourceType resourceType) throws Exception {
+        long resourceId = insertResource(organizationId, "unknown-" + resourceType, resourceType);
 
         mockMvc.perform(get("/api/resources/{id}/health/availability", resourceId)
                         .queryParam("from", "2026-08-28T10:00:00Z")
@@ -131,7 +135,7 @@ class ResourceAvailabilityApiIntegrationTest {
                         .queryParam("from", "2026-08-28T11:00:00Z")
                         .queryParam("to", "2026-08-28T11:00:00Z"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.errors[0].field").value("to"))
                 .andExpect(jsonPath("$.errors[0].message").value("To must be after from"));
 
@@ -144,6 +148,7 @@ class ResourceAvailabilityApiIntegrationTest {
         mockMvc.perform(get("/api/resources/{id}/health/availability", resourceId)
                         .queryParam("from", "2026-08-28T10:00:00Z"))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.errors[0].field").value("to"));
     }
 
@@ -171,10 +176,14 @@ class ResourceAvailabilityApiIntegrationTest {
     }
 
     private long insertResource(long targetOrganizationId, String name) {
+        return insertResource(targetOrganizationId, name, ResourceType.SERVICE);
+    }
+
+    private long insertResource(long targetOrganizationId, String name, ResourceType type) {
         long resourceId = jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
-                VALUES (?, 'SERVICE', 'ACTIVE', ?, '{}'::jsonb, now(), now()) RETURNING id
-                """, Long.class, name, targetOrganizationId);
+                VALUES (?, ?, 'ACTIVE', ?, '{}'::jsonb, now(), now()) RETURNING id
+                """, Long.class, name, type.name(), targetOrganizationId);
         jdbcTemplate.update(
                 "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
                 resourceId

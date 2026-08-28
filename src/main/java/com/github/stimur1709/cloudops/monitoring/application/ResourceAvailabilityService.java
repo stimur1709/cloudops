@@ -9,7 +9,6 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 
-import com.github.stimur1709.cloudops.common.application.InvalidRequestException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
@@ -41,7 +40,6 @@ public class ResourceAvailabilityService {
 
     @Transactional(readOnly = true)
     public ResourceAvailability get(long resourceId, Instant from, Instant to, long currentUserId) {
-        validatePeriod(from, to);
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
 
@@ -97,12 +95,6 @@ public class ResourceAvailabilityService {
                 percentage(upSeconds + degradedSeconds, knownSeconds),
                 percentage(knownSeconds, periodSeconds)
         );
-    }
-
-    private static void validatePeriod(Instant from, Instant to) {
-        if (!from.isBefore(to)) {
-            throw new InvalidRequestException("to", "To must be after from");
-        }
     }
 
     private static EnumMap<ResourceHealthStatus, Long> roundedSeconds(
