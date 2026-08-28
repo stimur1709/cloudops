@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="006-create-resource-health" author="stimur1709">
+        <createTable tableName="resource_health">
+            <column name="resource_id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="resource_health_pkey"/>
+            </column>
+            <column name="health_status" type="VARCHAR(10)" defaultValue="UNKNOWN">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="resource_health" baseColumnNames="resource_id"
+                                 constraintName="resource_health_resource_fk" referencedTableName="resources"
+                                 referencedColumnNames="id" onDelete="CASCADE"/>
+        <sql dbms="postgresql">
+            ALTER TABLE resource_health ADD CONSTRAINT resource_health_status_check
+                CHECK (health_status IN ('UNKNOWN', 'UP', 'DEGRADED', 'DOWN'));
+            INSERT INTO resource_health (resource_id, health_status)
+                SELECT id, 'UNKNOWN' FROM resources;
+            CREATE INDEX resource_health_status_idx ON resource_health (health_status, resource_id);
+        </sql>
+
+        <rollback>
+            <dropTable tableName="resource_health"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

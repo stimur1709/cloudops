@@ -3,6 +3,7 @@ package com.github.stimur1709.cloudops.monitoring.persistence;
 import java.util.List;
 import java.util.Optional;
 
+import com.github.stimur1709.cloudops.monitoring.HealthStatus;
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,13 @@ public interface MonitorJpaRepository extends JpaRepository<MonitorEntity, Long>
     List<MonitorEntity> findAllByResourceIdOrderById(long resourceId);
 
     boolean existsByResourceIdAndType(long resourceId, ProbeType type);
+
+    @Query("""
+            select monitor.healthStatus
+            from MonitorEntity monitor
+            where monitor.resourceId = :resourceId and monitor.enabled = true
+            """)
+    List<HealthStatus> findHealthStatusesByResourceIdAndEnabledTrue(@Param("resourceId") long resourceId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select monitor from MonitorEntity monitor where monitor.id = :id")

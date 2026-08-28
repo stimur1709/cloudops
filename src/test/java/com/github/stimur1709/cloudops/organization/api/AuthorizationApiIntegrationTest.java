@@ -42,7 +42,7 @@ class AuthorizationApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         insertUser(TestAuthentication.USER_ID, "owner@example.com");
         insertUser(ADMIN_ID, "admin@example.com");
@@ -190,11 +190,16 @@ class AuthorizationApiIntegrationTest {
     }
 
     private long insertResource(String name, long organizationId) {
-        return jdbcTemplate.queryForObject("""
+        long resourceId = jdbcTemplate.queryForObject("""
                 INSERT INTO resources
                     (name, type, status, organization_id, config, created_at, updated_at)
                 VALUES (?, 'SERVER', 'ACTIVE', ?, '{"host":"server.internal"}', now(), now()) RETURNING id
                 """, Long.class, name, organizationId);
+        jdbcTemplate.update(
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
+                resourceId
+        );
+        return resourceId;
     }
 
     private String resourceBody(String name, long organizationId) {

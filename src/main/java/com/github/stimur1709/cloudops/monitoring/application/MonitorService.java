@@ -35,6 +35,7 @@ public class MonitorService {
     private final ResourceJpaRepository resourceRepository;
     private final OrganizationAuthorization authorization;
     private final JpaSearchService searchService;
+    private final ResourceHealthService resourceHealthService;
     private final Clock clock;
 
     public MonitorService(
@@ -43,6 +44,7 @@ public class MonitorService {
             ResourceJpaRepository resourceRepository,
             OrganizationAuthorization authorization,
             JpaSearchService searchService,
+            ResourceHealthService resourceHealthService,
             Clock clock
     ) {
         this.monitorRepository = monitorRepository;
@@ -50,6 +52,7 @@ public class MonitorService {
         this.resourceRepository = resourceRepository;
         this.authorization = authorization;
         this.searchService = searchService;
+        this.resourceHealthService = resourceHealthService;
         this.clock = clock;
     }
 
@@ -76,7 +79,9 @@ public class MonitorService {
                 thresholdOrDefault(request.recoveryThreshold(), MonitorEntity.DEFAULT_RECOVERY_THRESHOLD)
         );
         try {
-            return monitorRepository.saveAndFlush(monitor);
+            MonitorEntity saved = monitorRepository.saveAndFlush(monitor);
+            resourceHealthService.recalculate(resourceId);
+            return saved;
         } catch (DataIntegrityViolationException exception) {
             throw monitorConflict();
         }
@@ -107,6 +112,8 @@ public class MonitorService {
                 thresholdOrDefault(request.recoveryThreshold(), MonitorEntity.DEFAULT_RECOVERY_THRESHOLD),
                 clock.instant()
         );
+        monitorRepository.flush();
+        resourceHealthService.recalculate(monitor.resourceId());
         return monitor;
     }
 
@@ -116,6 +123,8 @@ public class MonitorService {
         ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         authorization.requireManager(resource.organizationId(), currentUserId);
         monitorRepository.delete(monitor);
+        monitorRepository.flush();
+        resourceHealthService.recalculate(monitor.resourceId());
     }
 
     @Transactional(readOnly = true)

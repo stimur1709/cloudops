@@ -50,7 +50,7 @@ class ResourceApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
@@ -96,6 +96,7 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.name").value("router-01"))
                 .andExpect(jsonPath("$.type").value("NETWORK_DEVICE"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.healthStatus").value("UNKNOWN"))
                 .andExpect(jsonPath("$.organizationId").value(organizationId))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty())
@@ -122,6 +123,7 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.name").value("db-01"))
                 .andExpect(jsonPath("$.type").value("DATABASE"))
                 .andExpect(jsonPath("$.status").value("INACTIVE"))
+                .andExpect(jsonPath("$.healthStatus").value("UNKNOWN"))
                 .andExpect(jsonPath("$.organizationId").value(organizationId))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty());
