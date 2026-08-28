@@ -49,7 +49,7 @@ class OrganizationMembershipApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         insertUser(TestAuthentication.USER_ID, "owner@example.com");
         insertUser(ADMIN_ID, "admin@example.com");

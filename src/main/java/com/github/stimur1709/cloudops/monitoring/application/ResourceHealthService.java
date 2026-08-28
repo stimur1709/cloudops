@@ -1,5 +1,6 @@
 package com.github.stimur1709.cloudops.monitoring.application;
 
+import java.time.Clock;
 import java.util.List;
 
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
@@ -7,6 +8,8 @@ import com.github.stimur1709.cloudops.monitoring.HealthStatus;
 import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntity;
+import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventEntity;
+import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthJpaRepository;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import org.springframework.stereotype.Service;
@@ -17,13 +20,19 @@ public class ResourceHealthService {
 
     private final MonitorJpaRepository monitorRepository;
     private final ResourceHealthJpaRepository resourceHealthRepository;
+    private final ResourceHealthEventJpaRepository eventRepository;
+    private final Clock clock;
 
     public ResourceHealthService(
             MonitorJpaRepository monitorRepository,
-            ResourceHealthJpaRepository resourceHealthRepository
+            ResourceHealthJpaRepository resourceHealthRepository,
+            ResourceHealthEventJpaRepository eventRepository,
+            Clock clock
     ) {
         this.monitorRepository = monitorRepository;
         this.resourceHealthRepository = resourceHealthRepository;
+        this.eventRepository = eventRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -38,7 +47,14 @@ public class ResourceHealthService {
         ResourceHealthStatus status = aggregate(
                 monitorRepository.findHealthStatusesByResourceIdAndEnabledTrue(resourceId)
         );
+        ResourceHealthStatus previousStatus = resourceHealth.healthStatus();
+        if (previousStatus == status) {
+            return resourceHealth;
+        }
         resourceHealth.update(status);
+        eventRepository.save(ResourceHealthEventEntity.create(
+                resourceId, previousStatus, status, clock.instant()
+        ));
         return resourceHealth;
     }
 

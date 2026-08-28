@@ -92,7 +92,7 @@ class MonitorApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks,
+                TRUNCATE TABLE monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
                     organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         jdbcTemplate.update("""
@@ -344,6 +344,77 @@ class MonitorApiIntegrationTest {
         mockMvc.perform(delete("/api/monitors/{id}", monitorId))
                 .andExpect(status().isNoContent());
         assertResourceHealth(resourceId, "UNKNOWN");
+    }
+
+    @Test
+    void resourceHealthHistoryContainsOnlyRealTransitionsInOrder() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30", 1, 1)
+                .andReturn().getResponse().getContentAsString());
+
+        executionService.execute(monitorId);
+        executionService.execute(monitorId);
+        updateServiceConfig(resourceId, baseUrl + "/unexpected", 200, 1000);
+        executionService.execute(monitorId);
+        updateServiceConfig(resourceId, baseUrl + "/ok", 200, 1000);
+        executionService.execute(monitorId);
+        mockMvc.perform(put("/api/monitors/{id}", monitorId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"intervalSeconds":30,"enabled":false,"storageMode":"LATEST_ONLY",
+                                 "retentionDays":null,"failureThreshold":1,"recoveryThreshold":1}
+                                """))
+                .andExpect(status().isOk());
+
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT from_status || '->' || to_status
+                FROM resource_health_events WHERE resource_id = ? ORDER BY id
+                """, String.class, resourceId))
+                .containsExactly("UNKNOWN->UP", "UP->DOWN", "DOWN->UP", "UP->UNKNOWN");
+    }
+
+    @Test
+    void searchesResourceHealthHistoryWithinResourceAndReturnsForeignResourceAsNotFound() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long foreignOrganizationId = jdbcTemplate.queryForObject("""
+                INSERT INTO organizations (name, created_at, updated_at)
+                VALUES ('Foreign organization', now(), now()) RETURNING id
+                """, Long.class);
+        long foreignResourceId = jdbcTemplate.queryForObject("""
+                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                VALUES ('foreign', 'SERVICE', 'ACTIVE', ?, '{}'::jsonb, now(), now()) RETURNING id
+                """, Long.class, foreignOrganizationId);
+        jdbcTemplate.update(
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UP')",
+                foreignResourceId
+        );
+        jdbcTemplate.update("""
+                INSERT INTO resource_health_events (resource_id, from_status, to_status, changed_at)
+                VALUES (?, 'UNKNOWN', 'UP', '2026-08-28T01:00:00Z'),
+                       (?, 'UNKNOWN', 'UP', '2026-08-28T02:00:00Z')
+                """, resourceId, foreignResourceId);
+
+        mockMvc.perform(post("/api/resources/{id}/health/events/search", resourceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"start":0,"size":20,
+                                 "filter":{"operator":"AND","conditions":[
+                                   {"field":"toStatus","operation":"EQ","value":"UP"}]},
+                                 "sort":[{"field":"changedAt","order":"DESC"}],"getTotal":true}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].fromStatus").value("UNKNOWN"))
+                .andExpect(jsonPath("$.items[0].toStatus").value("UP"))
+                .andExpect(jsonPath("$.items[0].changedAt").value("2026-08-28T01:00:00Z"));
+
+        mockMvc.perform(post("/api/resources/{id}/health/events/search", foreignResourceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"start":0,"size":20,"getTotal":false}
+                                """))
+                .andExpect(status().isNotFound());
     }
 
     @Test

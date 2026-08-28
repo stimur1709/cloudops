@@ -32,7 +32,7 @@ class TaskClaimIntegrationTest {
     @BeforeEach
     void setUp() {
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)

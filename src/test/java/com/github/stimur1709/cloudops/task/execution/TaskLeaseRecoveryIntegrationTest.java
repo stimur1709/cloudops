@@ -47,7 +47,7 @@ class TaskLeaseRecoveryIntegrationTest {
     @BeforeEach
     void setUp() {
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations
+                TRUNCATE TABLE monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations
                 RESTART IDENTITY
                 """);
         jdbcTemplate.update("""
