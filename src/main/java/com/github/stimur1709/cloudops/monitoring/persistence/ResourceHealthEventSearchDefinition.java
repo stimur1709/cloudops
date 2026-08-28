@@ -6,6 +6,7 @@ import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchDefinit
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchField;
 import com.github.stimur1709.cloudops.common.persistence.search.SearchValueConverter;
 import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
+import jakarta.persistence.metamodel.SingularAttribute;
 
 public final class ResourceHealthEventSearchDefinition {
 
@@ -31,7 +32,7 @@ public final class ResourceHealthEventSearchDefinition {
     }
 
     private static JpaSearchField<ResourceHealthEventEntity, Long> comparableLong(
-            jakarta.persistence.metamodel.SingularAttribute<ResourceHealthEventEntity, Long> attribute
+            SingularAttribute<ResourceHealthEventEntity, Long> attribute
     ) {
         return JpaSearchField.<ResourceHealthEventEntity, Long>comparable(
                 root -> root.get(attribute), SearchValueConverter.longInteger()
@@ -39,7 +40,7 @@ public final class ResourceHealthEventSearchDefinition {
     }
 
     private static JpaSearchField<ResourceHealthEventEntity, ResourceHealthStatus> status(
-            jakarta.persistence.metamodel.SingularAttribute<ResourceHealthEventEntity, ResourceHealthStatus> attribute
+            SingularAttribute<ResourceHealthEventEntity, ResourceHealthStatus> attribute
     ) {
         return JpaSearchField.<ResourceHealthEventEntity, ResourceHealthStatus>equality(
                 root -> root.get(attribute), SearchValueConverter.enumeration(ResourceHealthStatus.class)
@@ -47,7 +48,7 @@ public final class ResourceHealthEventSearchDefinition {
     }
 
     private static JpaSearchField<ResourceHealthEventEntity, Instant> comparableInstant(
-            jakarta.persistence.metamodel.SingularAttribute<ResourceHealthEventEntity, Instant> attribute
+            SingularAttribute<ResourceHealthEventEntity, Instant> attribute
     ) {
         return JpaSearchField.<ResourceHealthEventEntity, Instant>comparable(
                 root -> root.get(attribute), SearchValueConverter.instant()
