@@ -26,6 +26,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.core.AuthenticationException;
@@ -143,6 +144,21 @@ public class GlobalExceptionHandler {
                 "Request parameter is invalid",
                 request,
                 List.of(new ApiFieldError(field, message))
+        );
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    ResponseEntity<ApiError> handleMissingRequestParameter(
+            MissingServletRequestParameterException exception,
+            HttpServletRequest request
+    ) {
+        String field = exception.getParameterName();
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_REQUEST",
+                "Request parameter is missing",
+                request,
+                List.of(new ApiFieldError(field, capitalize(field) + " is required"))
         );
     }
 
