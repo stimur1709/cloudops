@@ -59,6 +59,8 @@ public class MonitorService {
             boolean enabled,
             StorageMode storageMode,
             Integer retentionDays,
+            Integer failureThreshold,
+            Integer recoveryThreshold,
             long currentUserId
     ) {
         ResourceEntity resource = resourceRepository.findByIdForUpdate(resourceId)
@@ -72,7 +74,9 @@ public class MonitorService {
             throw monitorConflict();
         }
         MonitorEntity monitor = MonitorEntity.create(
-                resourceId, type, enabled, intervalSeconds, clock.instant(), storageMode, retentionDays
+                resourceId, type, enabled, intervalSeconds, clock.instant(), storageMode, retentionDays,
+                thresholdOrDefault(failureThreshold, MonitorEntity.DEFAULT_FAILURE_THRESHOLD),
+                thresholdOrDefault(recoveryThreshold, MonitorEntity.DEFAULT_RECOVERY_THRESHOLD)
         );
         try {
             return monitorRepository.saveAndFlush(monitor);
@@ -95,6 +99,8 @@ public class MonitorService {
             boolean enabled,
             StorageMode storageMode,
             Integer retentionDays,
+            Integer failureThreshold,
+            Integer recoveryThreshold,
             long currentUserId
     ) {
         MonitorEntity monitor = monitorRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
@@ -103,7 +109,12 @@ public class MonitorService {
         if (monitor.storageMode() == StorageMode.HISTORY && storageMode == StorageMode.LATEST_ONLY) {
             resultRepository.deleteAllByMonitorId(id);
         }
-        monitor.update(enabled, intervalSeconds, storageMode, retentionDays, clock.instant());
+        monitor.update(
+                enabled, intervalSeconds, storageMode, retentionDays,
+                thresholdOrDefault(failureThreshold, MonitorEntity.DEFAULT_FAILURE_THRESHOLD),
+                thresholdOrDefault(recoveryThreshold, MonitorEntity.DEFAULT_RECOVERY_THRESHOLD),
+                clock.instant()
+        );
         return monitor;
     }
 
@@ -149,5 +160,9 @@ public class MonitorService {
         return new ConflictException(
                 "MONITOR_ALREADY_EXISTS", "A monitor of this type already exists for the resource"
         );
+    }
+
+    private int thresholdOrDefault(Integer threshold, int defaultValue) {
+        return threshold == null ? defaultValue : threshold;
     }
 }

@@ -10,4 +10,5 @@
     <include file="db/changelog/changes/003-create-tasks.xml"/>
     <include file="db/changelog/changes/004-create-outbox-messages.xml"/>
     <include file="db/changelog/changes/005-create-monitoring.xml"/>
+    <include file="db/changelog/changes/006-add-monitor-health.xml"/>
 </databaseChangeLog>

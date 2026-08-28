@@ -39,6 +39,8 @@ public class ResourceMonitorController {
                 request.enabled(),
                 request.storageMode(),
                 request.retentionDays(),
+                request.failureThreshold(),
+                request.recoveryThreshold(),
                 CurrentUser.id(authentication)
         );
         return ResponseEntity.created(URI.create("/api/monitors/" + monitor.id()))

@@ -37,6 +37,8 @@ public class MonitorController {
                 request.enabled(),
                 request.storageMode(),
                 request.retentionDays(),
+                request.failureThreshold(),
+                request.recoveryThreshold(),
                 CurrentUser.id(authentication)
         ));
     }

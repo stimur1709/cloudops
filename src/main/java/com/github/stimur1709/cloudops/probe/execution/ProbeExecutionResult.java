@@ -4,6 +4,8 @@ import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 
 public sealed interface ProbeExecutionResult {
 
+    boolean success();
+
     record Completed(boolean success, Object data) implements ProbeExecutionResult {
     }
 

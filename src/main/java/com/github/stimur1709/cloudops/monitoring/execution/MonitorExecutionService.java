@@ -47,7 +47,7 @@ public class MonitorExecutionService {
             ));
             Instant checkedAt = clock.instant();
             JsonNode result = objectMapper.valueToTree(executionResult);
-            persistenceService.saveResult(monitorId, checkedAt, result);
+            persistenceService.saveResult(monitorId, checkedAt, result, executionResult.success());
         } catch (RuntimeException exception) {
             LOGGER.error("event=monitor_execution_failed monitorId={}", monitorId, exception);
         }

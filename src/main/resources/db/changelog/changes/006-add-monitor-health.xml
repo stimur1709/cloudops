@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="006-add-monitor-health" author="stimur1709">
+        <addColumn tableName="monitors">
+            <column name="health_status" type="VARCHAR(10)" defaultValue="UNKNOWN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="failure_threshold" type="INTEGER" defaultValueNumeric="3">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recovery_threshold" type="INTEGER" defaultValueNumeric="2">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consecutive_failures" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consecutive_successes" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <sql dbms="postgresql">
+            ALTER TABLE monitors ADD CONSTRAINT monitors_health_status_check
+                CHECK (health_status IN ('UNKNOWN', 'UP', 'DOWN'));
+            ALTER TABLE monitors ADD CONSTRAINT monitors_failure_threshold_check
+                CHECK (failure_threshold BETWEEN 1 AND 10);
+            ALTER TABLE monitors ADD CONSTRAINT monitors_recovery_threshold_check
+                CHECK (recovery_threshold BETWEEN 1 AND 10);
+            ALTER TABLE monitors ADD CONSTRAINT monitors_consecutive_failures_check
+                CHECK (consecutive_failures &gt;= 0);
+            ALTER TABLE monitors ADD CONSTRAINT monitors_consecutive_successes_check
+                CHECK (consecutive_successes &gt;= 0);
+        </sql>
+
+        <rollback>
+            <dropColumn tableName="monitors" columnName="consecutive_successes"/>
+            <dropColumn tableName="monitors" columnName="consecutive_failures"/>
+            <dropColumn tableName="monitors" columnName="recovery_threshold"/>
+            <dropColumn tableName="monitors" columnName="failure_threshold"/>
+            <dropColumn tableName="monitors" columnName="health_status"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

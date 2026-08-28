@@ -43,7 +43,7 @@ class MonitorExecutionServiceTest {
 
         verify(registry).get(ProbeType.HTTP_CHECK);
         verify(handler).execute(any());
-        verify(persistence).saveResult(eq(7L), eq(NOW), any());
+        verify(persistence).saveResult(eq(7L), eq(NOW), any(), eq(true));
     }
 
     @Test
@@ -63,6 +63,6 @@ class MonitorExecutionServiceTest {
 
         service.execute(7);
 
-        verify(persistence, never()).saveResult(anyLong(), any(), any());
+        verify(persistence, never()).saveResult(anyLong(), any(), any(), any(Boolean.class));
     }
 }
