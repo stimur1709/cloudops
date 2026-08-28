@@ -13,4 +13,5 @@
     <include file="db/changelog/changes/006-create-resource-health.xml"/>
     <include file="db/changelog/changes/007-create-resource-health-events.xml"/>
     <include file="db/changelog/changes/008-add-port-check.xml"/>
+    <include file="db/changelog/changes/009-add-network-probes.xml"/>
 </databaseChangeLog>

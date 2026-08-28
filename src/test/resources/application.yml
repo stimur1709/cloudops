@@ -18,6 +18,10 @@ cloudops:
   probe:
     port:
       timeout: 500ms
+    ping:
+      timeout: 500ms
+    tls:
+      timeout: 500ms
   monitoring:
     scheduler-enabled: false
     poll-interval: 100ms

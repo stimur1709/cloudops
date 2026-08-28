@@ -14,3 +14,30 @@ Content-Type: application/json
 ### Get current task state/result
 GET http://localhost:8080/api/tasks/{{taskId}}
 Authorization: Bearer {{accessToken}}
+
+### Run DNS check for the host resource from resource.http
+POST http://localhost:8080/api/resources/{{networkProbeResourceId}}/tasks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "DNS_CHECK"
+}
+
+### Run ping for the host resource from resource.http
+POST http://localhost:8080/api/resources/{{networkProbeResourceId}}/tasks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "PING"
+}
+
+### Run TLS check for the HTTPS resource from resource.http
+POST http://localhost:8080/api/resources/{{tlsResourceId}}/tasks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "TLS_CHECK"
+}

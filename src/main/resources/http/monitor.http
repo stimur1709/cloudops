@@ -26,6 +26,51 @@ Content-Type: application/json
 GET {{baseUrl}}/api/resources/{{resourceId}}/monitors
 Authorization: Bearer {{accessToken}}
 
+### Create DNS monitor for the host resource from resource.http
+POST {{baseUrl}}/api/resources/{{networkProbeResourceId}}/monitors
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "DNS_CHECK",
+  "intervalSeconds": 30,
+  "enabled": true,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2
+}
+
+### Create ping monitor for the host resource from resource.http
+POST {{baseUrl}}/api/resources/{{networkProbeResourceId}}/monitors
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "PING",
+  "intervalSeconds": 30,
+  "enabled": true,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2
+}
+
+### Create TLS monitor for the HTTPS resource from resource.http
+POST {{baseUrl}}/api/resources/{{tlsResourceId}}/monitors
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "TLS_CHECK",
+  "intervalSeconds": 30,
+  "enabled": true,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2
+}
+
 ### Get resource availability and uptime for a period
 GET {{baseUrl}}/api/resources/{{resourceId}}/health/availability?from={{availabilityFrom}}&to={{availabilityTo}}
 Authorization: Bearer {{accessToken}}

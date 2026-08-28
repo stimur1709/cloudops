@@ -169,6 +169,47 @@ class TaskApiIntegrationTest {
     }
 
     @Test
+    void executesDnsAndPingTasksThroughExistingAsyncPipeline() throws Exception {
+        long resourceId = insertResourceWithConfig(
+                organizationId, "server", "SERVER", "ACTIVE", "{\"host\":\"localhost\"}"
+        );
+
+        long dnsTaskId = taskId(run(resourceId, "DNS_CHECK")
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.type").value("DNS_CHECK"))
+                .andReturn().getResponse().getContentAsString());
+        awaitTask(dnsTaskId, "COMPLETED")
+                .andExpect(jsonPath("$.result.hostname").value("localhost"))
+                .andExpect(jsonPath("$.result.addresses").isArray())
+                .andExpect(jsonPath("$.result.responseTimeMs", greaterThanOrEqualTo(0)));
+
+        long pingTaskId = taskId(run(resourceId, "PING")
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.type").value("PING"))
+                .andReturn().getResponse().getContentAsString());
+        awaitTask(pingTaskId, "COMPLETED")
+                .andExpect(jsonPath("$.result.host").value("localhost"))
+                .andExpect(jsonPath("$.result.responseTimeMs", greaterThanOrEqualTo(0)));
+    }
+
+    @Test
+    void tlsTaskUsesExistingFailurePipeline() throws Exception {
+        int plainHttpPort = httpServer.getAddress().getPort();
+        long resourceId = insertResourceWithConfig(
+                organizationId, "server", "SERVER", "ACTIVE",
+                "{\"host\":\"127.0.0.1\",\"port\":%d}".formatted(plainHttpPort)
+        );
+
+        long taskId = taskId(run(resourceId, "TLS_CHECK")
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.type").value("TLS_CHECK"))
+                .andReturn().getResponse().getContentAsString());
+
+        awaitTask(taskId, "FAILED")
+                .andExpect(jsonPath("$.errorCode").isString());
+    }
+
+    @Test
     void rejectsPortCheckForServerWithoutPort() throws Exception {
         long resourceId = insertResourceWithConfig(
                 organizationId, "server", "SERVER", "ACTIVE", "{\"host\":\"127.0.0.1\"}"
@@ -317,7 +358,7 @@ class TaskApiIntegrationTest {
 
         mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":\"TLS_CHECK\"}"))
+                        .content("{\"type\":\"UNKNOWN_CHECK\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.errors[0].field").value("type"));
