@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.ForbiddenException;
+import com.github.stimur1709.cloudops.common.application.InvalidRequestException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
 import com.github.stimur1709.cloudops.resource.ResourceType;
@@ -26,6 +27,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.core.AuthenticationException;
@@ -146,6 +148,21 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    ResponseEntity<ApiError> handleMissingRequestParameter(
+            MissingServletRequestParameterException exception,
+            HttpServletRequest request
+    ) {
+        String field = exception.getParameterName();
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_REQUEST",
+                "Request parameter is missing",
+                request,
+                List.of(new ApiFieldError(field, capitalize(field) + " is required"))
+        );
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     ResponseEntity<ApiError> handleMethodNotAllowed(
             HttpRequestMethodNotSupportedException exception,
@@ -223,6 +240,20 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "INVALID_REQUEST",
                 "Search request is invalid",
+                request,
+                List.of(new ApiFieldError(exception.field(), exception.getMessage()))
+        );
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    ResponseEntity<ApiError> handleInvalidRequest(
+            InvalidRequestException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_REQUEST",
+                "Request parameters are invalid",
                 request,
                 List.of(new ApiFieldError(exception.field(), exception.getMessage()))
         );
