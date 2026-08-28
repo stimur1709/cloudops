@@ -29,7 +29,7 @@ class ResourceHealthConcurrencyIntegrationTest {
     @BeforeEach
     void setUp() {
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks,
+                TRUNCATE TABLE monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
                     organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
     }
@@ -78,6 +78,15 @@ class ResourceHealthConcurrencyIntegrationTest {
                     String.class,
                     resourceId
             )).isEqualTo("DEGRADED");
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT count(*) FROM resource_health_events WHERE resource_id = ?",
+                    Integer.class,
+                    resourceId
+            )).isEqualTo(1);
+            assertThat(jdbcTemplate.queryForObject("""
+                    SELECT from_status || '->' || to_status FROM resource_health_events
+                    WHERE resource_id = ?
+                    """, String.class, resourceId)).isEqualTo("UNKNOWN->DEGRADED");
         } finally {
             jdbcTemplate.update("DELETE FROM monitors WHERE resource_id = ?", resourceId);
             jdbcTemplate.execute("""

@@ -11,4 +11,5 @@
     <include file="db/changelog/changes/004-create-outbox-messages.xml"/>
     <include file="db/changelog/changes/005-create-monitoring.xml"/>
     <include file="db/changelog/changes/006-create-resource-health.xml"/>
+    <include file="db/changelog/changes/007-create-resource-health-events.xml"/>
 </databaseChangeLog>
