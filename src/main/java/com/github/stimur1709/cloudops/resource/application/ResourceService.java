@@ -8,8 +8,11 @@ import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
+import com.github.stimur1709.cloudops.monitoring.application.ResourceHealthService;
+import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntity;
+import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntity_;
+import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthJpaRepository;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
-import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipScopes;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
@@ -17,6 +20,7 @@ import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity_;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
+import com.github.stimur1709.cloudops.resource.persistence.ResourceHealthScopes;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceSearchDefinition;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
@@ -33,6 +37,8 @@ public class ResourceService {
     private final OrganizationAuthorization authorization;
     private final Clock clock;
     private final ResourceConfigMapper configMapper;
+    private final ResourceHealthService resourceHealthService;
+    private final ResourceHealthJpaRepository resourceHealthRepository;
 
     public ResourceService(
             ResourceJpaRepository resourceRepository,
@@ -40,7 +46,9 @@ public class ResourceService {
             OrganizationJpaRepository organizationRepository,
             OrganizationAuthorization authorization,
             Clock clock,
-            ResourceConfigMapper configMapper
+            ResourceConfigMapper configMapper,
+            ResourceHealthService resourceHealthService,
+            ResourceHealthJpaRepository resourceHealthRepository
     ) {
         this.resourceRepository = resourceRepository;
         this.searchService = searchService;
@@ -48,10 +56,12 @@ public class ResourceService {
         this.authorization = authorization;
         this.clock = clock;
         this.configMapper = configMapper;
+        this.resourceHealthService = resourceHealthService;
+        this.resourceHealthRepository = resourceHealthRepository;
     }
 
     @Transactional
-    public ResourceEntity create(
+    public ResourceDetails create(
             String name,
             ResourceType type,
             ResourceStatus status,
@@ -68,28 +78,32 @@ public class ResourceService {
         ResourceEntity resource = ResourceEntity.create(
                 name, type, status, organization, configMapper.toJson(config), now
         );
-        return save(resource);
+        ResourceEntity saved = save(resource);
+        return details(resourceHealthService.initialize(saved));
     }
 
     @Transactional(readOnly = true)
-    public ResourceEntity get(long id, long currentUserId) {
-        ResourceEntity resource = resourceRepository.findById(id)
+    public ResourceDetails get(long id, long currentUserId) {
+        ResourceHealthEntity resourceHealth = resourceHealthRepository.findById(id)
                 .orElseThrow(NotFoundException::new);
+        ResourceEntity resource = resourceHealth.resource();
         authorization.requireMember(resource.organizationId(), currentUserId);
-        return resource;
+        return details(resourceHealth);
     }
 
     @Transactional(readOnly = true)
-    public SearchResult<ResourceEntity> search(SearchQuery search, long currentUserId) {
-        return searchService.search(
+    public SearchResult<ResourceDetails> search(SearchQuery search, long currentUserId) {
+        SearchResult<ResourceHealthEntity> result = searchService.search(
                 search,
-                OrganizationMembershipScopes.visibleTo(currentUserId, ResourceEntity_.organizationId),
-                ResourceSearchDefinition.DEFINITION
+                ResourceHealthScopes.visibleTo(currentUserId),
+                ResourceSearchDefinition.DEFINITION,
+                root -> root.fetch(ResourceHealthEntity_.resource)
         );
+        return new SearchResult<>(result.items().stream().map(this::details).toList(), result.total());
     }
 
     @Transactional
-    public ResourceEntity update(
+    public ResourceDetails update(
             long id,
             String name,
             ResourceType type,
@@ -111,7 +125,9 @@ public class ResourceService {
             throw resourceNameConflict();
         }
         resource.update(name, type, status, organization, configMapper.toJson(config), clock.instant());
-        return save(resource);
+        ResourceEntity saved = save(resource);
+        return new ResourceDetails(saved, resourceHealthRepository.findById(id)
+                .orElseThrow(NotFoundException::new).healthStatus());
     }
 
     @Transactional
@@ -145,6 +161,10 @@ public class ResourceService {
         } catch (DataIntegrityViolationException exception) {
             throw resourceNameConflict();
         }
+    }
+
+    private ResourceDetails details(ResourceHealthEntity resourceHealth) {
+        return new ResourceDetails(resourceHealth.resource(), resourceHealth.healthStatus());
     }
 
     private ConflictException resourceNameConflict() {

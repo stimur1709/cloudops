@@ -66,7 +66,7 @@ class TaskRetryAndDeadLetterIntegrationTest {
             return null;
         });
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, outbox_messages, tasks, organization_memberships, resources, users, organizations
+                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations
                 RESTART IDENTITY
                 """);
         jdbcTemplate.update("""

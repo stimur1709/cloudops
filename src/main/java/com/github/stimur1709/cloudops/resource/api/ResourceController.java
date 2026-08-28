@@ -7,7 +7,7 @@ import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.resource.application.ResourceService;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
-import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
+import com.github.stimur1709.cloudops.resource.application.ResourceDetails;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -37,7 +37,7 @@ public class ResourceController {
             @Valid @RequestBody CreateResourceRequest request,
             Authentication authentication
     ) {
-        ResourceEntity resource = resourceService.create(
+        ResourceDetails resource = resourceService.create(
                 request.name(), request.type(), request.status(), request.organizationId(), request.config(),
                 CurrentUser.id(authentication)
         );
@@ -68,7 +68,7 @@ public class ResourceController {
             @Valid @RequestBody UpdateResourceRequest request,
             Authentication authentication
     ) {
-        ResourceEntity resource = resourceService.update(
+        ResourceDetails resource = resourceService.update(
                 id, request.name(), request.type(), request.status(), request.organizationId(), request.config(),
                 CurrentUser.id(authentication)
         );

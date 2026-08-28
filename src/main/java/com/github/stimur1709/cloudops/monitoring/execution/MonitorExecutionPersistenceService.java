@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.monitoring.StorageMode;
+import com.github.stimur1709.cloudops.monitoring.application.ResourceHealthService;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorEntity;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultEntity;
@@ -24,17 +25,20 @@ public class MonitorExecutionPersistenceService {
     private final MonitoringResultJpaRepository resultRepository;
     private final ResourceJpaRepository resourceRepository;
     private final ResourceConfigMapper configMapper;
+    private final ResourceHealthService resourceHealthService;
 
     public MonitorExecutionPersistenceService(
             MonitorJpaRepository monitorRepository,
             MonitoringResultJpaRepository resultRepository,
             ResourceJpaRepository resourceRepository,
-            ResourceConfigMapper configMapper
+            ResourceConfigMapper configMapper,
+            ResourceHealthService resourceHealthService
     ) {
         this.monitorRepository = monitorRepository;
         this.resultRepository = resultRepository;
         this.resourceRepository = resourceRepository;
         this.configMapper = configMapper;
+        this.resourceHealthService = resourceHealthService;
     }
 
     @Transactional(readOnly = true)
@@ -64,5 +68,7 @@ public class MonitorExecutionPersistenceService {
         if (monitor.storageMode() == StorageMode.HISTORY) {
             resultRepository.save(MonitoringResultEntity.create(monitorId, checkedAt, result));
         }
+        monitorRepository.flush();
+        resourceHealthService.recalculate(monitor.resourceId());
     }
 }

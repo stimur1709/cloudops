@@ -58,7 +58,7 @@ class ResourceSearchApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         insertCurrentUser();
         organizationId = insertOrganization("Test organization");
@@ -108,6 +108,33 @@ class ResourceSearchApiIntegrationTest {
                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[*].name", contains("first", "third")));
+    }
+
+    @Test
+    void returnsAndFiltersByAggregatedHealthStatus() throws Exception {
+        long upId = insertResource("up", "SERVER", "ACTIVE", FIRST_CREATED_AT);
+        long unknownId = insertResource("unknown", "SERVER", "INACTIVE", SECOND_CREATED_AT);
+        jdbcTemplate.update(
+                "UPDATE resource_health SET health_status = 'UP' WHERE resource_id = ?",
+                upId
+        );
+
+        search(filterRequest("AND", """
+                {"field": "healthStatus", "operation": "EQ", "value": "UP"}
+                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].id").value(upId))
+                .andExpect(jsonPath("$.items[0].healthStatus").value("UP"));
+
+        search(filterRequest("AND", """
+                {"field": "healthStatus", "operation": "EQ", "value": "UNKNOWN"}
+                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].id").value(unknownId))
+                .andExpect(jsonPath("$.items[0].status").value("INACTIVE"))
+                .andExpect(jsonPath("$.items[0].healthStatus").value("UNKNOWN"));
     }
 
     @Test
@@ -392,12 +419,17 @@ class ResourceSearchApiIntegrationTest {
     }
 
     private long insertResource(String name, String type, String status, Instant createdAt) {
-        return jdbcTemplate.queryForObject("""
+        long resourceId = jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?::jsonb, ?, ?)
                 RETURNING id
                 """, Long.class, name, type, status, organizationId, configFor(type),
                 Timestamp.from(createdAt), Timestamp.from(createdAt));
+        jdbcTemplate.update(
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
+                resourceId
+        );
+        return resourceId;
     }
 
     private String configFor(String type) {
@@ -496,6 +528,6 @@ class ResourceSearchApiIntegrationTest {
         String normalized = Arrays.stream(sql.toLowerCase(Locale.ROOT).split("\\s+"))
                 .filter(part -> !part.isBlank())
                 .collect(java.util.stream.Collectors.joining(" "));
-        return normalized.startsWith("select ") && normalized.contains(" from resources ");
+        return normalized.startsWith("select ") && normalized.contains(" from resource_health ");
     }
 }

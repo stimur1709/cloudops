@@ -3,6 +3,7 @@ package com.github.stimur1709.cloudops.common.persistence.search;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
+import java.util.function.Consumer;
 
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
@@ -34,11 +35,21 @@ public class JpaSearchService {
             JpaSearchScope<E> scope,
             JpaSearchDefinition<E> definition
     ) {
+        return search(search, scope, definition, _ -> { });
+    }
+
+    public <E> SearchResult<E> search(
+            SearchQuery search,
+            JpaSearchScope<E> scope,
+            JpaSearchDefinition<E> definition,
+            Consumer<Root<E>> fetcher
+    ) {
         PreparedSearch<E> preparedSearch = prepare(search, definition);
         CriteriaBuilder builder = entityManager.getCriteriaBuilder();
 
         CriteriaQuery<E> criteria = builder.createQuery(definition.entityType());
         Root<E> root = criteria.from(definition.entityType());
+        fetcher.accept(root);
         criteria.select(root);
         applyFilters(criteria, root, builder, scope, preparedSearch.filter());
         criteria.orderBy(toOrders(root, builder, preparedSearch.sort(), definition));

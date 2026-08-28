@@ -2,6 +2,7 @@ package com.github.stimur1709.cloudops.monitoring.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -91,7 +92,7 @@ class MonitorApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, outbox_messages, tasks,
+                TRUNCATE TABLE monitoring_results, monitors, resource_health, outbox_messages, tasks,
                     organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         jdbcTemplate.update("""
@@ -231,7 +232,7 @@ class MonitorApiIntegrationTest {
                 .hasSize(1);
         assertThat(sqlStatementRecorder.statements().stream()
                 .filter(statement -> statement.toLowerCase().contains(" from monitors ")))
-                .hasSize(2);
+                .hasSize(3);
     }
 
     @Test
@@ -310,6 +311,53 @@ class MonitorApiIntegrationTest {
         executionService.execute(monitorId);
 
         assertHealth(monitorId, "UP", 1, 0);
+    }
+
+    @Test
+    void monitorLifecycleRecalculatesResourceHealth() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30")
+                .andReturn().getResponse().getContentAsString());
+        assertResourceHealth(resourceId, "UNKNOWN");
+
+        executionService.execute(monitorId);
+        assertResourceHealth(resourceId, "UP");
+
+        mockMvc.perform(put("/api/monitors/{id}", monitorId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"intervalSeconds":30,"enabled":false,"storageMode":"LATEST_ONLY",
+                                 "retentionDays":null}
+                                """))
+                .andExpect(status().isOk());
+        assertResourceHealth(resourceId, "UNKNOWN");
+
+        mockMvc.perform(put("/api/monitors/{id}", monitorId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"intervalSeconds":30,"enabled":true,"storageMode":"LATEST_ONLY",
+                                 "retentionDays":null}
+                                """))
+                .andExpect(status().isOk());
+        assertResourceHealth(resourceId, "UP");
+
+        mockMvc.perform(delete("/api/monitors/{id}", monitorId))
+                .andExpect(status().isNoContent());
+        assertResourceHealth(resourceId, "UNKNOWN");
+    }
+
+    @Test
+    void inactiveResourceKeepsOperationalHealthSeparate() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30")
+                .andReturn().getResponse().getContentAsString());
+        executionService.execute(monitorId);
+        jdbcTemplate.update("UPDATE resources SET status = 'INACTIVE' WHERE id = ?", resourceId);
+
+        mockMvc.perform(get("/api/resources/{id}", resourceId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("INACTIVE"))
+                .andExpect(jsonPath("$.healthStatus").value("UP"));
     }
 
     @Test
@@ -445,6 +493,14 @@ class MonitorApiIntegrationTest {
                 .containsEntry("consecutive_successes", successes);
     }
 
+    private void assertResourceHealth(long resourceId, String healthStatus) {
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT health_status FROM resource_health WHERE resource_id = ?",
+                String.class,
+                resourceId
+        )).isEqualTo(healthStatus);
+    }
+
     private long insertService(String status, String url, int expectedStatus, int timeoutMs) {
         return insertResource(
                 "SERVICE", status,
@@ -454,10 +510,15 @@ class MonitorApiIntegrationTest {
     }
 
     private long insertResource(String type, String status, String config) {
-        return jdbcTemplate.queryForObject("""
+        long resourceId = jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
                 VALUES (?, ?, ?, ?, CAST(? AS jsonb), now(), now()) RETURNING id
                 """, Long.class, "resource-" + System.nanoTime(), type, status, organizationId, config);
+        jdbcTemplate.update(
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
+                resourceId
+        );
+        return resourceId;
     }
 
     private long insertMonitor(long resourceId, String storageMode, Integer retentionDays) {
