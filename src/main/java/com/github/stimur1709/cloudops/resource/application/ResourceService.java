@@ -97,7 +97,8 @@ public class ResourceService {
                 search,
                 OrganizationMembershipScopes.visibleTo(
                         currentUserId,
-                        root -> root.get(ResourceHealthEntity_.resource).get(ResourceEntity_.organizationId)
+                        root -> root.get(ResourceHealthEntity_.resource)
+                                .get(ResourceEntity_.organizationId)
                 ),
                 ResourceSearchDefinition.DEFINITION,
                 root -> root.fetch(ResourceHealthEntity_.resource)
