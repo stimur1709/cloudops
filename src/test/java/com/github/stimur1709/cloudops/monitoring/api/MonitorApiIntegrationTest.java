@@ -165,6 +165,47 @@ class MonitorApiIntegrationTest {
     }
 
     @Test
+    void createsAndExecutesDnsAndPingMonitorsThroughExistingHealthPipeline() throws Exception {
+        long resourceId = insertResource("SERVER", "ACTIVE", "{\"host\":\"localhost\"}");
+        long dnsMonitorId = monitorId(create(resourceId, "DNS_CHECK", "HISTORY", 30, "30", 1, 1)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.type").value("DNS_CHECK"))
+                .andReturn().getResponse().getContentAsString());
+        long pingMonitorId = monitorId(create(resourceId, "PING", "HISTORY", 30, "30", 1, 1)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.type").value("PING"))
+                .andReturn().getResponse().getContentAsString());
+
+        executionService.execute(dnsMonitorId);
+        executionService.execute(pingMonitorId);
+
+        mockMvc.perform(get("/api/resources/{id}/monitors", resourceId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.type == 'DNS_CHECK')].lastResult.data.hostname").value("localhost"))
+                .andExpect(jsonPath("$[?(@.type == 'PING')].lastResult.data.host").value("localhost"));
+        assertResourceHealth(resourceId, "UP");
+    }
+
+    @Test
+    void tlsMonitorUsesExistingThresholdAndHealthPipeline() throws Exception {
+        int plainHttpPort = httpServer.getAddress().getPort();
+        long resourceId = insertResource(
+                "SERVER", "ACTIVE", "{\"host\":\"127.0.0.1\",\"port\":%d}".formatted(plainHttpPort)
+        );
+        long monitorId = monitorId(create(resourceId, "TLS_CHECK", "LATEST_ONLY", null, "30", 1, 1)
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+
+        executionService.execute(monitorId);
+
+        mockMvc.perform(get("/api/resources/{id}/monitors", resourceId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].lastResult.error.code").isString())
+                .andExpect(jsonPath("$[0].healthStatus").value("DOWN"));
+        assertResourceHealth(resourceId, "DOWN");
+    }
+
+    @Test
     void failedPortMonitorUsesExistingThresholdsAndResourceHealthAggregation() throws Exception {
         int unusedPort;
         try (ServerSocket socket = new ServerSocket(0)) {

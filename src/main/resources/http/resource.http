@@ -4,7 +4,7 @@ Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "name": "service-03",
+  "name": "service-01",
   "type": "SERVICE",
   "status": "ACTIVE",
   "organizationId": 1,
@@ -14,6 +14,50 @@ Content-Type: application/json
     "timeoutMs": 5000
   }
 }
+
+> {%
+    client.global.set("serviceResourceId", response.body.id);
+%}
+
+### Create host resource for DNS_CHECK and PING
+POST http://localhost:8080/api/resources
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "network-probes-server",
+  "type": "SERVER",
+  "status": "ACTIVE",
+  "organizationId": 1,
+  "config": {
+    "host": "localhost"
+  }
+}
+
+> {%
+    client.global.set("networkProbeResourceId", response.body.id);
+%}
+
+### Create HTTPS resource for DNS_CHECK, PING and TLS_CHECK
+POST http://localhost:8080/api/resources
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "tls-service",
+  "type": "SERVICE",
+  "status": "ACTIVE",
+  "organizationId": 1,
+  "config": {
+    "url": "https://example.com",
+    "expectedStatus": 200,
+    "timeoutMs": 5000
+  }
+}
+
+> {%
+    client.global.set("tlsResourceId", response.body.id);
+%}
 
 ### Get resource
 GET http://localhost:8080/api/resources/1

@@ -204,6 +204,14 @@ curl -i -X POST http://localhost:8080/api/resources/2/tasks \
   -d '{"type":"PORT_CHECK"}'
 ```
 
+Также доступны `DNS_CHECK`, `PING` и `TLS_CHECK`. DNS-проверка разрешает hostname ресурса и
+возвращает все найденные IP-адреса; IP literal для неё не поддерживается. PING использует
+`InetAddress.isReachable`: в зависимости от ОС и прав процесса Java может использовать ICMP
+или TCP fallback. Его timeout задаётся через `PING_TIMEOUT` (`3s`). TLS-проверка выполняет
+handshake со стандартной Java-проверкой trust chain и hostname, возвращает данные leaf
+certificate и использует `TLS_CHECK_TIMEOUT` (`5s`). Пользовательские truststore, mTLS и
+отключение проверки сертификата не поддерживаются.
+
 API атомарно сохраняет Task и команду в PostgreSQL Transactional Outbox, после чего сразу
 возвращает `202 Accepted`, `Location: /api/tasks/{id}` и Task в статусе `PENDING`.
 Доступность RabbitMQ не влияет на создание Task: пока брокер недоступен, Task остаётся
@@ -325,6 +333,11 @@ curl -i -X POST http://localhost:8080/api/resources/2/monitors \
 
 TCP probe только открывает и закрывает соединение, не выполняя протокол прикладного уровня.
 Timeout соединения задаётся через `PORT_CHECK_TIMEOUT` (`3s`) и должен быть положительным.
+
+Тот же Monitor API принимает `DNS_CHECK`, `PING` и `TLS_CHECK` для совместимых ресурсов.
+`DNS_CHECK` и `PING` используют host у `SERVER`, `NETWORK_DEVICE`, `DATABASE` или host из URL
+у `SERVICE`. `TLS_CHECK` использует настроенный порт host-ресурса либо HTTPS URL (`443` по
+умолчанию); HTTP URL не поддерживается.
 
 Настройки и последний результат возвращает `GET /api/resources/{resourceId}/monitors`.
 Monitor изменяется через `PUT /api/monitors/{id}` и удаляется через
