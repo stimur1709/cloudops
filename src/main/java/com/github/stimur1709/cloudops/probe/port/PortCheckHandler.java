@@ -20,12 +20,12 @@ public class PortCheckHandler implements ProbeHandler {
     }
 
     @Override
-    public ProbeType supports() {
+    public ProbeType type() {
         return ProbeType.PORT_CHECK;
     }
 
     @Override
-    public boolean supports(ResourceConfig resourceConfig) {
+    public boolean isCompatibleWith(ResourceConfig resourceConfig) {
         return switch (resourceConfig) {
             case ServerResourceConfig server -> server.port() != null;
             case NetworkDeviceResourceConfig device -> device.managementPort() != null;

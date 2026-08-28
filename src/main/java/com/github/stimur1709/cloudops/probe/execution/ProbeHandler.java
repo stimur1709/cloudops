@@ -5,9 +5,9 @@ import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 
 public interface ProbeHandler {
 
-    ProbeType supports();
+    ProbeType type();
 
-    boolean supports(ResourceConfig resourceConfig);
+    boolean isCompatibleWith(ResourceConfig resourceConfig);
 
     ProbeExecutionResult execute(ProbeExecutionContext context);
 }

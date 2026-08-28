@@ -16,10 +16,10 @@ public class ProbeHandlerRegistry {
     public ProbeHandlerRegistry(List<ProbeHandler> handlers) {
         Map<ProbeType, ProbeHandler> registered = new EnumMap<>(ProbeType.class);
         for (ProbeHandler handler : handlers) {
-            ProbeHandler duplicate = registered.putIfAbsent(handler.supports(), handler);
+            ProbeHandler duplicate = registered.putIfAbsent(handler.type(), handler);
             if (duplicate != null) {
                 throw new IllegalStateException(
-                        "Multiple ProbeHandler beans support probe type " + handler.supports()
+                        "Multiple ProbeHandler beans support probe type " + handler.type()
                 );
             }
         }
@@ -35,6 +35,6 @@ public class ProbeHandlerRegistry {
     }
 
     public boolean supports(ProbeType type, ResourceConfig resourceConfig) {
-        return get(type).supports(resourceConfig);
+        return get(type).isCompatibleWith(resourceConfig);
     }
 }

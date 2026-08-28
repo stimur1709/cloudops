@@ -28,13 +28,13 @@ class PortCheckHandlerTest {
 
     @Test
     void supportsOnlyConfigsWithAHostAndPort() {
-        assertThat(handler.supports(new ServerResourceConfig("server", 22))).isTrue();
-        assertThat(handler.supports(new ServerResourceConfig("server", null))).isFalse();
-        assertThat(handler.supports(new NetworkDeviceResourceConfig("switch", 161))).isTrue();
-        assertThat(handler.supports(new NetworkDeviceResourceConfig("switch", null))).isFalse();
-        assertThat(handler.supports(new DatabaseResourceConfig("database", 5432, "cloudops"))).isTrue();
-        assertThat(handler.supports(new ServiceResourceConfig("https://example.com", 200, 1000))).isFalse();
-        assertThat(handler.supports(new OtherResourceConfig())).isFalse();
+        assertThat(handler.isCompatibleWith(new ServerResourceConfig("server", 22))).isTrue();
+        assertThat(handler.isCompatibleWith(new ServerResourceConfig("server", null))).isFalse();
+        assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", 161))).isTrue();
+        assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", null))).isFalse();
+        assertThat(handler.isCompatibleWith(new DatabaseResourceConfig("database", 5432, "cloudops"))).isTrue();
+        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("https://example.com", 200, 1000))).isFalse();
+        assertThat(handler.isCompatibleWith(new OtherResourceConfig())).isFalse();
     }
 
     @Test
@@ -46,7 +46,7 @@ class PortCheckHandlerTest {
                 1, ProbeType.PORT_CHECK, new DatabaseResourceConfig("database", 5432, "cloudops")
         ));
 
-        assertThat(handler.supports()).isEqualTo(ProbeType.PORT_CHECK);
+        assertThat(handler.type()).isEqualTo(ProbeType.PORT_CHECK);
         assertThat(result).isEqualTo(ProbeExecutionResult.completed(true, checkResult));
         verify(client).execute("database", 5432);
     }

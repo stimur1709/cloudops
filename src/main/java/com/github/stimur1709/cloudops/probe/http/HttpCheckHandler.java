@@ -18,12 +18,12 @@ public class HttpCheckHandler implements ProbeHandler {
     }
 
     @Override
-    public ProbeType supports() {
+    public ProbeType type() {
         return ProbeType.HTTP_CHECK;
     }
 
     @Override
-    public boolean supports(ResourceConfig resourceConfig) {
+    public boolean isCompatibleWith(ResourceConfig resourceConfig) {
         return resourceConfig instanceof ServiceResourceConfig;
     }
 
