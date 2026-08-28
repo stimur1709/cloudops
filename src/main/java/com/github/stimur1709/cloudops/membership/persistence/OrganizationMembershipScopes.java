@@ -1,6 +1,9 @@
 package com.github.stimur1709.cloudops.membership.persistence;
 
+import java.util.function.Function;
+
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchScope;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import jakarta.persistence.metamodel.SingularAttribute;
@@ -14,6 +17,13 @@ public final class OrganizationMembershipScopes {
             long userId,
             SingularAttribute<? super E, Long> organizationIdAttribute
     ) {
+        return visibleTo(userId, root -> root.get(organizationIdAttribute));
+    }
+
+    public static <E> JpaSearchScope<E> visibleTo(
+            long userId,
+            Function<Root<E>, Expression<Long>> organizationIdExpression
+    ) {
         return (root, query, builder) -> {
             Subquery<Long> memberships = query.subquery(Long.class);
             Root<OrganizationMembershipEntity> membership = memberships.from(OrganizationMembershipEntity.class);
@@ -21,7 +31,7 @@ public final class OrganizationMembershipScopes {
             memberships.where(builder.equal(
                     membership.get(OrganizationMembershipEntity_.userId), userId
             ));
-            return root.get(organizationIdAttribute).in(memberships);
+            return organizationIdExpression.apply(root).in(memberships);
         };
     }
 }

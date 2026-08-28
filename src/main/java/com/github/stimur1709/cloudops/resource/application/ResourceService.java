@@ -13,6 +13,7 @@ import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntit
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntity_;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthJpaRepository;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
+import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipScopes;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
@@ -20,7 +21,6 @@ import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity_;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
-import com.github.stimur1709.cloudops.resource.persistence.ResourceHealthScopes;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceSearchDefinition;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
@@ -95,7 +95,10 @@ public class ResourceService {
     public SearchResult<ResourceDetails> search(SearchQuery search, long currentUserId) {
         SearchResult<ResourceHealthEntity> result = searchService.search(
                 search,
-                ResourceHealthScopes.visibleTo(currentUserId),
+                OrganizationMembershipScopes.visibleTo(
+                        currentUserId,
+                        root -> root.get(ResourceHealthEntity_.resource).get(ResourceEntity_.organizationId)
+                ),
                 ResourceSearchDefinition.DEFINITION,
                 root -> root.fetch(ResourceHealthEntity_.resource)
         );
