@@ -11,6 +11,8 @@ import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.monitoring.StorageMode;
+import com.github.stimur1709.cloudops.monitoring.api.CreateMonitorRequest;
+import com.github.stimur1709.cloudops.monitoring.api.UpdateMonitorRequest;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorEntity;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultEntity;
@@ -54,25 +56,24 @@ public class MonitorService {
     @Transactional
     public MonitorEntity create(
             long resourceId,
-            ProbeType type,
-            int intervalSeconds,
-            boolean enabled,
-            StorageMode storageMode,
-            Integer retentionDays,
+            CreateMonitorRequest request,
             long currentUserId
     ) {
         ResourceEntity resource = resourceRepository.findByIdForUpdate(resourceId)
                 .orElseThrow(NotFoundException::new);
         authorization.requireManager(resource.organizationId(), currentUserId);
-        requireSupported(resource, type);
+        requireSupported(resource, request.type());
         if (resource.status() != ResourceStatus.ACTIVE) {
             throw new ConflictException("RESOURCE_INACTIVE", "Monitoring requires an active resource");
         }
-        if (monitorRepository.existsByResourceIdAndType(resourceId, type)) {
+        if (monitorRepository.existsByResourceIdAndType(resourceId, request.type())) {
             throw monitorConflict();
         }
         MonitorEntity monitor = MonitorEntity.create(
-                resourceId, type, enabled, intervalSeconds, clock.instant(), storageMode, retentionDays
+                resourceId, request.type(), request.enabled(), request.intervalSeconds(), clock.instant(),
+                request.storageMode(), request.retentionDays(),
+                thresholdOrDefault(request.failureThreshold(), MonitorEntity.DEFAULT_FAILURE_THRESHOLD),
+                thresholdOrDefault(request.recoveryThreshold(), MonitorEntity.DEFAULT_RECOVERY_THRESHOLD)
         );
         try {
             return monitorRepository.saveAndFlush(monitor);
@@ -91,19 +92,21 @@ public class MonitorService {
     @Transactional
     public MonitorEntity update(
             long id,
-            int intervalSeconds,
-            boolean enabled,
-            StorageMode storageMode,
-            Integer retentionDays,
+            UpdateMonitorRequest request,
             long currentUserId
     ) {
         MonitorEntity monitor = monitorRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
         ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         authorization.requireManager(resource.organizationId(), currentUserId);
-        if (monitor.storageMode() == StorageMode.HISTORY && storageMode == StorageMode.LATEST_ONLY) {
+        if (monitor.storageMode() == StorageMode.HISTORY && request.storageMode() == StorageMode.LATEST_ONLY) {
             resultRepository.deleteAllByMonitorId(id);
         }
-        monitor.update(enabled, intervalSeconds, storageMode, retentionDays, clock.instant());
+        monitor.update(
+                request.enabled(), request.intervalSeconds(), request.storageMode(), request.retentionDays(),
+                thresholdOrDefault(request.failureThreshold(), MonitorEntity.DEFAULT_FAILURE_THRESHOLD),
+                thresholdOrDefault(request.recoveryThreshold(), MonitorEntity.DEFAULT_RECOVERY_THRESHOLD),
+                clock.instant()
+        );
         return monitor;
     }
 
@@ -149,5 +152,9 @@ public class MonitorService {
         return new ConflictException(
                 "MONITOR_ALREADY_EXISTS", "A monitor of this type already exists for the resource"
         );
+    }
+
+    private int thresholdOrDefault(Integer threshold, int defaultValue) {
+        return threshold == null ? defaultValue : threshold;
     }
 }

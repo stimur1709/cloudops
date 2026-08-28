@@ -1,5 +1,8 @@
-### Create resources task
-POST http://localhost:8080//api/resources/1/monitors
+@baseUrl = http://localhost:8080
+@resourceId = 1
+
+### Create monitor and save its ID
+POST {{baseUrl}}/api/resources/{{resourceId}}/monitors
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
@@ -8,31 +11,64 @@ Content-Type: application/json
   "intervalSeconds": 30,
   "enabled": true,
   "storageMode": "HISTORY",
-  "retentionDays": 1
+  "retentionDays": 30,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2
 }
 
 > {%
-    client.global.set("taskId", response.body.id);
+    client.global.set("monitorId", response.body.id);
 %}
 
-### Get current task state/result
-POST http://localhost:8080/api/monitors/1/results/search
+### List resource monitors with current health
+GET {{baseUrl}}/api/resources/{{resourceId}}/monitors
 Authorization: Bearer {{accessToken}}
+
+### Update monitor settings and health thresholds
+PUT {{baseUrl}}/api/monitors/{{monitorId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "intervalSeconds": 60,
+  "enabled": true,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "failureThreshold": 4,
+  "recoveryThreshold": 3
+}
+
+### Search monitor result history
+POST {{baseUrl}}/api/monitors/{{monitorId}}/results/search
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
 
 {
   "start": 0,
   "size": 20,
-  "filter": {
-    "operator": "AND",
-    "conditions": [
-      {
-        "field": "name",
-        "operation": "EQ",
-        "value": "router-01"
-      }
-    ]
-  },
   "sort": [
+    {
+      "field": "checkedAt",
+      "order": "DESC"
+    }
   ],
   "getTotal": true
 }
+
+### Disable monitor without changing its health
+PUT {{baseUrl}}/api/monitors/{{monitorId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "intervalSeconds": 60,
+  "enabled": false,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "failureThreshold": 4,
+  "recoveryThreshold": 3
+}
+
+### Delete monitor
+DELETE {{baseUrl}}/api/monitors/{{monitorId}}
+Authorization: Bearer {{accessToken}}

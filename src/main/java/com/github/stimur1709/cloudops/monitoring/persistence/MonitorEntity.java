@@ -2,6 +2,7 @@ package com.github.stimur1709.cloudops.monitoring.persistence;
 
 import java.time.Instant;
 
+import com.github.stimur1709.cloudops.monitoring.HealthStatus;
 import com.github.stimur1709.cloudops.monitoring.StorageMode;
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import jakarta.persistence.Column;
@@ -19,6 +20,9 @@ import tools.jackson.databind.JsonNode;
 @Entity
 @Table(name = "monitors")
 public class MonitorEntity {
+
+    public static final int DEFAULT_FAILURE_THRESHOLD = 3;
+    public static final int DEFAULT_RECOVERY_THRESHOLD = 2;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -54,6 +58,22 @@ public class MonitorEntity {
     @Column(name = "last_result", columnDefinition = "jsonb")
     private JsonNode lastResult;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "health_status", nullable = false, length = 10)
+    private HealthStatus healthStatus;
+
+    @Column(name = "failure_threshold", nullable = false)
+    private int failureThreshold;
+
+    @Column(name = "recovery_threshold", nullable = false)
+    private int recoveryThreshold;
+
+    @Column(name = "consecutive_failures", nullable = false)
+    private int consecutiveFailures;
+
+    @Column(name = "consecutive_successes", nullable = false)
+    private int consecutiveSuccesses;
+
     protected MonitorEntity() {
     }
 
@@ -64,7 +84,9 @@ public class MonitorEntity {
             int intervalSeconds,
             Instant nextRunAt,
             StorageMode storageMode,
-            Integer retentionDays
+            Integer retentionDays,
+            int failureThreshold,
+            int recoveryThreshold
     ) {
         this.resourceId = resourceId;
         this.type = type;
@@ -73,6 +95,9 @@ public class MonitorEntity {
         this.nextRunAt = nextRunAt;
         this.storageMode = storageMode;
         this.retentionDays = retentionDays;
+        this.healthStatus = HealthStatus.UNKNOWN;
+        this.failureThreshold = failureThreshold;
+        this.recoveryThreshold = recoveryThreshold;
     }
 
     public static MonitorEntity create(
@@ -82,9 +107,14 @@ public class MonitorEntity {
             int intervalSeconds,
             Instant nextRunAt,
             StorageMode storageMode,
-            Integer retentionDays
+            Integer retentionDays,
+            int failureThreshold,
+            int recoveryThreshold
     ) {
-        return new MonitorEntity(resourceId, type, enabled, intervalSeconds, nextRunAt, storageMode, retentionDays);
+        return new MonitorEntity(
+                resourceId, type, enabled, intervalSeconds, nextRunAt, storageMode, retentionDays,
+                failureThreshold, recoveryThreshold
+        );
     }
 
     public void update(
@@ -92,20 +122,61 @@ public class MonitorEntity {
             int intervalSeconds,
             StorageMode storageMode,
             Integer retentionDays,
+            int failureThreshold,
+            int recoveryThreshold,
             Instant now
     ) {
         this.enabled = enabled;
         this.intervalSeconds = intervalSeconds;
         this.storageMode = storageMode;
         this.retentionDays = retentionDays;
+        if (this.failureThreshold != failureThreshold || this.recoveryThreshold != recoveryThreshold) {
+            consecutiveFailures = 0;
+            consecutiveSuccesses = 0;
+        }
+        this.failureThreshold = failureThreshold;
+        this.recoveryThreshold = recoveryThreshold;
         if (enabled && nextRunAt.isBefore(now)) {
             nextRunAt = now;
         }
     }
 
-    public void record(Instant checkedAt, JsonNode result) {
+    public void record(Instant checkedAt, JsonNode result, boolean success) {
         lastCheckedAt = checkedAt;
         lastResult = result;
+        updateHealth(success);
+    }
+
+    private void updateHealth(boolean success) {
+        switch (healthStatus) {
+            case UNKNOWN -> {
+                healthStatus = success ? HealthStatus.UP : HealthStatus.DOWN;
+                resetCounters();
+            }
+            case UP -> {
+                consecutiveSuccesses = 0;
+                if (success) {
+                    consecutiveFailures = 0;
+                } else if (++consecutiveFailures >= failureThreshold) {
+                    healthStatus = HealthStatus.DOWN;
+                    resetCounters();
+                }
+            }
+            case DOWN -> {
+                consecutiveFailures = 0;
+                if (!success) {
+                    consecutiveSuccesses = 0;
+                } else if (++consecutiveSuccesses >= recoveryThreshold) {
+                    healthStatus = HealthStatus.UP;
+                    resetCounters();
+                }
+            }
+        }
+    }
+
+    private void resetCounters() {
+        consecutiveFailures = 0;
+        consecutiveSuccesses = 0;
     }
 
     public Long id() { return id; }
@@ -118,4 +189,9 @@ public class MonitorEntity {
     public Integer retentionDays() { return retentionDays; }
     public Instant lastCheckedAt() { return lastCheckedAt; }
     public JsonNode lastResult() { return lastResult; }
+    public HealthStatus healthStatus() { return healthStatus; }
+    public int failureThreshold() { return failureThreshold; }
+    public int recoveryThreshold() { return recoveryThreshold; }
+    public int consecutiveFailures() { return consecutiveFailures; }
+    public int consecutiveSuccesses() { return consecutiveSuccesses; }
 }

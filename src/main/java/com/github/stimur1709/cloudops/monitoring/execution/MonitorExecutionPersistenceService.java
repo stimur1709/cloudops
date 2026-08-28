@@ -54,10 +54,13 @@ public class MonitorExecutionPersistenceService {
     }
 
     @Transactional
-    public void saveResult(long monitorId, Instant checkedAt, JsonNode result) {
+    public void saveResult(long monitorId, Instant checkedAt, JsonNode result, boolean success) {
         MonitorEntity monitor = monitorRepository.findByIdForUpdate(monitorId)
                 .orElseThrow(NotFoundException::new);
-        monitor.record(checkedAt, result);
+        if (!monitor.enabled()) {
+            return;
+        }
+        monitor.record(checkedAt, result, success);
         if (monitor.storageMode() == StorageMode.HISTORY) {
             resultRepository.save(MonitoringResultEntity.create(monitorId, checkedAt, result));
         }

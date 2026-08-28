@@ -34,11 +34,7 @@ public class ResourceMonitorController {
     ) {
         MonitorEntity monitor = monitorService.create(
                 resourceId,
-                request.type(),
-                request.intervalSeconds(),
-                request.enabled(),
-                request.storageMode(),
-                request.retentionDays(),
+                request,
                 CurrentUser.id(authentication)
         );
         return ResponseEntity.created(URI.create("/api/monitors/" + monitor.id()))

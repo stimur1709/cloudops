@@ -18,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import com.github.stimur1709.cloudops.SqlStatementRecorder;
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.monitoring.execution.MonitorClaimService;
@@ -59,6 +60,7 @@ class MonitorApiIntegrationTest {
     @Autowired private MonitorClaimService claimService;
     @Autowired private MonitorExecutionService executionService;
     @Autowired private MonitoringRetentionService retentionService;
+    @Autowired private SqlStatementRecorder sqlStatementRecorder;
 
     private MockMvc mockMvc;
     private long organizationId;
@@ -118,9 +120,20 @@ class MonitorApiIntegrationTest {
                 .andExpect(jsonPath("$.type").value("HTTP_CHECK"))
                 .andExpect(jsonPath("$.enabled").value(true))
                 .andExpect(jsonPath("$.storageMode").value("HISTORY"))
+                .andExpect(jsonPath("$.healthStatus").value("UNKNOWN"))
+                .andExpect(jsonPath("$.failureThreshold").value(3))
+                .andExpect(jsonPath("$.recoveryThreshold").value(2))
+                .andExpect(jsonPath("$.consecutiveFailures").doesNotExist())
+                .andExpect(jsonPath("$.consecutiveSuccesses").doesNotExist())
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(monitorId(response)).isPositive();
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT health_status, consecutive_failures, consecutive_successes FROM monitors
+                """))
+                .containsEntry("health_status", "UNKNOWN")
+                .containsEntry("consecutive_failures", 0)
+                .containsEntry("consecutive_successes", 0);
         create(resourceId, "LATEST_ONLY", null, "30")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("MONITOR_ALREADY_EXISTS"));
@@ -148,6 +161,17 @@ class MonitorApiIntegrationTest {
         create(serviceId, "LATEST_ONLY", 10, "30")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("retentionDays"));
+
+        mockMvc.perform(post("/api/resources/{id}/monitors", serviceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"type":"HTTP_CHECK","intervalSeconds":30,"enabled":true,
+                                 "storageMode":"LATEST_ONLY","retentionDays":null,
+                                 "failureThreshold":0,"recoveryThreshold":11}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[?(@.field == 'failureThreshold')]").exists())
+                .andExpect(jsonPath("$.errors[?(@.field == 'recoveryThreshold')]").exists());
     }
 
     @Test
@@ -194,6 +218,23 @@ class MonitorApiIntegrationTest {
     }
 
     @Test
+    void executionDoesNotReloadResourceWhenSavingResult() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30")
+                .andReturn().getResponse().getContentAsString());
+        sqlStatementRecorder.clear();
+
+        executionService.execute(monitorId);
+
+        assertThat(sqlStatementRecorder.statements().stream()
+                .filter(statement -> statement.toLowerCase().contains(" from resources ")))
+                .hasSize(1);
+        assertThat(sqlStatementRecorder.statements().stream()
+                .filter(statement -> statement.toLowerCase().contains(" from monitors ")))
+                .hasSize(2);
+    }
+
+    @Test
     void statusMismatchIsCompletedFailureWhileLatestOnlyCreatesNoHistory() throws Exception {
         long resourceId = insertService("ACTIVE", baseUrl + "/unexpected", 200, 1000);
         create(resourceId, "LATEST_ONLY", null, "30");
@@ -219,7 +260,79 @@ class MonitorApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].lastResult.success").value(false))
                 .andExpect(jsonPath("$[0].lastResult.error.code").value("TIMEOUT"))
-                .andExpect(jsonPath("$[0].lastResult.error.message").value("HTTP check timed out"));
+                .andExpect(jsonPath("$[0].lastResult.error.message").value("HTTP check timed out"))
+                .andExpect(jsonPath("$[0].healthStatus").value("DOWN"));
+    }
+
+    @Test
+    void appliesHealthThresholdsEquallyToLatestOnlyAndHistory() throws Exception {
+        for (String storageMode : List.of("LATEST_ONLY", "HISTORY")) {
+            long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+            Integer retentionDays = storageMode.equals("HISTORY") ? 30 : null;
+            long monitorId = monitorId(create(resourceId, storageMode, retentionDays, "30", 2, 2)
+                    .andExpect(jsonPath("$.failureThreshold").value(2))
+                    .andExpect(jsonPath("$.recoveryThreshold").value(2))
+                    .andReturn().getResponse().getContentAsString());
+
+            executionService.execute(monitorId);
+            assertHealth(monitorId, "UP", 0, 0);
+
+            updateServiceConfig(resourceId, baseUrl + "/unexpected", 200, 1000);
+            executionService.execute(monitorId);
+            assertHealth(monitorId, "UP", 1, 0);
+            executionService.execute(monitorId);
+            assertHealth(monitorId, "DOWN", 0, 0);
+
+            updateServiceConfig(resourceId, baseUrl + "/ok", 200, 1000);
+            executionService.execute(monitorId);
+            assertHealth(monitorId, "DOWN", 0, 1);
+            executionService.execute(monitorId);
+            assertHealth(monitorId, "UP", 0, 0);
+
+            int historyCount = jdbcTemplate.queryForObject(
+                    "SELECT count(*) FROM monitoring_results WHERE monitor_id = ?", Integer.class, monitorId
+            );
+            assertThat(historyCount).isEqualTo(storageMode.equals("HISTORY") ? 5 : 0);
+        }
+    }
+
+    @Test
+    void disabledMonitorPreservesHealthAndCounters() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30", 2, 2)
+                .andReturn().getResponse().getContentAsString());
+        executionService.execute(monitorId);
+        updateServiceConfig(resourceId, baseUrl + "/unexpected", 200, 1000);
+        executionService.execute(monitorId);
+        assertHealth(monitorId, "UP", 1, 0);
+
+        jdbcTemplate.update("UPDATE monitors SET enabled = false WHERE id = ?", monitorId);
+        executionService.execute(monitorId);
+
+        assertHealth(monitorId, "UP", 1, 0);
+    }
+
+    @Test
+    void updatingThresholdsPreservesHealthAndResetsCounters() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30")
+                .andReturn().getResponse().getContentAsString());
+        executionService.execute(monitorId);
+        updateServiceConfig(resourceId, baseUrl + "/unexpected", 200, 1000);
+        executionService.execute(monitorId);
+        assertHealth(monitorId, "UP", 1, 0);
+
+        mockMvc.perform(put("/api/monitors/{id}", monitorId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"intervalSeconds":30,"enabled":true,"storageMode":"LATEST_ONLY",
+                                 "retentionDays":null,"failureThreshold":4,"recoveryThreshold":3}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.healthStatus").value("UP"))
+                .andExpect(jsonPath("$.failureThreshold").value(4))
+                .andExpect(jsonPath("$.recoveryThreshold").value(3));
+        assertHealth(monitorId, "UP", 0, 0);
     }
 
     @Test
@@ -233,6 +346,12 @@ class MonitorApiIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT last_checked_at IS NULL FROM monitors", Boolean.class
         )).isTrue();
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT health_status, consecutive_failures, consecutive_successes FROM monitors
+                """))
+                .containsEntry("health_status", "UNKNOWN")
+                .containsEntry("consecutive_failures", 0)
+                .containsEntry("consecutive_successes", 0);
         assertThat(count("monitoring_results")).isZero();
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT next_run_at > now() FROM monitors", Boolean.class
@@ -284,13 +403,46 @@ class MonitorApiIntegrationTest {
     private org.springframework.test.web.servlet.ResultActions create(
             long resourceId, String storageMode, Integer retentionDays, String intervalSeconds
     ) throws Exception {
+        return create(resourceId, storageMode, retentionDays, intervalSeconds, null, null);
+    }
+
+    private org.springframework.test.web.servlet.ResultActions create(
+            long resourceId,
+            String storageMode,
+            Integer retentionDays,
+            String intervalSeconds,
+            Integer failureThreshold,
+            Integer recoveryThreshold
+    ) throws Exception {
         String retention = retentionDays == null ? "null" : retentionDays.toString();
+        String failure = failureThreshold == null ? "null" : failureThreshold.toString();
+        String recovery = recoveryThreshold == null ? "null" : recoveryThreshold.toString();
         return mockMvc.perform(post("/api/resources/{id}/monitors", resourceId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"type":"HTTP_CHECK","intervalSeconds":%s,"enabled":true,
-                         "storageMode":"%s","retentionDays":%s}
-                        """.formatted(intervalSeconds, storageMode, retention)));
+                         "storageMode":"%s","retentionDays":%s,
+                         "failureThreshold":%s,"recoveryThreshold":%s}
+                        """.formatted(intervalSeconds, storageMode, retention, failure, recovery)));
+    }
+
+    private void updateServiceConfig(long resourceId, String url, int expectedStatus, int timeoutMs) {
+        jdbcTemplate.update(
+                "UPDATE resources SET config = CAST(? AS jsonb) WHERE id = ?",
+                "{\"url\":\"%s\",\"expectedStatus\":%d,\"timeoutMs\":%d}"
+                        .formatted(url, expectedStatus, timeoutMs),
+                resourceId
+        );
+    }
+
+    private void assertHealth(long monitorId, String healthStatus, int failures, int successes) {
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT health_status, consecutive_failures, consecutive_successes
+                FROM monitors WHERE id = ?
+                """, monitorId))
+                .containsEntry("health_status", healthStatus)
+                .containsEntry("consecutive_failures", failures)
+                .containsEntry("consecutive_successes", successes);
     }
 
     private long insertService(String status, String url, int expectedStatus, int timeoutMs) {
