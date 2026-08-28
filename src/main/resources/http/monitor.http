@@ -1,5 +1,7 @@
 @baseUrl = http://localhost:8080
 @resourceId = 1
+@availabilityFrom = 2026-08-28T00:00:00Z
+@availabilityTo = 2026-08-29T00:00:00Z
 
 ### Create monitor and save its ID
 POST {{baseUrl}}/api/resources/{{resourceId}}/monitors
@@ -22,6 +24,10 @@ Content-Type: application/json
 
 ### List resource monitors with current health
 GET {{baseUrl}}/api/resources/{{resourceId}}/monitors
+Authorization: Bearer {{accessToken}}
+
+### Get resource availability and uptime for a period
+GET {{baseUrl}}/api/resources/{{resourceId}}/health/availability?from={{availabilityFrom}}&to={{availabilityTo}}
 Authorization: Bearer {{accessToken}}
 
 ### Update monitor settings and health thresholds
