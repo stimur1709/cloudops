@@ -33,12 +33,7 @@ public class MonitorController {
     ) {
         return MonitorResponse.from(monitorService.update(
                 id,
-                request.intervalSeconds(),
-                request.enabled(),
-                request.storageMode(),
-                request.retentionDays(),
-                request.failureThreshold(),
-                request.recoveryThreshold(),
+                request,
                 CurrentUser.id(authentication)
         ));
     }

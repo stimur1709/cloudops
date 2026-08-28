@@ -18,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import com.github.stimur1709.cloudops.SqlStatementRecorder;
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.monitoring.execution.MonitorClaimService;
@@ -59,6 +60,7 @@ class MonitorApiIntegrationTest {
     @Autowired private MonitorClaimService claimService;
     @Autowired private MonitorExecutionService executionService;
     @Autowired private MonitoringRetentionService retentionService;
+    @Autowired private SqlStatementRecorder sqlStatementRecorder;
 
     private MockMvc mockMvc;
     private long organizationId;
@@ -213,6 +215,23 @@ class MonitorApiIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].result.success").value(true));
+    }
+
+    @Test
+    void executionDoesNotReloadResourceWhenSavingResult() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30")
+                .andReturn().getResponse().getContentAsString());
+        sqlStatementRecorder.clear();
+
+        executionService.execute(monitorId);
+
+        assertThat(sqlStatementRecorder.statements().stream()
+                .filter(statement -> statement.toLowerCase().contains(" from resources ")))
+                .hasSize(1);
+        assertThat(sqlStatementRecorder.statements().stream()
+                .filter(statement -> statement.toLowerCase().contains(" from monitors ")))
+                .hasSize(2);
     }
 
     @Test

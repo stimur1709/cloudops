@@ -60,10 +60,6 @@ public class MonitorExecutionPersistenceService {
         if (!monitor.enabled()) {
             return;
         }
-        ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElse(null);
-        if (resource == null || resource.status() != ResourceStatus.ACTIVE) {
-            return;
-        }
         monitor.record(checkedAt, result, success);
         if (monitor.storageMode() == StorageMode.HISTORY) {
             resultRepository.save(MonitoringResultEntity.create(monitorId, checkedAt, result));
