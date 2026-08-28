@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.github.stimur1709.cloudops.probe.ProbeType;
+import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -31,5 +32,9 @@ public class ProbeHandlerRegistry {
             throw new ProbeHandlerNotFoundException(type);
         }
         return handler;
+    }
+
+    public boolean supports(ProbeType type, ResourceConfig resourceConfig) {
+        return get(type).supports(resourceConfig);
     }
 }

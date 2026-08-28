@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -138,6 +139,62 @@ class MonitorApiIntegrationTest {
         create(resourceId, "LATEST_ONLY", null, "30")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("MONITOR_ALREADY_EXISTS"));
+    }
+
+    @Test
+    void createsAndExecutesPortMonitorThroughExistingHealthPipeline() throws Exception {
+        int port = httpServer.getAddress().getPort();
+        long resourceId = insertResource(
+                "SERVER", "ACTIVE", "{\"host\":\"127.0.0.1\",\"port\":%d}".formatted(port)
+        );
+        long monitorId = monitorId(create(resourceId, "PORT_CHECK", "HISTORY", 30, "30", 1, 1)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.type").value("PORT_CHECK"))
+                .andReturn().getResponse().getContentAsString());
+
+        executionService.execute(monitorId);
+
+        mockMvc.perform(get("/api/resources/{id}/monitors", resourceId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].lastResult.success").value(true))
+                .andExpect(jsonPath("$[0].lastResult.data.host").value("127.0.0.1"))
+                .andExpect(jsonPath("$[0].lastResult.data.port").value(port))
+                .andExpect(jsonPath("$[0].lastResult.data.responseTimeMs").isNumber())
+                .andExpect(jsonPath("$[0].healthStatus").value("UP"));
+        assertResourceHealth(resourceId, "UP");
+    }
+
+    @Test
+    void failedPortMonitorUsesExistingThresholdsAndResourceHealthAggregation() throws Exception {
+        int unusedPort;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            unusedPort = socket.getLocalPort();
+        }
+        long resourceId = insertResource(
+                "DATABASE", "ACTIVE",
+                "{\"host\":\"127.0.0.1\",\"port\":%d,\"database\":\"cloudops\"}".formatted(unusedPort)
+        );
+        long monitorId = monitorId(create(resourceId, "PORT_CHECK", "LATEST_ONLY", null, "30", 1, 1)
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+
+        executionService.execute(monitorId);
+
+        mockMvc.perform(get("/api/resources/{id}/monitors", resourceId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].lastResult.success").value(false))
+                .andExpect(jsonPath("$[0].lastResult.error.code").value("CONNECTION_ERROR"))
+                .andExpect(jsonPath("$[0].healthStatus").value("DOWN"));
+        assertResourceHealth(resourceId, "DOWN");
+    }
+
+    @Test
+    void rejectsPortMonitorWhenResourceConfigHasNoPort() throws Exception {
+        long resourceId = insertResource("NETWORK_DEVICE", "ACTIVE", "{\"host\":\"switch\"}");
+
+        create(resourceId, "PORT_CHECK", "LATEST_ONLY", null, "30", null, null)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MONITOR_TYPE_NOT_SUPPORTED"));
     }
 
     @Test
@@ -533,16 +590,29 @@ class MonitorApiIntegrationTest {
             Integer failureThreshold,
             Integer recoveryThreshold
     ) throws Exception {
+        return create(resourceId, "HTTP_CHECK", storageMode, retentionDays, intervalSeconds,
+                failureThreshold, recoveryThreshold);
+    }
+
+    private org.springframework.test.web.servlet.ResultActions create(
+            long resourceId,
+            String type,
+            String storageMode,
+            Integer retentionDays,
+            String intervalSeconds,
+            Integer failureThreshold,
+            Integer recoveryThreshold
+    ) throws Exception {
         String retention = retentionDays == null ? "null" : retentionDays.toString();
         String failure = failureThreshold == null ? "null" : failureThreshold.toString();
         String recovery = recoveryThreshold == null ? "null" : recoveryThreshold.toString();
         return mockMvc.perform(post("/api/resources/{id}/monitors", resourceId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"type":"HTTP_CHECK","intervalSeconds":%s,"enabled":true,
+                        {"type":"%s","intervalSeconds":%s,"enabled":true,
                          "storageMode":"%s","retentionDays":%s,
                          "failureThreshold":%s,"recoveryThreshold":%s}
-                        """.formatted(intervalSeconds, storageMode, retention, failure, recovery)));
+                        """.formatted(type, intervalSeconds, storageMode, retention, failure, recovery)));
     }
 
     private void updateServiceConfig(long resourceId, String url, int expectedStatus, int timeoutMs) {

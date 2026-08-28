@@ -29,6 +29,9 @@ spring:
         default-requeue-rejected: false
 
 cloudops:
+  probe:
+    port:
+      timeout: ${PORT_CHECK_TIMEOUT:3s}
   monitoring:
     scheduler-enabled: ${MONITORING_SCHEDULER_ENABLED:true}
     poll-interval: ${MONITORING_POLL_INTERVAL:5s}

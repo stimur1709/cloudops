@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="008-add-port-check" author="stimur1709">
+        <sql dbms="postgresql">
+            ALTER TABLE tasks DROP CONSTRAINT tasks_type_check;
+            ALTER TABLE tasks ADD CONSTRAINT tasks_type_check CHECK (type IN ('HTTP_CHECK', 'PORT_CHECK'));
+            ALTER TABLE monitors DROP CONSTRAINT monitors_type_check;
+            ALTER TABLE monitors ADD CONSTRAINT monitors_type_check CHECK (type IN ('HTTP_CHECK', 'PORT_CHECK'));
+        </sql>
+        <rollback>
+            DELETE FROM monitoring_results
+                WHERE monitor_id IN (SELECT id FROM monitors WHERE type = 'PORT_CHECK');
+            DELETE FROM monitors WHERE type = 'PORT_CHECK';
+            DELETE FROM tasks WHERE type = 'PORT_CHECK';
+            ALTER TABLE tasks DROP CONSTRAINT tasks_type_check;
+            ALTER TABLE tasks ADD CONSTRAINT tasks_type_check CHECK (type IN ('HTTP_CHECK'));
+            ALTER TABLE monitors DROP CONSTRAINT monitors_type_check;
+            ALTER TABLE monitors ADD CONSTRAINT monitors_type_check CHECK (type IN ('HTTP_CHECK'));
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

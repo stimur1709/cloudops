@@ -148,6 +148,38 @@ class TaskApiIntegrationTest {
     }
 
     @Test
+    void createsPortCheckTaskAndExecutesItThroughExistingAsyncPipeline() throws Exception {
+        int port = httpServer.getAddress().getPort();
+        long resourceId = insertResourceWithConfig(
+                organizationId, "server", "SERVER", "ACTIVE",
+                "{\"host\":\"127.0.0.1\",\"port\":%d}".formatted(port)
+        );
+
+        String response = run(resourceId, "PORT_CHECK")
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.type").value("PORT_CHECK"))
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString();
+
+        awaitTask(taskId(response), "COMPLETED")
+                .andExpect(jsonPath("$.result.host").value("127.0.0.1"))
+                .andExpect(jsonPath("$.result.port").value(port))
+                .andExpect(jsonPath("$.result.responseTimeMs", greaterThanOrEqualTo(0)))
+                .andExpect(jsonPath("$.attemptCount").value(1));
+    }
+
+    @Test
+    void rejectsPortCheckForServerWithoutPort() throws Exception {
+        long resourceId = insertResourceWithConfig(
+                organizationId, "server", "SERVER", "ACTIVE", "{\"host\":\"127.0.0.1\"}"
+        );
+
+        run(resourceId, "PORT_CHECK")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("TASK_TYPE_NOT_SUPPORTED"));
+    }
+
+    @Test
     void statusMismatchIsCompleted() throws Exception {
         long resourceId = insertResource(
                 organizationId, "service", "SERVICE", "ACTIVE", baseUrl + "/unexpected", 200, 1000
@@ -371,9 +403,13 @@ class TaskApiIntegrationTest {
     }
 
     private ResultActions run(long resourceId) throws Exception {
+        return run(resourceId, "HTTP_CHECK");
+    }
+
+    private ResultActions run(long resourceId, String type) throws Exception {
         return mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"type\":\"HTTP_CHECK\"}"));
+                .content("{\"type\":\"%s\"}".formatted(type)));
     }
 
     private long taskId(String response) {
@@ -420,6 +456,15 @@ class TaskApiIntegrationTest {
                 ? "{\"url\":\"%s\",\"expectedStatus\":%d,\"timeoutMs\":%d}"
                         .formatted(url, expectedStatus, timeoutMs)
                 : "{}";
+        return jdbcTemplate.queryForObject("""
+                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                VALUES (?, ?, ?, ?, CAST(? AS jsonb), now(), now()) RETURNING id
+                """, Long.class, name, type, status, organization, config);
+    }
+
+    private long insertResourceWithConfig(
+            long organization, String name, String type, String status, String config
+    ) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
                 VALUES (?, ?, ?, ?, CAST(? AS jsonb), now(), now()) RETURNING id

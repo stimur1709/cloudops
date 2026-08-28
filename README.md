@@ -192,6 +192,18 @@ curl -i -X POST http://localhost:8080/api/resources/1/tasks \
   -d '{"type":"HTTP_CHECK"}'
 ```
 
+Проверка `PORT_CHECK` использует актуальные `host` и порт из config ресурса: `port` для
+`SERVER` и `DATABASE`, `managementPort` для `NETWORK_DEVICE`. У `SERVER` и
+`NETWORK_DEVICE` соответствующий порт должен быть задан; `SERVICE` и `OTHER` этот probe не
+поддерживают. Отдельные параметры запуска не передаются:
+
+```shell
+curl -i -X POST http://localhost:8080/api/resources/2/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"PORT_CHECK"}'
+```
+
 API атомарно сохраняет Task и команду в PostgreSQL Transactional Outbox, после чего сразу
 возвращает `202 Accepted`, `Location: /api/tasks/{id}` и Task в статусе `PENDING`.
 Доступность RabbitMQ не влияет на создание Task: пока брокер недоступен, Task остаётся
@@ -265,7 +277,7 @@ fencing защищает только состояние PostgreSQL. Внешн�
 
 Consumer захватывает Task один раз и выполняет retry только вокруг вызова handler-а. Retry
 применяется к явно помеченным временным внутренним ошибкам CloudOps; обычный отрицательный
-результат `HTTP_CHECK` (`TIMEOUT`, DNS, connection, TLS или контролируемая ошибка HTTP-клиента)
+результат probe (`TIMEOUT`, DNS, connection, TLS или контролируемая ошибка HTTP-клиента)
 сразу сохраняется как `FAILED` и подтверждается без retry и DLQ. Несовпадение ожидаемого HTTP
 status остаётся корректно завершённой проверкой `COMPLETED` с отрицательным значением
 `matchedExpectedStatus`.
@@ -290,7 +302,7 @@ Non-retryable poison messages также сразу направляются в 
 `x-death`. Автоматического consumer-а и replay для DLQ пока нет: сообщения предназначены для
 диагностики и остаются в очереди до ручного удаления.
 
-## HTTP monitoring
+## Monitoring
 
 Для активного ресурса `SERVICE` можно создать один периодический monitor типа `HTTP_CHECK`:
 
@@ -301,12 +313,25 @@ curl -i -X POST http://localhost:8080/api/resources/1/monitors \
   -d '{"type":"HTTP_CHECK","intervalSeconds":60,"enabled":true,"storageMode":"HISTORY","retentionDays":30}'
 ```
 
+Для поддерживаемого ресурса тот же API принимает `PORT_CHECK`; и manual Task, и Monitoring
+используют один TCP handler:
+
+```shell
+curl -i -X POST http://localhost:8080/api/resources/2/monitors \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"PORT_CHECK","intervalSeconds":60,"enabled":true,"storageMode":"HISTORY","retentionDays":30}'
+```
+
+TCP probe только открывает и закрывает соединение, не выполняя протокол прикладного уровня.
+Timeout соединения задаётся через `PORT_CHECK_TIMEOUT` (`3s`) и должен быть положительным.
+
 Настройки и последний результат возвращает `GET /api/resources/{resourceId}/monitors`.
 Monitor изменяется через `PUT /api/monitors/{id}` и удаляется через
 `DELETE /api/monitors/{id}`. История monitor-а в режиме `HISTORY` доступна через
 `POST /api/monitors/{id}/results/search`; переход на `LATEST_ONLY` удаляет накопленную историю.
 
-Monitoring выполняет общий с manual Task HTTP probe напрямую, без создания Task, outbox-записи
+Monitoring выполняет общий с manual Task probe напрямую, без создания Task, outbox-записи
 или RabbitMQ-команды. Несовпадение HTTP status сохраняется как завершённый probe с
 `success=false`; timeout, DNS, connection и TLS ошибки сохраняются как failed probe result.
 Планировщик заранее сдвигает `nextRunAt` и координирует экземпляры приложения через PostgreSQL
