@@ -1,0 +1,48 @@
+package com.github.stimur1709.cloudops.task.execution;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.github.stimur1709.cloudops.task.TaskType;
+import org.springframework.stereotype.Component;
+
+@Component
+public class TaskHandlerRegistry {
+
+    private final Map<TaskType, TaskHandler> handlers;
+
+    public TaskHandlerRegistry(List<TaskHandler> handlers) {
+        Map<TaskType, TaskHandler> indexed = new HashMap<>();
+        for (TaskHandler handler : handlers) {
+            if (indexed.put(handler.type(), handler) != null) {
+                throw new IllegalStateException("Multiple task handlers are configured for " + handler.type());
+            }
+        }
+        this.handlers = Map.copyOf(indexed);
+    }
+
+    public boolean supports(String value) {
+        try {
+            return handlers.containsKey(new TaskType(value));
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
+    public TaskType resolve(String value) {
+        TaskType type = new TaskType(value);
+        if (!handlers.containsKey(type)) {
+            throw new TaskHandlerNotFoundException(type);
+        }
+        return type;
+    }
+
+    public TaskHandler get(TaskType type) {
+        TaskHandler handler = handlers.get(type);
+        if (handler == null) {
+            throw new TaskHandlerNotFoundException(type);
+        }
+        return handler;
+    }
+}

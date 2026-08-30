@@ -32,7 +32,6 @@ public class TaskEntity {
     @Column(name = "resource_id", nullable = false)
     private Long resourceId;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private TaskType type;
 

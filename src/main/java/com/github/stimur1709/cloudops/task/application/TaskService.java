@@ -6,7 +6,7 @@ import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipScopes;
-import com.github.stimur1709.cloudops.task.TaskType;
+import com.github.stimur1709.cloudops.task.execution.TaskHandlerRegistry;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity_;
 import com.github.stimur1709.cloudops.task.persistence.TaskJpaRepository;
@@ -21,21 +21,24 @@ public class TaskService {
     private final TaskJpaRepository taskRepository;
     private final OrganizationAuthorization authorization;
     private final JpaSearchService searchService;
+    private final TaskHandlerRegistry handlerRegistry;
 
     public TaskService(
             TaskPersistenceService persistenceService,
             TaskJpaRepository taskRepository,
             OrganizationAuthorization authorization,
-            JpaSearchService searchService
+            JpaSearchService searchService,
+            TaskHandlerRegistry handlerRegistry
     ) {
         this.persistenceService = persistenceService;
         this.taskRepository = taskRepository;
         this.authorization = authorization;
         this.searchService = searchService;
+        this.handlerRegistry = handlerRegistry;
     }
 
-    public TaskEntity create(long resourceId, TaskType type, long currentUserId) {
-        return persistenceService.create(resourceId, type, currentUserId);
+    public TaskEntity create(long resourceId, String type, long currentUserId) {
+        return persistenceService.create(resourceId, handlerRegistry.resolve(type), currentUserId);
     }
 
     @Transactional(readOnly = true)

@@ -19,7 +19,7 @@ class TaskEntityTest {
 
     @Test
     void supportsCompletedLifecycle() {
-        TaskEntity task = TaskEntity.create(1, 2, TaskType.HTTP_CHECK, 3, CREATED);
+        TaskEntity task = TaskEntity.create(1, 2, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, 3, CREATED);
         task.start(STARTED);
         task.complete(new ObjectMapper().createObjectNode().put("statusCode", 200), COMPLETED);
 
@@ -31,17 +31,17 @@ class TaskEntityTest {
 
     @Test
     void supportsFailedLifecycle() {
-        TaskEntity task = TaskEntity.create(1, 2, TaskType.HTTP_CHECK, 3, CREATED);
+        TaskEntity task = TaskEntity.create(1, 2, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, 3, CREATED);
         task.start(STARTED);
-        task.fail(TaskErrorCode.TIMEOUT, "HTTP check timed out", COMPLETED);
+        task.fail(TaskErrorCode.EXECUTION_ERROR, "Operation failed", COMPLETED);
 
         assertThat(task.status()).isEqualTo(TaskStatus.FAILED);
-        assertThat(task.errorCode()).isEqualTo(TaskErrorCode.TIMEOUT);
+        assertThat(task.errorCode()).isEqualTo(TaskErrorCode.EXECUTION_ERROR);
     }
 
     @Test
     void rejectsInvalidTransitions() {
-        TaskEntity task = TaskEntity.create(1, 2, TaskType.HTTP_CHECK, 3, CREATED);
+        TaskEntity task = TaskEntity.create(1, 2, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, 3, CREATED);
 
         assertThatIllegalStateException().isThrownBy(() -> task.complete(null, COMPLETED));
         task.start(STARTED);

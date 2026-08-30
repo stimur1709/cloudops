@@ -1,21 +1,18 @@
 package com.github.stimur1709.cloudops.task;
 
-import com.github.stimur1709.cloudops.probe.ProbeType;
+import java.util.Objects;
 
-public enum TaskType {
-    HTTP_CHECK(ProbeType.HTTP_CHECK),
-    PORT_CHECK(ProbeType.PORT_CHECK),
-    DNS_CHECK(ProbeType.DNS_CHECK),
-    PING(ProbeType.PING),
-    TLS_CHECK(ProbeType.TLS_CHECK);
+public record TaskType(String value) {
 
-    private final ProbeType probeType;
-
-    TaskType(ProbeType probeType) {
-        this.probeType = probeType;
+    public TaskType {
+        Objects.requireNonNull(value);
+        if (!value.matches("[A-Z][A-Z0-9_]{0,29}")) {
+            throw new IllegalArgumentException("Task type has an invalid format");
+        }
     }
 
-    public ProbeType probeType() {
-        return probeType;
+    @Override
+    public String toString() {
+        return value;
     }
 }

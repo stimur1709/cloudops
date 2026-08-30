@@ -8,7 +8,6 @@ import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
-import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
@@ -41,7 +40,6 @@ public class TaskPersistenceService {
     private final OutboxMessageJpaRepository outboxRepository;
     private final ObjectMapper objectMapper;
     private final TaskLeaseProperties leaseProperties;
-    private final ProbeHandlerRegistry handlerRegistry;
 
     public TaskPersistenceService(
             TaskJpaRepository taskRepository,
@@ -51,8 +49,7 @@ public class TaskPersistenceService {
             Clock clock,
             OutboxMessageJpaRepository outboxRepository,
             ObjectMapper objectMapper,
-            TaskLeaseProperties leaseProperties,
-            ProbeHandlerRegistry handlerRegistry
+            TaskLeaseProperties leaseProperties
     ) {
         this.taskRepository = taskRepository;
         this.resourceRepository = resourceRepository;
@@ -62,14 +59,12 @@ public class TaskPersistenceService {
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
         this.leaseProperties = leaseProperties;
-        this.handlerRegistry = handlerRegistry;
     }
 
     @Transactional
     public TaskEntity create(long resourceId, TaskType type, long currentUserId) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
-        requireSupported(type, resource);
         if (resource.status() != ResourceStatus.ACTIVE) {
             throw new ConflictException("RESOURCE_INACTIVE", "Task requires an active resource");
         }
@@ -139,16 +134,6 @@ public class TaskPersistenceService {
         return taskRepository.renewLease(
                 taskId, executionId, clock.instant().plus(leaseProperties.duration()), TaskStatus.RUNNING
         ) == 1;
-    }
-
-    private void requireSupported(TaskType taskType, ResourceEntity resource) {
-        ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
-        if (!handlerRegistry.supports(taskType.probeType(), config)) {
-            throw new ConflictException(
-                    "TASK_TYPE_NOT_SUPPORTED",
-                    "Task type %s is not supported for resource type %s".formatted(taskType, resource.type())
-            );
-        }
     }
 
     public record ClaimedTask(

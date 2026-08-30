@@ -175,7 +175,7 @@ class TaskLeaseRecoveryIntegrationTest {
     private long insertPendingTask() {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO tasks (organization_id, resource_id, type, status, created_by, created_at)
-                VALUES (?, ?, 'HTTP_CHECK', 'PENDING', ?, now()) RETURNING id
+                VALUES (?, ?, 'TEST_OPERATION', 'PENDING', ?, now()) RETURNING id
                 """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID);
     }
 
@@ -187,7 +187,7 @@ class TaskLeaseRecoveryIntegrationTest {
                     organization_id, resource_id, type, status, created_by, created_at, started_at,
                     execution_id, lease_expires_at, recovery_count, attempt_count
                 )
-                VALUES (?, ?, 'HTTP_CHECK', 'RUNNING', ?, now(), now(), ?, ?, ?, ?) RETURNING id
+                VALUES (?, ?, 'TEST_OPERATION', 'RUNNING', ?, now(), now(), ?, ?, ?, ?) RETURNING id
                 """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID,
                 executionId, leaseExpiresAt.atOffset(ZoneOffset.UTC), recoveryCount, attemptCount);
     }

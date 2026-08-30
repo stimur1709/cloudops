@@ -183,40 +183,18 @@ curl -i -X DELETE http://localhost:8080/api/resources/1 \
 
 ## API задач
 
-Запустить HTTP-проверку активного ресурса типа `SERVICE`:
-
-```shell
-curl -i -X POST http://localhost:8080/api/resources/1/tasks \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"type":"HTTP_CHECK"}'
-```
-
-Проверка `PORT_CHECK` использует актуальные `host` и порт из config ресурса: `port` для
-`SERVER` и `DATABASE`, `managementPort` для `NETWORK_DEVICE`. У `SERVER` и
-`NETWORK_DEVICE` соответствующий порт должен быть задан; `SERVICE` и `OTHER` этот probe не
-поддерживают. Отдельные параметры запуска не передаются:
-
-```shell
-curl -i -X POST http://localhost:8080/api/resources/2/tasks \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"type":"PORT_CHECK"}'
-```
-
-Также доступны `DNS_CHECK`, `PING` и `TLS_CHECK`. DNS-проверка разрешает hostname ресурса и
-возвращает все найденные IP-адреса; IP literal для неё не поддерживается. PING использует
-`InetAddress.isReachable`: в зависимости от ОС и прав процесса Java может использовать ICMP
-или TCP fallback. Его timeout задаётся через `PING_TIMEOUT` (`3s`). TLS-проверка выполняет
-handshake со стандартной Java-проверкой trust chain и hostname, возвращает данные leaf
-certificate и использует `TLS_CHECK_TIMEOUT` (`5s`). Пользовательские truststore, mTLS и
-отключение проверки сертификата не поддерживаются.
+Task — самостоятельная конечная операция над Resource, потенциально долгая, асинхронная или
+имеющая side effects. `TaskType` не равен `ProbeType`: диагностические `HTTP_CHECK`,
+`PORT_CHECK`, `DNS_CHECK`, `PING` и `TLS_CHECK` принадлежат только Monitoring и не принимаются
+через `POST /api/resources/{resourceId}/tasks`. Первый production `TaskType` будет добавлен
+вместе с реальным resource-operation use case; до этого endpoint создания не имеет допустимых
+значений. API чтения `GET /api/tasks/{id}` и `POST /api/tasks/search` сохранены.
 
 API атомарно сохраняет Task и команду в PostgreSQL Transactional Outbox, после чего сразу
 возвращает `202 Accepted`, `Location: /api/tasks/{id}` и Task в статусе `PENDING`.
 Доступность RabbitMQ не влияет на создание Task: пока брокер недоступен, Task остаётся
 `PENDING`, а relay периодически пытается опубликовать сохранённую команду. После
-восстановления RabbitMQ HTTP-проверка выполняется асинхронно; итоговый статус и результат
+восстановления RabbitMQ операция выполняется асинхронно; итоговый статус и результат
 нужно читать отдельно:
 
 ```shell
@@ -284,11 +262,8 @@ fencing защищает только состояние PostgreSQL. Внешн�
 ### Retry и Dead Letter Queue
 
 Consumer захватывает Task один раз и выполняет retry только вокруг вызова handler-а. Retry
-применяется к явно помеченным временным внутренним ошибкам CloudOps; обычный отрицательный
-результат probe (`TIMEOUT`, DNS, connection, TLS или контролируемая ошибка HTTP-клиента)
-сразу сохраняется как `FAILED` и подтверждается без retry и DLQ. Несовпадение ожидаемого HTTP
-status остаётся корректно завершённой проверкой `COMPLETED` с отрицательным значением
-`matchedExpectedStatus`.
+применяется к явно помеченным временным внутренним ошибкам CloudOps. Контролируемый
+отрицательный результат конкретной операции сохраняется как `FAILED` без retry.
 
 Параметры exponential backoff:
 
@@ -321,8 +296,7 @@ curl -i -X POST http://localhost:8080/api/resources/1/monitors \
   -d '{"type":"HTTP_CHECK","intervalSeconds":60,"enabled":true,"storageMode":"HISTORY","retentionDays":30}'
 ```
 
-Для поддерживаемого ресурса тот же API принимает `PORT_CHECK`; и manual Task, и Monitoring
-используют один TCP handler:
+Для поддерживаемого ресурса тот же API принимает `PORT_CHECK`:
 
 ```shell
 curl -i -X POST http://localhost:8080/api/resources/2/monitors \
@@ -344,8 +318,13 @@ Monitor изменяется через `PUT /api/monitors/{id}` и удаляе
 `DELETE /api/monitors/{id}`. История monitor-а в режиме `HISTORY` доступна через
 `POST /api/monitors/{id}/results/search`; переход на `LATEST_ONLY` удаляет накопленную историю.
 
-Monitoring выполняет общий с manual Task probe напрямую, без создания Task, outbox-записи
-или RabbitMQ-команды. Несовпадение HTTP status сохраняется как завершённый probe с
+Probe — способ диагностической проверки Resource, а Monitor хранит runtime/state периодического
+Probe. Внеочередной запуск существующего Monitor выполняется через
+`POST /api/monitors/{id}/run`. Он использует тот же `MonitorExecutionService`, handler, настройки
+и правила хранения результата, что scheduler, но не сдвигает `nextRunAt` и не создаёт Task,
+outbox-запись или RabbitMQ-команду. Отдельного признака manual/source в результате нет.
+
+Несовпадение HTTP status сохраняется как завершённый probe с
 `success=false`; timeout, DNS, connection и TLS ошибки сохраняются как failed probe result.
 Планировщик заранее сдвигает `nextRunAt` и координирует экземпляры приложения через PostgreSQL
 `FOR UPDATE SKIP LOCKED`. Пропущенные во время downtime интервалы не воспроизводятся.

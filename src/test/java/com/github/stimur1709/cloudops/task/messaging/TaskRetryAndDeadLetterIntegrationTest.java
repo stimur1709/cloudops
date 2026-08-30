@@ -14,12 +14,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
-import com.github.stimur1709.cloudops.probe.ProbeType;
-import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionContext;
-import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
-import com.github.stimur1709.cloudops.probe.execution.ProbeHandler;
-import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerNotFoundException;
-import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
+import com.github.stimur1709.cloudops.task.TestTaskTypes;
+import com.github.stimur1709.cloudops.task.execution.TaskExecutionContext;
+import com.github.stimur1709.cloudops.task.execution.TaskExecutionResult;
+import com.github.stimur1709.cloudops.task.execution.TaskHandler;
+import com.github.stimur1709.cloudops.task.execution.TaskHandlerNotFoundException;
+import com.github.stimur1709.cloudops.task.execution.TaskHandlerRegistry;
 import com.github.stimur1709.cloudops.task.execution.RetryableTaskExecutionException;
 import com.github.stimur1709.cloudops.task.outbox.TaskExecutionCommandPublisher;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,16 +50,16 @@ class TaskRetryAndDeadLetterIntegrationTest {
     private TaskMessagingProperties messagingProperties;
 
     @MockitoBean
-    private ProbeHandlerRegistry handlerRegistry;
+    private TaskHandlerRegistry handlerRegistry;
 
-    private ProbeHandler handler;
+    private TaskHandler handler;
     private long organizationId;
     private long resourceId;
 
     @BeforeEach
     void setUp() {
         reset(handlerRegistry);
-        handler = org.mockito.Mockito.mock(ProbeHandler.class);
+        handler = org.mockito.Mockito.mock(TaskHandler.class);
         rabbitTemplate.execute(channel -> {
             channel.queuePurge(messagingProperties.queue());
             channel.queuePurge(messagingProperties.deadLetterQueue());
@@ -88,10 +88,10 @@ class TaskRetryAndDeadLetterIntegrationTest {
     @Test
     void retriesHandlerThenPersistsEveryAttemptAndLastAttemptTime() throws Exception {
         long taskId = insertPendingTask();
-        when(handlerRegistry.get(ProbeType.HTTP_CHECK)).thenReturn(handler);
-        when(handler.execute(org.mockito.ArgumentMatchers.any(ProbeExecutionContext.class)))
+        when(handlerRegistry.get(TestTaskTypes.TYPE)).thenReturn(handler);
+        when(handler.execute(org.mockito.ArgumentMatchers.any(TaskExecutionContext.class)))
                 .thenThrow(new RetryableTaskExecutionException("temporary"))
-                .thenReturn(ProbeExecutionResult.completed(true, "ok"));
+                .thenReturn(TaskExecutionResult.completed("ok"));
 
         publish(taskId);
 
@@ -102,15 +102,15 @@ class TaskRetryAndDeadLetterIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT last_attempt_at IS NOT NULL FROM tasks WHERE id = ?", Boolean.class, taskId
         )).isTrue();
-        verify(handler, times(2)).execute(org.mockito.ArgumentMatchers.any(ProbeExecutionContext.class));
+        verify(handler, times(2)).execute(org.mockito.ArgumentMatchers.any(TaskExecutionContext.class));
         assertThat(rabbitTemplate.receive(messagingProperties.deadLetterQueue())).isNull();
     }
 
     @Test
     void exhaustedRetryFailsTaskAndPreservesMessageInDeadLetterQueue() throws Exception {
         long taskId = insertPendingTask();
-        when(handlerRegistry.get(ProbeType.HTTP_CHECK)).thenReturn(handler);
-        when(handler.execute(org.mockito.ArgumentMatchers.any(ProbeExecutionContext.class)))
+        when(handlerRegistry.get(TestTaskTypes.TYPE)).thenReturn(handler);
+        when(handler.execute(org.mockito.ArgumentMatchers.any(TaskExecutionContext.class)))
                 .thenThrow(new RetryableTaskExecutionException("temporary internal detail"));
         UUID messageId = UUID.randomUUID();
 
@@ -136,8 +136,8 @@ class TaskRetryAndDeadLetterIntegrationTest {
     @Test
     void nonRetryableExceptionIsAttemptedOnceAndDeadLettered() throws Exception {
         long taskId = insertPendingTask();
-        when(handlerRegistry.get(ProbeType.HTTP_CHECK)).thenReturn(handler);
-        when(handler.execute(org.mockito.ArgumentMatchers.any(ProbeExecutionContext.class)))
+        when(handlerRegistry.get(TestTaskTypes.TYPE)).thenReturn(handler);
+        when(handler.execute(org.mockito.ArgumentMatchers.any(TaskExecutionContext.class)))
                 .thenThrow(new IllegalArgumentException("configuration is incompatible"));
 
         publish(taskId);
@@ -146,15 +146,15 @@ class TaskRetryAndDeadLetterIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId
         )).isEqualTo(1);
-        verify(handler).execute(org.mockito.ArgumentMatchers.any(ProbeExecutionContext.class));
+        verify(handler).execute(org.mockito.ArgumentMatchers.any(TaskExecutionContext.class));
         assertThat(awaitDeadLetter()).isNotNull();
     }
 
     @Test
     void missingHandlerFailsWithoutAttemptAndIsDeadLettered() throws Exception {
         long taskId = insertPendingTask();
-        when(handlerRegistry.get(ProbeType.HTTP_CHECK))
-                .thenThrow(new ProbeHandlerNotFoundException(ProbeType.HTTP_CHECK));
+        when(handlerRegistry.get(TestTaskTypes.TYPE))
+                .thenThrow(new TaskHandlerNotFoundException(TestTaskTypes.TYPE));
 
         publish(taskId);
 
@@ -185,9 +185,9 @@ class TaskRetryAndDeadLetterIntegrationTest {
         assertThat(deadLetter.getMessageProperties().getHeaders()).containsKey("x-death");
 
         long taskId = insertPendingTask();
-        when(handlerRegistry.get(ProbeType.HTTP_CHECK)).thenReturn(handler);
-        when(handler.execute(org.mockito.ArgumentMatchers.any(ProbeExecutionContext.class)))
-                .thenReturn(ProbeExecutionResult.completed(true, "ok"));
+        when(handlerRegistry.get(TestTaskTypes.TYPE)).thenReturn(handler);
+        when(handler.execute(org.mockito.ArgumentMatchers.any(TaskExecutionContext.class)))
+                .thenReturn(TaskExecutionResult.completed("ok"));
         publish(taskId);
         awaitStatus(taskId, "COMPLETED");
     }
@@ -207,7 +207,7 @@ class TaskRetryAndDeadLetterIntegrationTest {
     private long insertPendingTask() {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO tasks (organization_id, resource_id, type, status, created_by, created_at)
-                VALUES (?, ?, 'HTTP_CHECK', 'PENDING', ?, now()) RETURNING id
+                VALUES (?, ?, 'TEST_OPERATION', 'PENDING', ?, now()) RETURNING id
                 """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID);
     }
 
@@ -215,7 +215,7 @@ class TaskRetryAndDeadLetterIntegrationTest {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO tasks
                     (organization_id, resource_id, type, status, created_by, created_at, started_at, completed_at)
-                VALUES (?, ?, 'HTTP_CHECK', 'COMPLETED', ?, now(), now(), now()) RETURNING id
+                VALUES (?, ?, 'TEST_OPERATION', 'COMPLETED', ?, now(), now(), now()) RETURNING id
                 """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID);
     }
 

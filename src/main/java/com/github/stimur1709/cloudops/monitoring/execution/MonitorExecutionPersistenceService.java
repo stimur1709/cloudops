@@ -64,11 +64,16 @@ public class MonitorExecutionPersistenceService {
         if (!monitor.enabled()) {
             return;
         }
-        monitor.record(checkedAt, result, success);
+        boolean updatesCurrentState = monitor.lastCheckedAt() == null || !checkedAt.isBefore(monitor.lastCheckedAt());
+        if (updatesCurrentState) {
+            monitor.record(checkedAt, result, success);
+        }
         if (monitor.storageMode() == StorageMode.HISTORY) {
             resultRepository.save(MonitoringResultEntity.create(monitorId, checkedAt, result));
         }
         monitorRepository.flush();
-        resourceHealthService.recalculate(monitor.resourceId());
+        if (updatesCurrentState) {
+            resourceHealthService.recalculate(monitor.resourceId());
+        }
     }
 }

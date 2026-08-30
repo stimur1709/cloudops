@@ -364,6 +364,92 @@ class MonitorApiIntegrationTest {
     }
 
     @Test
+    void manualRunUsesMonitoringFlowWithoutChangingScheduleOrCreatingTaskInfrastructure() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "HISTORY", 30, "30")
+                .andReturn().getResponse().getContentAsString());
+        java.time.Instant nextRunAt = jdbcTemplate.queryForObject(
+                "SELECT next_run_at FROM monitors WHERE id = ?", java.time.Instant.class, monitorId
+        );
+
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(monitorId))
+                .andExpect(jsonPath("$.lastCheckedAt").isNotEmpty())
+                .andExpect(jsonPath("$.lastResult.success").value(true))
+                .andExpect(jsonPath("$.healthStatus").value("UP"))
+                .andExpect(jsonPath("$.lastResult.trigger").doesNotExist())
+                .andExpect(jsonPath("$.lastResult.source").doesNotExist())
+                .andExpect(jsonPath("$.lastResult.manual").doesNotExist());
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT next_run_at FROM monitors WHERE id = ?", java.time.Instant.class, monitorId
+        )).isEqualTo(nextRunAt);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM monitoring_results WHERE monitor_id = ?", Integer.class, monitorId
+        )).isEqualTo(1);
+        assertThat(count("tasks")).isZero();
+        assertThat(count("outbox_messages")).isZero();
+    }
+
+    @Test
+    void manualRunUsesLatestOnlyStorageAndHidesForeignMonitor() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30")
+                .andReturn().getResponse().getContentAsString());
+
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lastResult.success").value(true));
+        assertThat(count("monitoring_results")).isZero();
+
+        long foreignOrganizationId = jdbcTemplate.queryForObject("""
+                INSERT INTO organizations (name, created_at, updated_at)
+                VALUES ('Foreign manual run', now(), now()) RETURNING id
+                """, Long.class);
+        long foreignResourceId = jdbcTemplate.queryForObject("""
+                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                VALUES ('foreign', 'SERVICE', 'ACTIVE', ?, CAST(? AS jsonb), now(), now()) RETURNING id
+                """, Long.class, foreignOrganizationId,
+                "{\"url\":\"%s/ok\",\"expectedStatus\":200,\"timeoutMs\":1000}".formatted(baseUrl));
+        long foreignMonitorId = insertMonitor(foreignResourceId, "LATEST_ONLY", null);
+
+        mockMvc.perform(post("/api/monitors/{id}/run", foreignMonitorId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void scheduledAndManualRunCanCompleteConcurrentlyWithoutLosingHistory() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/slow", 200, 2000);
+        long monitorId = monitorId(create(resourceId, "HISTORY", 30, "30")
+                .andReturn().getResponse().getContentAsString());
+
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Future<?> scheduled = executor.submit(scheduler::poll);
+            Future<?> manual = executor.submit(() -> {
+                try {
+                    mockMvc.perform(post("/api/monitors/{id}/run", monitorId))
+                            .andExpect(status().isOk());
+                } catch (Exception exception) {
+                    throw new AssertionError(exception);
+                }
+            });
+            scheduled.get();
+            manual.get();
+        }
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM monitoring_results WHERE monitor_id = ?", Integer.class, monitorId
+        )).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT last_checked_at IS NOT NULL AS checked, health_status
+                FROM monitors WHERE id = ?
+                """, monitorId))
+                .containsEntry("checked", true)
+                .containsEntry("health_status", "UP");
+    }
+
+    @Test
     void appliesHealthThresholdsEquallyToLatestOnlyAndHistory() throws Exception {
         for (String storageMode : List.of("LATEST_ONLY", "HISTORY")) {
             long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
