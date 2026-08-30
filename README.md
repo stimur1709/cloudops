@@ -186,9 +186,10 @@ curl -i -X DELETE http://localhost:8080/api/resources/1 \
 Task — самостоятельная конечная операция над Resource, потенциально долгая, асинхронная или
 имеющая side effects. `TaskType` не равен `ProbeType`: диагностические `HTTP_CHECK`,
 `PORT_CHECK`, `DNS_CHECK`, `PING` и `TLS_CHECK` принадлежат только Monitoring и не принимаются
-через `POST /api/resources/{resourceId}/tasks`. Первый production `TaskType` будет добавлен
-вместе с реальным resource-operation use case; до этого endpoint создания не имеет допустимых
-значений. API чтения `GET /api/tasks/{id}` и `POST /api/tasks/search` сохранены.
+через `POST /api/resources/{resourceId}/tasks`. До появления первой реальной операции enum
+содержит временный `TEST_OPERATION`; production handler для него отсутствует, поэтому через API
+он недоступен. Placeholder и TODO нужно удалить при добавлении первого настоящего `TaskType`.
+API чтения `GET /api/tasks/{id}` и `POST /api/tasks/search` сохранены.
 
 API атомарно сохраняет Task и команду в PostgreSQL Transactional Outbox, после чего сразу
 возвращает `202 Accepted`, `Location: /api/tasks/{id}` и Task в статусе `PENDING`.
@@ -319,10 +320,11 @@ Monitor изменяется через `PUT /api/monitors/{id}` и удаляе
 `POST /api/monitors/{id}/results/search`; переход на `LATEST_ONLY` удаляет накопленную историю.
 
 Probe — способ диагностической проверки Resource, а Monitor хранит runtime/state периодического
-Probe. Внеочередной запуск существующего Monitor выполняется через
-`POST /api/monitors/{id}/run`. Он использует тот же `MonitorExecutionService`, handler, настройки
-и правила хранения результата, что scheduler, но не сдвигает `nextRunAt` и не создаёт Task,
-outbox-запись или RabbitMQ-команду. Отдельного признака manual/source в результате нет.
+Probe. `POST /api/monitors/{id}/run` асинхронно ставит включённый Monitor на ближайший запуск:
+атомарно выставляет `nextRunAt` в текущее время и возвращает `202 Accepted` без тела. Probe
+выполняется обычным scheduler через `MonitorExecutionService`, поэтому используются тот же
+handler, настройки и правила хранения результата. Endpoint не создаёт Task, outbox-запись или
+RabbitMQ-команду и не добавляет в результат признаки manual/source.
 
 Несовпадение HTTP status сохраняется как завершённый probe с
 `success=false`; timeout, DNS, connection и TLS ошибки сохраняются как failed probe result.

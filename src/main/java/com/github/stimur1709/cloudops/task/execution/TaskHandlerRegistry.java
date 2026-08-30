@@ -22,20 +22,14 @@ public class TaskHandlerRegistry {
         this.handlers = Map.copyOf(indexed);
     }
 
-    public boolean supports(String value) {
-        try {
-            return handlers.containsKey(new TaskType(value));
-        } catch (RuntimeException exception) {
-            return false;
-        }
+    public boolean supports(TaskType type) {
+        return handlers.containsKey(type);
     }
 
-    public TaskType resolve(String value) {
-        TaskType type = new TaskType(value);
+    public void requireSupported(TaskType type) {
         if (!handlers.containsKey(type)) {
             throw new TaskHandlerNotFoundException(type);
         }
-        return type;
     }
 
     public TaskHandler get(TaskType type) {

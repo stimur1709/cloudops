@@ -45,8 +45,9 @@ public class MonitorController {
     }
 
     @PostMapping("/{id}/run")
-    public MonitorResponse run(@PathVariable long id, Authentication authentication) {
-        return MonitorResponse.from(monitorService.run(id, CurrentUser.id(authentication)));
+    public ResponseEntity<Void> run(@PathVariable long id, Authentication authentication) {
+        monitorService.scheduleRun(id, CurrentUser.id(authentication));
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/{id}/results/search")

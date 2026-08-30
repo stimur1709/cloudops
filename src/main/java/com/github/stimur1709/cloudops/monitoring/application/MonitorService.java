@@ -19,7 +19,6 @@ import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultEnt
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultEntity_;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultSearchDefinition;
-import com.github.stimur1709.cloudops.monitoring.execution.MonitorExecutionService;
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
@@ -43,7 +42,6 @@ public class MonitorService {
     private final Clock clock;
     private final ResourceConfigMapper configMapper;
     private final ProbeHandlerRegistry handlerRegistry;
-    private final MonitorExecutionService executionService;
 
     public MonitorService(
             MonitorJpaRepository monitorRepository,
@@ -54,8 +52,7 @@ public class MonitorService {
             ResourceHealthService resourceHealthService,
             Clock clock,
             ResourceConfigMapper configMapper,
-            ProbeHandlerRegistry handlerRegistry,
-            MonitorExecutionService executionService
+            ProbeHandlerRegistry handlerRegistry
     ) {
         this.monitorRepository = monitorRepository;
         this.resultRepository = resultRepository;
@@ -66,7 +63,6 @@ public class MonitorService {
         this.clock = clock;
         this.configMapper = configMapper;
         this.handlerRegistry = handlerRegistry;
-        this.executionService = executionService;
     }
 
     @Transactional
@@ -140,12 +136,15 @@ public class MonitorService {
         resourceHealthService.recalculate(monitor.resourceId());
     }
 
-    public MonitorEntity run(long id, long currentUserId) {
-        MonitorEntity monitor = monitorRepository.findById(id).orElseThrow(NotFoundException::new);
+    @Transactional
+    public void scheduleRun(long id, long currentUserId) {
+        MonitorEntity monitor = monitorRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
         ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
-        executionService.execute(id);
-        return monitorRepository.findById(id).orElseThrow(NotFoundException::new);
+        if (!monitor.enabled()) {
+            throw new ConflictException("MONITOR_DISABLED", "A disabled monitor cannot be scheduled");
+        }
+        monitor.scheduleNow(clock.instant());
     }
 
     @Transactional(readOnly = true)

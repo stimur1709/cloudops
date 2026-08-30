@@ -26,7 +26,7 @@ Content-Type: application/json
 GET {{baseUrl}}/api/resources/{{resourceId}}/monitors
 Authorization: Bearer {{accessToken}}
 
-### Run the existing monitor immediately without changing its schedule
+### Schedule the existing monitor for the next scheduler poll
 POST {{baseUrl}}/api/monitors/{{monitorId}}/run
 Authorization: Bearer {{accessToken}}
 

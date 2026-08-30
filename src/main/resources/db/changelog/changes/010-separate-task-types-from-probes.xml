@@ -16,9 +16,7 @@
             DELETE FROM tasks
             WHERE type IN ('HTTP_CHECK', 'PORT_CHECK', 'DNS_CHECK', 'PING', 'TLS_CHECK');
             ALTER TABLE tasks DROP CONSTRAINT tasks_type_check;
-            ALTER TABLE tasks ADD CONSTRAINT tasks_type_check CHECK (
-                type NOT IN ('HTTP_CHECK', 'PORT_CHECK', 'DNS_CHECK', 'PING', 'TLS_CHECK')
-            );
+            ALTER TABLE tasks ADD CONSTRAINT tasks_type_check CHECK (type IN ('TEST_OPERATION'));
         </sql>
 
         <rollback>

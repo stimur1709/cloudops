@@ -1,10 +1,11 @@
 package com.github.stimur1709.cloudops.task.api.validation;
 
 import com.github.stimur1709.cloudops.task.execution.TaskHandlerRegistry;
+import com.github.stimur1709.cloudops.task.TaskType;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-public class SupportedTaskTypeValidator implements ConstraintValidator<SupportedTaskType, String> {
+public class SupportedTaskTypeValidator implements ConstraintValidator<SupportedTaskType, TaskType> {
 
     private final TaskHandlerRegistry registry;
 
@@ -13,7 +14,7 @@ public class SupportedTaskTypeValidator implements ConstraintValidator<Supported
     }
 
     @Override
-    public boolean isValid(String value, ConstraintValidatorContext context) {
+    public boolean isValid(TaskType value, ConstraintValidatorContext context) {
         return value == null || registry.supports(value);
     }
 }

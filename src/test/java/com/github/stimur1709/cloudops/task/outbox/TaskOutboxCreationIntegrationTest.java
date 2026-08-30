@@ -83,7 +83,7 @@ class TaskOutboxCreationIntegrationTest {
     @Test
     void taskCreationDoesNotCallRabbitPublisherOnRequestThread() {
         var task = taskService.create(
-                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE.value(),
+                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE,
                 TestAuthentication.USER_ID
         );
 

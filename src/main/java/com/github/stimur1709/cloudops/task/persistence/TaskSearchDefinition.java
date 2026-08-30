@@ -16,9 +16,7 @@ public final class TaskSearchDefinition {
                     .field(TaskEntity_.ORGANIZATION_ID, comparableLong(TaskEntity_.organizationId))
                     .field(TaskEntity_.RESOURCE_ID, comparableLong(TaskEntity_.resourceId))
                     .field(TaskEntity_.TYPE, JpaSearchField.<TaskEntity, TaskType>equality(
-                            root -> root.get(TaskEntity_.type), SearchValueConverter.of(
-                                    TaskType::new, "Value must be a valid task type"
-                            )
+                            root -> root.get(TaskEntity_.type), SearchValueConverter.enumeration(TaskType.class)
                     ).sortable())
                     .field(TaskEntity_.STATUS, JpaSearchField.<TaskEntity, TaskStatus>equality(
                             root -> root.get(TaskEntity_.status), SearchValueConverter.enumeration(TaskStatus.class)

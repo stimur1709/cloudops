@@ -60,7 +60,7 @@ class TaskApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"type\":\"%s\"}".formatted(type)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.errors[0].field").value("type"));
 
         assertThat(count("tasks")).isZero();
