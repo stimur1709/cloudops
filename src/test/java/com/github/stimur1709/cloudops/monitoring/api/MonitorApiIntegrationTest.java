@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -361,6 +362,91 @@ class MonitorApiIntegrationTest {
                 .andExpect(jsonPath("$[0].lastResult.error.code").value("TIMEOUT"))
                 .andExpect(jsonPath("$[0].lastResult.error.message").value("HTTP check timed out"))
                 .andExpect(jsonPath("$[0].healthStatus").value("DOWN"));
+    }
+
+    @Test
+    void runRequestSchedulesMonitorAndReturnsAcceptedBeforeExecution() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "HISTORY", 30, "30")
+                .andReturn().getResponse().getContentAsString());
+        jdbcTemplate.update("UPDATE monitors SET next_run_at = now() + INTERVAL '1 hour' WHERE id = ?", monitorId);
+
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId))
+                .andExpect(status().isAccepted())
+                .andExpect(content().string(""));
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT next_run_at <= now() AND last_checked_at IS NULL
+                FROM monitors WHERE id = ?
+                """, Boolean.class, monitorId)).isTrue();
+        assertThat(count("monitoring_results")).isZero();
+        assertThat(count("tasks")).isZero();
+        assertThat(count("outbox_messages")).isZero();
+
+        scheduler.poll();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM monitoring_results WHERE monitor_id = ?", Integer.class, monitorId
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT last_checked_at IS NOT NULL AND next_run_at > now() FROM monitors WHERE id = ?",
+                Boolean.class, monitorId
+        )).isTrue();
+    }
+
+    @Test
+    void runRequestUsesLatestOnlyStorageAndHidesForeignMonitor() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30")
+                .andReturn().getResponse().getContentAsString());
+        jdbcTemplate.update("UPDATE monitors SET next_run_at = now() + INTERVAL '1 hour' WHERE id = ?", monitorId);
+
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId))
+                .andExpect(status().isAccepted());
+        scheduler.poll();
+        assertThat(count("monitoring_results")).isZero();
+
+        long foreignOrganizationId = jdbcTemplate.queryForObject("""
+                INSERT INTO organizations (name, created_at, updated_at)
+                VALUES ('Foreign manual run', now(), now()) RETURNING id
+                """, Long.class);
+        long foreignResourceId = jdbcTemplate.queryForObject("""
+                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                VALUES ('foreign', 'SERVICE', 'ACTIVE', ?, CAST(? AS jsonb), now(), now()) RETURNING id
+                """, Long.class, foreignOrganizationId,
+                "{\"url\":\"%s/ok\",\"expectedStatus\":200,\"timeoutMs\":1000}".formatted(baseUrl));
+        long foreignMonitorId = insertMonitor(foreignResourceId, "LATEST_ONLY", null);
+
+        mockMvc.perform(post("/api/monitors/{id}/run", foreignMonitorId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void repeatedRunRequestsCoalesceBeforeSchedulerPoll() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "HISTORY", 30, "30")
+                .andReturn().getResponse().getContentAsString());
+        jdbcTemplate.update("UPDATE monitors SET next_run_at = now() + INTERVAL '1 hour' WHERE id = ?", monitorId);
+
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId)).andExpect(status().isAccepted());
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId)).andExpect(status().isAccepted());
+        scheduler.poll();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM monitoring_results WHERE monitor_id = ?", Integer.class, monitorId
+        )).isEqualTo(1);
+    }
+
+    @Test
+    void runRequestRejectsDisabledMonitor() throws Exception {
+        long resourceId = insertService("ACTIVE", baseUrl + "/ok", 200, 1000);
+        long monitorId = monitorId(create(resourceId, "LATEST_ONLY", null, "30")
+                .andReturn().getResponse().getContentAsString());
+        jdbcTemplate.update("UPDATE monitors SET enabled = false WHERE id = ?", monitorId);
+
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MONITOR_DISABLED"));
     }
 
     @Test

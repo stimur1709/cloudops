@@ -136,6 +136,17 @@ public class MonitorService {
         resourceHealthService.recalculate(monitor.resourceId());
     }
 
+    @Transactional
+    public void scheduleRun(long id, long currentUserId) {
+        MonitorEntity monitor = monitorRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
+        ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
+        authorization.requireMember(resource.organizationId(), currentUserId);
+        if (!monitor.enabled()) {
+            throw new ConflictException("MONITOR_DISABLED", "A disabled monitor cannot be scheduled");
+        }
+        monitor.scheduleNow(clock.instant());
+    }
+
     @Transactional(readOnly = true)
     public SearchResult<MonitoringResultEntity> searchResults(
             long monitorId,

@@ -15,12 +15,6 @@ import java.time.Duration;
 import java.util.UUID;
 
 import com.github.stimur1709.cloudops.resource.config.OtherResourceConfig;
-import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
-import com.github.stimur1709.cloudops.probe.ProbeType;
-import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
-import com.github.stimur1709.cloudops.probe.execution.ProbeHandler;
-import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerNotFoundException;
-import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.TaskType;
@@ -38,16 +32,16 @@ class TaskExecutionServiceTest {
     private static final UUID EXECUTION_ID = UUID.fromString("00000000-0000-0000-0000-000000000007");
 
     private TaskPersistenceService persistence;
-    private ProbeHandlerRegistry registry;
-    private ProbeHandler handler;
+    private TaskHandlerRegistry registry;
+    private TaskHandler handler;
     private TaskLeaseManager leaseManager;
     private TaskExecutionService service;
 
     @BeforeEach
     void setUp() {
         persistence = mock(TaskPersistenceService.class);
-        registry = mock(ProbeHandlerRegistry.class);
-        handler = mock(ProbeHandler.class);
+        registry = mock(TaskHandlerRegistry.class);
+        handler = mock(TaskHandler.class);
         leaseManager = mock(TaskLeaseManager.class);
         TaskRetryProperties properties = new TaskRetryProperties(
                 true, 3, Duration.ofMillis(1), 2.0, Duration.ofMillis(2)
@@ -61,7 +55,7 @@ class TaskExecutionServiceTest {
     @Test
     void invokesSuccessfulHandlerOnce() {
         arrangeClaimedTask();
-        when(handler.execute(any())).thenReturn(ProbeExecutionResult.completed(true, "done"));
+        when(handler.execute(any())).thenReturn(TaskExecutionResult.completed("done"));
 
         assertThat(service.execute(7)).isEqualTo(TaskExecutionOutcome.ACKNOWLEDGE);
 
@@ -77,7 +71,7 @@ class TaskExecutionServiceTest {
         arrangeClaimedTask();
         when(handler.execute(any()))
                 .thenThrow(new RetryableTaskExecutionException("temporary"))
-                .thenReturn(ProbeExecutionResult.completed(true, "done"));
+                .thenReturn(TaskExecutionResult.completed("done"));
         when(persistence.recordAttempt(7, EXECUTION_ID)).thenReturn(1, 2);
 
         assertThat(service.execute(7)).isEqualTo(TaskExecutionOutcome.ACKNOWLEDGE);
@@ -114,17 +108,17 @@ class TaskExecutionServiceTest {
     @Test
     void controlledNegativeResultIsAcknowledgedWithoutRetry() {
         arrangeClaimedTask();
-        when(handler.execute(any())).thenReturn(ProbeExecutionResult.failed(ProbeErrorCode.TIMEOUT, "HTTP check timed out"));
+        when(handler.execute(any())).thenReturn(TaskExecutionResult.failed(TaskErrorCode.EXECUTION_ERROR, "Operation failed"));
 
         assertThat(service.execute(7)).isEqualTo(TaskExecutionOutcome.ACKNOWLEDGE);
 
-        verify(persistence).fail(7, EXECUTION_ID, TaskErrorCode.TIMEOUT, "HTTP check timed out");
+        verify(persistence).fail(7, EXECUTION_ID, TaskErrorCode.EXECUTION_ERROR, "Operation failed");
     }
 
     @Test
-    void completedProbeWithUnmatchedExpectationStillCompletesTask() {
+    void completedOperationCompletesTask() {
         arrangeClaimedTask();
-        when(handler.execute(any())).thenReturn(ProbeExecutionResult.completed(false, "status mismatch"));
+        when(handler.execute(any())).thenReturn(TaskExecutionResult.completed("done"));
 
         assertThat(service.execute(7)).isEqualTo(TaskExecutionOutcome.ACKNOWLEDGE);
 
@@ -135,7 +129,8 @@ class TaskExecutionServiceTest {
     @Test
     void turnsMissingHandlerIntoControlledDeadLetterFailure() {
         arrangeClaim();
-        when(registry.get(ProbeType.HTTP_CHECK)).thenThrow(new ProbeHandlerNotFoundException(ProbeType.HTTP_CHECK));
+        when(registry.get(com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE))
+                .thenThrow(new TaskHandlerNotFoundException(com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE));
 
         assertThat(service.execute(7)).isEqualTo(TaskExecutionOutcome.DEAD_LETTER);
 
@@ -179,7 +174,7 @@ class TaskExecutionServiceTest {
     @Test
     void doesNotRerunHandlerWhenTerminalResultCannotBeSaved() {
         arrangeClaimedTask();
-        when(handler.execute(any())).thenReturn(ProbeExecutionResult.completed(true, "done"));
+        when(handler.execute(any())).thenReturn(TaskExecutionResult.completed("done"));
         doThrow(new IllegalStateException("database unavailable"))
                 .when(persistence).complete(eq(7L), eq(EXECUTION_ID), any());
 
@@ -190,13 +185,13 @@ class TaskExecutionServiceTest {
 
     private void arrangeClaimedTask() {
         arrangeClaim();
-        when(registry.get(ProbeType.HTTP_CHECK)).thenReturn(handler);
+        when(registry.get(com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE)).thenReturn(handler);
         when(persistence.recordAttempt(7, EXECUTION_ID)).thenReturn(1);
     }
 
     private void arrangeClaim() {
         when(persistence.claim(7)).thenReturn(new TaskPersistenceService.ClaimedTask(
-                7, 8, TaskType.HTTP_CHECK, new OtherResourceConfig(), EXECUTION_ID
+                7, 8, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, new OtherResourceConfig(), EXECUTION_ID
         ));
         when(persistence.fail(eq(7L), eq(EXECUTION_ID), any(), any())).thenReturn(true);
     }

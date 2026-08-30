@@ -67,7 +67,7 @@ class TaskOutboxCreationIntegrationTest {
 
     @Test
     void createsTaskAndExplicitCommandPayloadInOneTransaction() {
-        var task = taskPersistenceService.create(resourceId, TaskType.HTTP_CHECK, TestAuthentication.USER_ID);
+        var task = taskPersistenceService.create(resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID);
 
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Long.class)).isOne();
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class)).isOne();
@@ -82,7 +82,10 @@ class TaskOutboxCreationIntegrationTest {
 
     @Test
     void taskCreationDoesNotCallRabbitPublisherOnRequestThread() {
-        var task = taskService.create(resourceId, TaskType.HTTP_CHECK, TestAuthentication.USER_ID);
+        var task = taskService.create(
+                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE,
+                TestAuthentication.USER_ID
+        );
 
         assertThat(task.id()).isPositive();
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class)).isOne();
@@ -104,7 +107,7 @@ class TaskOutboxCreationIntegrationTest {
                 """);
 
         assertThatThrownBy(() -> taskPersistenceService.create(
-                resourceId, TaskType.HTTP_CHECK, TestAuthentication.USER_ID
+                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID
         )).isInstanceOf(RuntimeException.class);
 
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Long.class)).isZero();

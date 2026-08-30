@@ -26,6 +26,10 @@ Content-Type: application/json
 GET {{baseUrl}}/api/resources/{{resourceId}}/monitors
 Authorization: Bearer {{accessToken}}
 
+### Schedule the existing monitor for the next scheduler poll
+POST {{baseUrl}}/api/monitors/{{monitorId}}/run
+Authorization: Bearer {{accessToken}}
+
 ### Create DNS monitor for the host resource from resource.http
 POST {{baseUrl}}/api/resources/{{networkProbeResourceId}}/monitors
 Authorization: Bearer {{accessToken}}

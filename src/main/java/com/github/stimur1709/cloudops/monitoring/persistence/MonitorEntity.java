@@ -147,6 +147,10 @@ public class MonitorEntity {
         updateHealth(success);
     }
 
+    public void scheduleNow(Instant now) {
+        nextRunAt = now;
+    }
+
     private void updateHealth(boolean success) {
         switch (healthStatus) {
             case UNKNOWN -> {

@@ -50,7 +50,7 @@ class TaskClaimIntegrationTest {
                 """, Long.class, organizationId);
         taskId = jdbcTemplate.queryForObject("""
                 INSERT INTO tasks (organization_id, resource_id, type, status, created_by, created_at)
-                VALUES (?, ?, 'HTTP_CHECK', 'PENDING', ?, now()) RETURNING id
+                VALUES (?, ?, 'TEST_OPERATION', 'PENDING', ?, now()) RETURNING id
                 """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID);
     }
 

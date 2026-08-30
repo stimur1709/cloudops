@@ -1,43 +1,25 @@
-### Create resources task
-POST http://localhost:8080/api/resources/1/tasks
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
+@baseUrl = http://localhost:8080
+@taskId = 1
 
-{
-  "type": "HTTP_CHECK"
-}
-
-> {%
-    client.global.set("taskId", response.body.id);
-%}
+### Task creation has no production types until a resource operation is implemented
+# POST {{baseUrl}}/api/resources/1/tasks
+# Authorization: Bearer {{accessToken}}
+# Content-Type: application/json
+#
+# {"type":"FUTURE_RESOURCE_OPERATION"}
 
 ### Get current task state/result
-GET http://localhost:8080/api/tasks/{{taskId}}
+GET {{baseUrl}}/api/tasks/{{taskId}}
 Authorization: Bearer {{accessToken}}
 
-### Run DNS check for the host resource from resource.http
-POST http://localhost:8080/api/resources/{{networkProbeResourceId}}/tasks
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{
-  "type": "DNS_CHECK"
-}
-
-### Run ping for the host resource from resource.http
-POST http://localhost:8080/api/resources/{{networkProbeResourceId}}/tasks
+### Search existing tasks
+POST {{baseUrl}}/api/tasks/search
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "type": "PING"
-}
-
-### Run TLS check for the HTTPS resource from resource.http
-POST http://localhost:8080/api/resources/{{tlsResourceId}}/tasks
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{
-  "type": "TLS_CHECK"
+  "start": 0,
+  "size": 20,
+  "sort": [{"field": "createdAt", "order": "DESC"}],
+  "getTotal": true
 }
