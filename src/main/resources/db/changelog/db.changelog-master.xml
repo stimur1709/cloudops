@@ -15,4 +15,5 @@
     <include file="db/changelog/changes/008-add-port-check.xml"/>
     <include file="db/changelog/changes/009-add-network-probes.xml"/>
     <include file="db/changelog/changes/010-separate-task-types-from-probes.xml"/>
+    <include file="db/changelog/changes/011-create-credentials.xml"/>
 </databaseChangeLog>

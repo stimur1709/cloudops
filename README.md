@@ -30,6 +30,9 @@ $jwtKey = New-Object byte[] 32
 [Security.Cryptography.RandomNumberGenerator]::Fill($jwtKey)
 $env:JWT_SECRET = [Convert]::ToBase64String($jwtKey)
 $env:JWT_ISSUER = "cloudops-local"
+$credentialKey = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Fill($credentialKey)
+$env:CREDENTIALS_MASTER_KEY = [Convert]::ToBase64String($credentialKey)
 ./mvnw.cmd spring-boot:run
 ```
 
@@ -40,6 +43,16 @@ $env:JWT_ISSUER = "cloudops-local"
 `JWT_SECRET` обязателен, должен быть Base64-представлением ключа длиной не менее 32 байт
 и не имеет значения по умолчанию. `JWT_ISSUER` по умолчанию равен `cloudops`,
 `JWT_ACCESS_TOKEN_TTL` — `15m`.
+
+`CREDENTIALS_MASTER_KEY` также обязателен и должен быть Base64-представлением ровно 32 случайных
+байт. Это master key для AES-GCM шифрования credentials; его нельзя хранить в БД или коммитить.
+
+## Credentials
+
+`ResourceConfig` содержит адреса и несекретные параметры ресурса. `Credential` хранит отдельно
+зашифрованный секрет подключения, а `ResourceCredential` связывает credential с ресурсом по
+назначению `SSH` или `DATABASE`. Параметры Task и Probe не используются для передачи сохранённых
+паролей и приватных ключей. API credentials никогда не возвращает plaintext или ciphertext.
 
 `RABBITMQ_PASSWORD` обязателен. По умолчанию приложение подключается к
 `localhost:5672` пользователем `cloudops`. Имена exchange, queue и routing key можно
