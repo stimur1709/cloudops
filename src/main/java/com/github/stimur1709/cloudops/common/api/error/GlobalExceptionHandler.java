@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.github.stimur1709.cloudops.common.application.ConflictException;
+import com.github.stimur1709.cloudops.common.application.BadRequestException;
 import com.github.stimur1709.cloudops.common.application.ForbiddenException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
@@ -218,6 +219,11 @@ public class GlobalExceptionHandler {
                 request,
                 List.of()
         );
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    ResponseEntity<ApiError> handleBadRequest(BadRequestException exception, HttpServletRequest request) {
+        return response(HttpStatus.BAD_REQUEST, exception.code(), exception.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(AuthenticationException.class)
