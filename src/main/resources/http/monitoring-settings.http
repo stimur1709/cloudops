@@ -1,0 +1,80 @@
+@baseUrl = http://localhost:8080
+@organizationId = 1
+
+### Get effective monitoring settings for every organization probe
+GET {{baseUrl}}/api/organizations/{{organizationId}}/monitoring-settings
+Authorization: Bearer {{accessToken}}
+
+### Store HTTP_CHECK history for the organization
+PUT {{baseUrl}}/api/organizations/{{organizationId}}/monitoring-settings/HTTP_CHECK
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "intervalSeconds": 60,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "timeoutMs": 5000
+}
+
+### Store PORT_CHECK history for the organization
+PUT {{baseUrl}}/api/organizations/{{organizationId}}/monitoring-settings/PORT_CHECK
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "intervalSeconds": 60,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "timeoutMs": 3000
+}
+
+### Store DNS_CHECK history for the organization
+PUT {{baseUrl}}/api/organizations/{{organizationId}}/monitoring-settings/DNS_CHECK
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "intervalSeconds": 60,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2,
+  "storageMode": "HISTORY",
+  "retentionDays": 30
+}
+
+### Store PING history for the organization
+PUT {{baseUrl}}/api/organizations/{{organizationId}}/monitoring-settings/PING
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "intervalSeconds": 60,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "timeoutMs": 3000
+}
+
+### Store TLS_CHECK history for the organization
+PUT {{baseUrl}}/api/organizations/{{organizationId}}/monitoring-settings/TLS_CHECK
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "intervalSeconds": 60,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "timeoutMs": 5000
+}
