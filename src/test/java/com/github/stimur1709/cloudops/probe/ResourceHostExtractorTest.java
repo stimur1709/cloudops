@@ -19,9 +19,8 @@ class ResourceHostExtractorTest {
                 .isEqualTo("switch.local");
         assertThat(ResourceHostExtractor.extract(new DatabaseResourceConfig("database.local", 5432, "cloudops")))
                 .isEqualTo("database.local");
-        assertThat(ResourceHostExtractor.extract(
-                new ServiceResourceConfig("https://api.local:8443/status", 200)
-        )).isEqualTo("api.local");
+        assertThat(ResourceHostExtractor.extract(new ServiceResourceConfig("https://api.local:8443/status", 200)))
+                .isEqualTo("api.local");
     }
 
     @Test

@@ -1,11 +1,10 @@
 package com.github.stimur1709.cloudops.credential.api;
 
-import java.util.List;
-
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.credential.CredentialPurpose;
 import com.github.stimur1709.cloudops.credential.application.ResourceCredentialService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,14 +31,17 @@ public class ResourceCredentialController {
     }
 
     @PutMapping("/{purpose}")
-    public ResourceCredentialResponse bind(@PathVariable long resourceId, @PathVariable CredentialPurpose purpose,
-                                           @Valid @RequestBody BindCredentialRequest request, Authentication authentication) {
+    public ResourceCredentialResponse bind(
+            @PathVariable long resourceId,
+            @PathVariable CredentialPurpose purpose,
+            @Valid @RequestBody BindCredentialRequest request,
+            Authentication authentication) {
         return service.bind(resourceId, purpose, request.credentialId(), CurrentUser.id(authentication));
     }
 
     @DeleteMapping("/{purpose}")
-    public ResponseEntity<Void> unbind(@PathVariable long resourceId, @PathVariable CredentialPurpose purpose,
-                                       Authentication authentication) {
+    public ResponseEntity<Void> unbind(
+            @PathVariable long resourceId, @PathVariable CredentialPurpose purpose, Authentication authentication) {
         service.unbind(resourceId, purpose, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();
     }

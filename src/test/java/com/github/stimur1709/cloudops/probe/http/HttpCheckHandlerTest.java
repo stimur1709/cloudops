@@ -21,9 +21,7 @@ class HttpCheckHandlerTest {
         when(client.execute(config, 5000)).thenReturn(HttpCheckOutcome.completed(checkResult));
         HttpCheckHandler handler = new HttpCheckHandler(client);
 
-        ProbeExecutionResult result = handler.execute(
-                new ProbeExecutionContext(2, ProbeType.HTTP_CHECK, config)
-        );
+        ProbeExecutionResult result = handler.execute(new ProbeExecutionContext(2, ProbeType.HTTP_CHECK, config));
 
         assertThat(handler.type()).isEqualTo(ProbeType.HTTP_CHECK);
         assertThat(handler.isCompatibleWith(config)).isTrue();

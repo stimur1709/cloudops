@@ -30,8 +30,7 @@ public class ResourceHealthEntity {
     @Column(name = "health_status", nullable = false, length = 10)
     private ResourceHealthStatus healthStatus;
 
-    protected ResourceHealthEntity() {
-    }
+    protected ResourceHealthEntity() {}
 
     private ResourceHealthEntity(ResourceEntity resource) {
         this.resource = resource;
@@ -46,7 +45,15 @@ public class ResourceHealthEntity {
         this.healthStatus = healthStatus;
     }
 
-    public Long resourceId() { return resourceId; }
-    public ResourceEntity resource() { return resource; }
-    public ResourceHealthStatus healthStatus() { return healthStatus; }
+    public Long resourceId() {
+        return resourceId;
+    }
+
+    public ResourceEntity resource() {
+        return resource;
+    }
+
+    public ResourceHealthStatus healthStatus() {
+        return healthStatus;
+    }
 }

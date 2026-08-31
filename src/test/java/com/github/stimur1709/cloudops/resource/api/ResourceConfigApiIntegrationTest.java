@@ -78,9 +78,8 @@ class ResourceConfigApiIntegrationTest {
                 .andExpect(jsonPath("$.config.*", hasSize(0)));
 
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM resources WHERE jsonb_typeof(config) = 'object'",
-                Integer.class
-        )).isEqualTo(5);
+                        "SELECT count(*) FROM resources WHERE jsonb_typeof(config) = 'object'", Integer.class))
+                .isEqualTo(5);
     }
 
     @Test
@@ -89,12 +88,14 @@ class ResourceConfigApiIntegrationTest {
                 {"host":"db.internal","port":5432,"database":"orders"}
                 """)
                 .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         long id = ((Number) JsonPath.read(response, "$.id")).longValue();
 
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT config ->> 'database' FROM resources WHERE id = ?", String.class, id
-        )).isEqualTo("orders");
+                        "SELECT config ->> 'database' FROM resources WHERE id = ?", String.class, id))
+                .isEqualTo("orders");
         mockMvc.perform(get("/api/resources/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.config.host").value("db.internal"))
@@ -110,9 +111,8 @@ class ResourceConfigApiIntegrationTest {
                 .andExpect(jsonPath("$.config.timeoutMs").doesNotExist());
 
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT config ? 'timeoutMs' FROM resources WHERE name = 'service'",
-                Boolean.class
-        )).isFalse();
+                        "SELECT config ? 'timeoutMs' FROM resources WHERE name = 'service'", Boolean.class))
+                .isFalse();
     }
 
     @Test
@@ -150,7 +150,9 @@ class ResourceConfigApiIntegrationTest {
     void updatesConfigAndChangesTypeOnlyWithCompatibleConfig() throws Exception {
         String response = create("resource", "SERVER", "{\"host\":\"old.internal\"}")
                 .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         long id = ((Number) JsonPath.read(response, "$.id")).longValue();
 
         update(id, "SERVER", "{\"host\":\"new.internal\",\"port\":2222}")
@@ -173,11 +175,11 @@ class ResourceConfigApiIntegrationTest {
     }
 
     private ResultActions createWithoutConfig(String name, String type) throws Exception {
-        return mockMvc.perform(post("/api/resources")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
+        return mockMvc.perform(
+                post("/api/resources").contentType(MediaType.APPLICATION_JSON).content("""
                         {"name":"%s","type":"%s","status":"ACTIVE","organizationId":%d}
-                        """.formatted(name, type, organizationId)));
+                        """.formatted(
+                                name, type, organizationId)));
     }
 
     private ResultActions update(long id, String type, String config) throws Exception {

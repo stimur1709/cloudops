@@ -1,5 +1,7 @@
 package com.github.stimur1709.cloudops.probe.http;
 
+import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
+import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URI;
@@ -10,17 +12,13 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import javax.net.ssl.SSLException;
-
-import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
-import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
 import org.springframework.stereotype.Component;
 
 @Component
 public class HttpCheckClient {
 
-    private final HttpClient client = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build();
+    private final HttpClient client =
+            HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
 
     public HttpCheckOutcome execute(ServiceResourceConfig config, int timeoutMs) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(config.url()))
@@ -30,11 +28,14 @@ public class HttpCheckClient {
         long startedAt = System.nanoTime();
         try {
             HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
-            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs =
+                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             return HttpCheckOutcome.completed(new HttpCheckResult(
-                    config.url(), response.statusCode(), config.expectedStatus(), responseTimeMs,
-                    response.statusCode() == config.expectedStatus()
-            ));
+                    config.url(),
+                    response.statusCode(),
+                    config.expectedStatus(),
+                    responseTimeMs,
+                    response.statusCode() == config.expectedStatus()));
         } catch (HttpTimeoutException exception) {
             return failure(ProbeErrorCode.TIMEOUT, "HTTP check timed out");
         } catch (InterruptedException exception) {

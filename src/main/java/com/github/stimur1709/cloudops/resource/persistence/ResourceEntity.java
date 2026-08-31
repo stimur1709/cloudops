@@ -1,7 +1,5 @@
 package com.github.stimur1709.cloudops.resource.persistence;
 
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
@@ -9,13 +7,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import tools.jackson.databind.JsonNode;
@@ -56,8 +55,7 @@ public class ResourceEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected ResourceEntity() {
-    }
+    protected ResourceEntity() {}
 
     private ResourceEntity(
             String name,
@@ -66,8 +64,7 @@ public class ResourceEntity {
             OrganizationEntity organization,
             JsonNode config,
             Instant createdAt,
-            Instant updatedAt
-    ) {
+            Instant updatedAt) {
         this.name = name;
         this.type = type;
         this.status = status;
@@ -84,8 +81,7 @@ public class ResourceEntity {
             ResourceStatus status,
             OrganizationEntity organization,
             JsonNode config,
-            Instant createdAt
-    ) {
+            Instant createdAt) {
         return new ResourceEntity(name, type, status, organization, config, createdAt, createdAt);
     }
 
@@ -95,8 +91,7 @@ public class ResourceEntity {
             ResourceStatus status,
             OrganizationEntity organization,
             JsonNode config,
-            Instant updatedAt
-    ) {
+            Instant updatedAt) {
         this.name = name;
         this.type = type;
         this.status = status;

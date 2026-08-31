@@ -1,12 +1,11 @@
 package com.github.stimur1709.cloudops.credential.api;
 
-import java.net.URI;
-
 import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
 import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.credential.application.CredentialService;
 import jakarta.validation.Valid;
+import java.net.URI;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,14 +22,24 @@ import org.springframework.web.bind.annotation.RestController;
 public class CredentialController {
     private final CredentialService service;
 
-    public CredentialController(CredentialService service) { this.service = service; }
+    public CredentialController(CredentialService service) {
+        this.service = service;
+    }
 
     @PostMapping("/organizations/{organizationId}/credentials")
-    public ResponseEntity<CredentialResponse> create(@PathVariable long organizationId,
-            @Valid @RequestBody CredentialRequest request, Authentication authentication) {
-        CredentialResponse response = CredentialResponse.from(service.create(organizationId, request.name(),
-                request.type(), request.username(), request.secret(), CurrentUser.id(authentication)));
-        return ResponseEntity.created(URI.create("/api/credentials/" + response.id())).body(response);
+    public ResponseEntity<CredentialResponse> create(
+            @PathVariable long organizationId,
+            @Valid @RequestBody CredentialRequest request,
+            Authentication authentication) {
+        CredentialResponse response = CredentialResponse.from(service.create(
+                organizationId,
+                request.name(),
+                request.type(),
+                request.username(),
+                request.secret(),
+                CurrentUser.id(authentication)));
+        return ResponseEntity.created(URI.create("/api/credentials/" + response.id()))
+                .body(response);
     }
 
     @GetMapping("/credentials/{id}")
@@ -39,17 +48,22 @@ public class CredentialController {
     }
 
     @PostMapping("/credentials/search")
-    public SearchResponse<CredentialResponse> search(@Valid @RequestBody SearchRequest request,
-            Authentication authentication) {
-        return SearchResponse.from(service.search(request.toQuery(), CurrentUser.id(authentication)),
-                CredentialResponse::from);
+    public SearchResponse<CredentialResponse> search(
+            @Valid @RequestBody SearchRequest request, Authentication authentication) {
+        return SearchResponse.from(
+                service.search(request.toQuery(), CurrentUser.id(authentication)), CredentialResponse::from);
     }
 
     @PutMapping("/credentials/{id}")
-    public CredentialResponse update(@PathVariable long id, @Valid @RequestBody CredentialRequest request,
-            Authentication authentication) {
-        return CredentialResponse.from(service.update(id, request.name(), request.type(), request.username(),
-                request.secret(), CurrentUser.id(authentication)));
+    public CredentialResponse update(
+            @PathVariable long id, @Valid @RequestBody CredentialRequest request, Authentication authentication) {
+        return CredentialResponse.from(service.update(
+                id,
+                request.name(),
+                request.type(),
+                request.username(),
+                request.secret(),
+                CurrentUser.id(authentication)));
     }
 
     @DeleteMapping("/credentials/{id}")

@@ -11,15 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Locale;
-
 import com.github.stimur1709.cloudops.SqlStatementRecorder;
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -114,10 +113,7 @@ class ResourceSearchApiIntegrationTest {
     void returnsAndFiltersByAggregatedHealthStatus() throws Exception {
         long upId = insertResource("up", "SERVER", "ACTIVE", FIRST_CREATED_AT);
         long unknownId = insertResource("unknown", "SERVER", "INACTIVE", SECOND_CREATED_AT);
-        jdbcTemplate.update(
-                "UPDATE resource_health SET health_status = 'UP' WHERE resource_id = ?",
-                upId
-        );
+        jdbcTemplate.update("UPDATE resource_health SET health_status = 'UP' WHERE resource_id = ?", upId);
 
         search(filterRequest("AND", """
                 {"field": "healthStatus", "operation": "EQ", "value": "UP"}
@@ -289,15 +285,14 @@ class ResourceSearchApiIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.errors[0].field").value("filter.conditions[0].operation"))
-                .andExpect(jsonPath("$.errors[0].message").value(
-                        "Operation CONTAINS is not supported for field id"
-                ));
+                .andExpect(jsonPath("$.errors[0].message").value("Operation CONTAINS is not supported for field id"));
     }
 
     @Test
     void rejectsValuesThatCannotBeConvertedToFieldTypes() throws Exception {
         assertInvalidFilterValue("id", "EQ", "abc", "Value must be a valid integer number");
-        assertInvalidFilterValue("type", "EQ", "ROUTER", "Value must be one of: NETWORK_DEVICE, SERVER, DATABASE, SERVICE, OTHER");
+        assertInvalidFilterValue(
+                "type", "EQ", "ROUTER", "Value must be one of: NETWORK_DEVICE, SERVER, DATABASE, SERVICE, OTHER");
         assertInvalidFilterValue("createdAt", "GT", "yesterday", "Value must be a valid ISO-8601 instant");
     }
 
@@ -318,11 +313,9 @@ class ResourceSearchApiIntegrationTest {
     @Test
     void updatesResourceAndChangesUpdatedAt() throws Exception {
         long id = insertResource("old-name", "SERVER", "ACTIVE", FIRST_CREATED_AT);
-        Instant previousUpdatedAt = jdbcTemplate.queryForObject(
-                "SELECT updated_at FROM resources WHERE id = ?",
-                Timestamp.class,
-                id
-        ).toInstant();
+        Instant previousUpdatedAt = jdbcTemplate
+                .queryForObject("SELECT updated_at FROM resources WHERE id = ?", Timestamp.class, id)
+                .toInstant();
 
         String response = mockMvc.perform(put("/api/resources/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -346,11 +339,8 @@ class ResourceSearchApiIntegrationTest {
 
         Instant updatedAt = Instant.parse(JsonPath.read(response, "$.updatedAt"));
         assertThat(updatedAt).isNotEqualTo(previousUpdatedAt);
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT name FROM resources WHERE id = ?",
-                String.class,
-                id
-        )).isEqualTo("router-core-01");
+        assertThat(jdbcTemplate.queryForObject("SELECT name FROM resources WHERE id = ?", String.class, id))
+                .isEqualTo("router-core-01");
     }
 
     @Test
@@ -398,11 +388,8 @@ class ResourceSearchApiIntegrationTest {
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM resources WHERE id = ?",
-                Long.class,
-                id
-        )).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM resources WHERE id = ?", Long.class, id))
+                .isZero();
     }
 
     @Test
@@ -419,16 +406,22 @@ class ResourceSearchApiIntegrationTest {
     }
 
     private long insertResource(String name, String type, String status, Instant createdAt) {
-        long resourceId = jdbcTemplate.queryForObject("""
+        long resourceId = jdbcTemplate.queryForObject(
+                """
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?::jsonb, ?, ?)
                 RETURNING id
-                """, Long.class, name, type, status, organizationId, configFor(type),
-                Timestamp.from(createdAt), Timestamp.from(createdAt));
+                """,
+                Long.class,
+                name,
+                type,
+                status,
+                organizationId,
+                configFor(type),
+                Timestamp.from(createdAt),
+                Timestamp.from(createdAt));
         jdbcTemplate.update(
-                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
-                resourceId
-        );
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')", resourceId);
         return resourceId;
     }
 
@@ -497,12 +490,8 @@ class ResourceSearchApiIntegrationTest {
                 """.formatted(sort);
     }
 
-    private void assertInvalidFilterValue(
-            String field,
-            String operation,
-            String value,
-            String expectedMessage
-    ) throws Exception {
+    private void assertInvalidFilterValue(String field, String operation, String value, String expectedMessage)
+            throws Exception {
         search(filterRequest("AND", """
                 {"field": "%s", "operation": "%s", "value": "%s"}
                 """.formatted(field, operation, value)))

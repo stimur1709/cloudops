@@ -1,11 +1,10 @@
 package com.github.stimur1709.cloudops.resource.config;
 
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Locale;
-
-import jakarta.validation.ConstraintValidator;
-import jakarta.validation.ConstraintValidatorContext;
 
 public final class HttpUrlValidator implements ConstraintValidator<HttpUrl, String> {
 
@@ -19,7 +18,7 @@ public final class HttpUrlValidator implements ConstraintValidator<HttpUrl, Stri
             String scheme = uri.getScheme();
             return scheme != null
                     && (scheme.toLowerCase(Locale.ROOT).equals("http")
-                    || scheme.toLowerCase(Locale.ROOT).equals("https"))
+                            || scheme.toLowerCase(Locale.ROOT).equals("https"))
                     && uri.getHost() != null;
         } catch (URISyntaxException exception) {
             return false;

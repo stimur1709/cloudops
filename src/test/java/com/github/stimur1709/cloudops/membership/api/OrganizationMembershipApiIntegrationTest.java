@@ -102,8 +102,8 @@ class OrganizationMembershipApiIntegrationTest {
 
         add(OTHER_ID, "ADMIN", ADMIN_ID).andExpect(status().isForbidden());
         add(OTHER_ID, "OWNER", ADMIN_ID).andExpect(status().isForbidden());
-        mockMvc.perform(delete("/api/organizations/{id}/members/{userId}", organizationId,
-                        TestAuthentication.USER_ID).with(as(ADMIN_ID)))
+        mockMvc.perform(delete("/api/organizations/{id}/members/{userId}", organizationId, TestAuthentication.USER_ID)
+                        .with(as(ADMIN_ID)))
                 .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/organizations/{id}/members/{userId}", organizationId, MEMBER_ID)
                         .with(as(ADMIN_ID))
@@ -127,14 +127,12 @@ class OrganizationMembershipApiIntegrationTest {
 
     @Test
     void lastOwnerCannotBeDemotedOrRemoved() throws Exception {
-        mockMvc.perform(put("/api/organizations/{id}/members/{userId}", organizationId,
-                        TestAuthentication.USER_ID)
+        mockMvc.perform(put("/api/organizations/{id}/members/{userId}", organizationId, TestAuthentication.USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role\":\"ADMIN\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LAST_OWNER_REQUIRED"));
-        mockMvc.perform(delete("/api/organizations/{id}/members/{userId}", organizationId,
-                        TestAuthentication.USER_ID))
+        mockMvc.perform(delete("/api/organizations/{id}/members/{userId}", organizationId, TestAuthentication.USER_ID))
                 .andExpect(status().isConflict());
     }
 
@@ -165,7 +163,8 @@ class OrganizationMembershipApiIntegrationTest {
             org.assertj.core.api.Assertions.assertThat(jdbcTemplate.queryForObject("""
                     SELECT count(*) FROM organization_memberships
                     WHERE organization_id = ? AND role = 'OWNER'
-                    """, Integer.class, organizationId)).isEqualTo(1);
+                    """, Integer.class, organizationId))
+                    .isEqualTo(1);
         } finally {
             executor.shutdownNow();
         }

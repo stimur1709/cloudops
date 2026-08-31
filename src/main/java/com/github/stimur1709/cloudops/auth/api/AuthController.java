@@ -1,12 +1,11 @@
 package com.github.stimur1709.cloudops.auth.api;
 
-import java.net.URI;
-
 import com.github.stimur1709.cloudops.auth.application.AuthService;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.user.api.UserResponse;
 import com.github.stimur1709.cloudops.user.application.UserService;
 import jakarta.validation.Valid;
+import java.net.URI;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,9 +28,8 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
-        UserResponse response = UserResponse.from(
-                authService.register(request.email(), request.displayName(), request.password())
-        );
+        UserResponse response =
+                UserResponse.from(authService.register(request.email(), request.displayName(), request.password()));
         return ResponseEntity.created(URI.create("/api/users/" + response.id())).body(response);
     }
 

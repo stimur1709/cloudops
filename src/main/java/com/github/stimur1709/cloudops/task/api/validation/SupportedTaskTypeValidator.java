@@ -1,7 +1,7 @@
 package com.github.stimur1709.cloudops.task.api.validation;
 
-import com.github.stimur1709.cloudops.task.execution.TaskHandlerRegistry;
 import com.github.stimur1709.cloudops.task.TaskType;
+import com.github.stimur1709.cloudops.task.execution.TaskHandlerRegistry;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 

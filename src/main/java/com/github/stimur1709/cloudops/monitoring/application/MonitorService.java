@@ -1,8 +1,5 @@
 package com.github.stimur1709.cloudops.monitoring.application;
 
-import java.time.Clock;
-import java.util.List;
-
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchScopes;
@@ -15,6 +12,8 @@ import com.github.stimur1709.cloudops.monitoring.persistence.*;
 import com.github.stimur1709.cloudops.monitoring.settings.MonitoringSettingsResolver;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
+import java.time.Clock;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,9 +26,13 @@ public class MonitorService {
     private final MonitoringSettingsResolver settingsResolver;
     private final Clock clock;
 
-    public MonitorService(MonitorJpaRepository monitorRepository, ResourceJpaRepository resourceRepository,
-            OrganizationAuthorization authorization, JpaSearchService searchService,
-            MonitoringSettingsResolver settingsResolver, Clock clock) {
+    public MonitorService(
+            MonitorJpaRepository monitorRepository,
+            ResourceJpaRepository resourceRepository,
+            OrganizationAuthorization authorization,
+            JpaSearchService searchService,
+            MonitoringSettingsResolver settingsResolver,
+            Clock clock) {
         this.monitorRepository = monitorRepository;
         this.resourceRepository = resourceRepository;
         this.authorization = authorization;
@@ -48,7 +51,8 @@ public class MonitorService {
     @Transactional
     public void scheduleRun(long id, long currentUserId) {
         MonitorEntity monitor = monitorRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
-        ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
+        ResourceEntity resource =
+                resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
         if (!settingsResolver.resolve(resource, monitor.type()).enabled()) {
             throw new ConflictException("MONITOR_DISABLED", "A disabled monitor cannot be scheduled");
@@ -59,16 +63,16 @@ public class MonitorService {
     @Transactional(readOnly = true)
     public SearchResult<MonitoringResultEntity> searchResults(long monitorId, SearchQuery query, long currentUserId) {
         MonitorEntity monitor = monitorRepository.findById(monitorId).orElseThrow(NotFoundException::new);
-        ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
+        ResourceEntity resource =
+                resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
         if (settingsResolver.resolve(resource, monitor.type()).storageMode() != StorageMode.HISTORY) {
-            throw new ConflictException("MONITOR_HISTORY_NOT_ENABLED",
-                    "History is available only for HISTORY storage mode");
+            throw new ConflictException(
+                    "MONITOR_HISTORY_NOT_ENABLED", "History is available only for HISTORY storage mode");
         }
         return searchService.search(
                 query,
                 JpaSearchScopes.equal(MonitoringResultEntity_.monitorId, monitorId),
-                MonitoringResultSearchDefinition.DEFINITION
-        );
+                MonitoringResultSearchDefinition.DEFINITION);
     }
 }

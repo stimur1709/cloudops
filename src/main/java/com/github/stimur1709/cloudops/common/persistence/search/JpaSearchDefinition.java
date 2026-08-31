@@ -5,10 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public record JpaSearchDefinition<E>(
-        Class<E> entityType,
-        Map<String, JpaSearchField<E, ?>> fields,
-        String defaultSortField
-) {
+        Class<E> entityType, Map<String, JpaSearchField<E, ?>> fields, String defaultSortField) {
 
     public JpaSearchDefinition {
         entityType = Objects.requireNonNull(entityType);

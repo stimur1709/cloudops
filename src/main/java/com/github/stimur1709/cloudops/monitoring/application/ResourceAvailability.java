@@ -14,6 +14,4 @@ public record ResourceAvailability(
         long knownSeconds,
         BigDecimal uptimePercent,
         BigDecimal availabilityPercent,
-        BigDecimal coveragePercent
-) {
-}
+        BigDecimal coveragePercent) {}

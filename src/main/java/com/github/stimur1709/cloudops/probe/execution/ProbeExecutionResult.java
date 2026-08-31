@@ -6,8 +6,7 @@ public sealed interface ProbeExecutionResult {
 
     boolean success();
 
-    record Completed(boolean success, Object data) implements ProbeExecutionResult {
-    }
+    record Completed(boolean success, Object data) implements ProbeExecutionResult {}
 
     record Failed(boolean success, Error error) implements ProbeExecutionResult {
         public Failed(Error error) {
@@ -15,8 +14,7 @@ public sealed interface ProbeExecutionResult {
         }
     }
 
-    record Error(ProbeErrorCode code, String message) {
-    }
+    record Error(ProbeErrorCode code, String message) {}
 
     static Completed completed(boolean success, Object data) {
         return new Completed(success, data);

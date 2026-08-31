@@ -12,6 +12,4 @@ public record TaskMessagingProperties(
         @NotBlank String routingKey,
         @NotBlank String deadLetterExchange,
         @NotBlank String deadLetterQueue,
-        @NotBlank String deadLetterRoutingKey
-) {
-}
+        @NotBlank String deadLetterRoutingKey) {}

@@ -1,20 +1,19 @@
 package com.github.stimur1709.cloudops.resource.application;
 
-import java.time.Clock;
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
+import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
-import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
-import com.github.stimur1709.cloudops.monitoring.application.ResourceHealthService;
+import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
+import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipScopes;
 import com.github.stimur1709.cloudops.monitoring.application.MonitorProvisioningService;
+import com.github.stimur1709.cloudops.monitoring.application.ResourceHealthService;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntity;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntity_;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthJpaRepository;
-import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
-import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipScopes;
+import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
+import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
@@ -23,11 +22,11 @@ import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity_;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceSearchDefinition;
-import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
-import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
+import java.time.Clock;
+import java.time.Instant;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 public class ResourceService {
@@ -51,8 +50,7 @@ public class ResourceService {
             ResourceConfigMapper configMapper,
             ResourceHealthService resourceHealthService,
             ResourceHealthJpaRepository resourceHealthRepository,
-            MonitorProvisioningService monitorProvisioningService
-    ) {
+            MonitorProvisioningService monitorProvisioningService) {
         this.resourceRepository = resourceRepository;
         this.searchService = searchService;
         this.organizationRepository = organizationRepository;
@@ -71,17 +69,15 @@ public class ResourceService {
             ResourceStatus status,
             long organizationId,
             ResourceConfig config,
-            long currentUserId
-    ) {
+            long currentUserId) {
         OrganizationEntity organization = getOrganizationForUpdate(organizationId);
         authorization.requireManager(organizationId, currentUserId);
         if (resourceRepository.existsByOrganizationIdAndName(organizationId, name)) {
             throw resourceNameConflict();
         }
         Instant now = clock.instant();
-        ResourceEntity resource = ResourceEntity.create(
-                name, type, status, organization, configMapper.toJson(config), now
-        );
+        ResourceEntity resource =
+                ResourceEntity.create(name, type, status, organization, configMapper.toJson(config), now);
         ResourceEntity saved = save(resource);
         ResourceHealthEntity health = resourceHealthService.initialize(saved);
         monitorProvisioningService.reconcile(saved);
@@ -90,8 +86,8 @@ public class ResourceService {
 
     @Transactional(readOnly = true)
     public ResourceDetails get(long id, long currentUserId) {
-        ResourceHealthEntity resourceHealth = resourceHealthRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
+        ResourceHealthEntity resourceHealth =
+                resourceHealthRepository.findById(id).orElseThrow(NotFoundException::new);
         ResourceEntity resource = resourceHealth.resource();
         authorization.requireMember(resource.organizationId(), currentUserId);
         return details(resourceHealth);
@@ -103,12 +99,9 @@ public class ResourceService {
                 search,
                 OrganizationMembershipScopes.visibleTo(
                         currentUserId,
-                        root -> root.get(ResourceHealthEntity_.resource)
-                                .get(ResourceEntity_.organizationId)
-                ),
+                        root -> root.get(ResourceHealthEntity_.resource).get(ResourceEntity_.organizationId)),
                 ResourceSearchDefinition.DEFINITION,
-                root -> root.fetch(ResourceHealthEntity_.resource)
-        );
+                root -> root.fetch(ResourceHealthEntity_.resource));
         return new SearchResult<>(result.items().stream().map(this::details).toList(), result.total());
     }
 
@@ -120,10 +113,8 @@ public class ResourceService {
             ResourceStatus status,
             long organizationId,
             ResourceConfig config,
-            long currentUserId
-    ) {
-        ResourceEntity resource = resourceRepository.findByIdForUpdate(id)
-                .orElseThrow(NotFoundException::new);
+            long currentUserId) {
+        ResourceEntity resource = resourceRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
         long sourceOrganizationId = resource.organizationId();
         authorization.requireManager(sourceOrganizationId, currentUserId);
         OrganizationEntity organization = lockOrganizations(sourceOrganizationId, organizationId);
@@ -138,22 +129,24 @@ public class ResourceService {
         ResourceEntity saved = save(resource);
         monitorProvisioningService.reconcile(saved);
         resourceHealthService.recalculate(saved.id());
-        return new ResourceDetails(saved, resourceHealthRepository.findById(id)
-                .orElseThrow(NotFoundException::new).healthStatus());
+        return new ResourceDetails(
+                saved,
+                resourceHealthRepository
+                        .findById(id)
+                        .orElseThrow(NotFoundException::new)
+                        .healthStatus());
     }
 
     @Transactional
     public void delete(long id, long currentUserId) {
-        ResourceEntity resource = resourceRepository.findByIdForUpdate(id)
-                .orElseThrow(NotFoundException::new);
+        ResourceEntity resource = resourceRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
         getOrganizationForUpdate(resource.organizationId());
         authorization.requireManager(resource.organizationId(), currentUserId);
         resourceRepository.delete(resource);
     }
 
     private OrganizationEntity getOrganizationForUpdate(long organizationId) {
-        return organizationRepository.findByIdForUpdate(organizationId)
-                .orElseThrow(NotFoundException::new);
+        return organizationRepository.findByIdForUpdate(organizationId).orElseThrow(NotFoundException::new);
     }
 
     private OrganizationEntity lockOrganizations(long sourceId, long targetId) {
@@ -180,9 +173,6 @@ public class ResourceService {
     }
 
     private ConflictException resourceNameConflict() {
-        return new ConflictException(
-                "RESOURCE_NAME_CONFLICT",
-                "Resource name is already used in this organization"
-        );
+        return new ConflictException("RESOURCE_NAME_CONFLICT", "Resource name is already used in this organization");
     }
 }

@@ -24,12 +24,8 @@ public class ResourceAvailabilityController {
     public ResourceAvailabilityResponse get(
             @PathVariable long resourceId,
             @Valid @ModelAttribute ResourceAvailabilityRequest request,
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         return ResourceAvailabilityResponse.from(
-                availabilityService.get(
-                        resourceId, request.from(), request.to(), CurrentUser.id(authentication)
-                )
-        );
+                availabilityService.get(resourceId, request.from(), request.to(), CurrentUser.id(authentication)));
     }
 }

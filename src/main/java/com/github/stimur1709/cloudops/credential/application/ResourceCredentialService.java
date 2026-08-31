@@ -1,7 +1,5 @@
 package com.github.stimur1709.cloudops.credential.application;
 
-import java.util.List;
-
 import com.github.stimur1709.cloudops.common.application.BadRequestException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.credential.CredentialPurpose;
@@ -15,6 +13,7 @@ import com.github.stimur1709.cloudops.credential.persistence.CredentialJpaReposi
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +24,11 @@ public class ResourceCredentialService {
     private final CredentialJpaRepository credentialRepository;
     private final OrganizationAuthorization authorization;
 
-    public ResourceCredentialService(ResourceCredentialJpaRepository repository,
-                                     ResourceJpaRepository resourceRepository, CredentialJpaRepository credentialRepository,
-                                     OrganizationAuthorization authorization) {
+    public ResourceCredentialService(
+            ResourceCredentialJpaRepository repository,
+            ResourceJpaRepository resourceRepository,
+            CredentialJpaRepository credentialRepository,
+            OrganizationAuthorization authorization) {
         this.repository = repository;
         this.resourceRepository = resourceRepository;
         this.credentialRepository = credentialRepository;
@@ -41,21 +42,25 @@ public class ResourceCredentialService {
                 .map(details -> new ResourceCredentialResponse(
                         details.purpose(),
                         new CredentialResponse(
-                                details.credentialId(), details.organizationId(), details.name(), details.type(),
-                                details.username(), details.createdAt(), details.updatedAt()
-                        )
-                ))
+                                details.credentialId(),
+                                details.organizationId(),
+                                details.name(),
+                                details.type(),
+                                details.username(),
+                                details.createdAt(),
+                                details.updatedAt())))
                 .toList();
     }
 
     @Transactional
-    public ResourceCredentialResponse bind(long resourceId, CredentialPurpose purpose, long credentialId,
-                                           long userId) {
+    public ResourceCredentialResponse bind(long resourceId, CredentialPurpose purpose, long credentialId, long userId) {
         ResourceEntity resource = accessibleResource(resourceId, userId, true);
-        CredentialEntity credential = credentialRepository.findById(credentialId).orElseThrow(NotFoundException::new);
+        CredentialEntity credential =
+                credentialRepository.findById(credentialId).orElseThrow(NotFoundException::new);
         if (!resource.organizationId().equals(credential.organizationId())) throw new NotFoundException();
         requireCompatible(purpose, credential.type());
-        ResourceCredentialEntity binding = repository.findByResourceIdAndPurpose(resourceId, purpose)
+        ResourceCredentialEntity binding = repository
+                .findByResourceIdAndPurpose(resourceId, purpose)
                 .orElseGet(() -> new ResourceCredentialEntity(resourceId, purpose, credentialId));
         binding.replace(credentialId);
         repository.saveAndFlush(binding);
@@ -76,11 +81,10 @@ public class ResourceCredentialService {
     }
 
     private void requireCompatible(CredentialPurpose purpose, CredentialType type) {
-        boolean compatible = purpose == CredentialPurpose.SSH
-                || type == CredentialType.USERNAME_PASSWORD;
+        boolean compatible = purpose == CredentialPurpose.SSH || type == CredentialType.USERNAME_PASSWORD;
         if (!compatible) {
-            throw new BadRequestException("INCOMPATIBLE_CREDENTIAL",
-                    "Credential type is not compatible with the requested purpose");
+            throw new BadRequestException(
+                    "INCOMPATIBLE_CREDENTIAL", "Credential type is not compatible with the requested purpose");
         }
     }
 }

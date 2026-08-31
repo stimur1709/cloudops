@@ -352,7 +352,7 @@ RabbitMQ-команду и не добавляет в результат при�
 `FOR UPDATE SKIP LOCKED`. `enabled`, interval, thresholds, storage, retention и timeout на каждом
 запуске берутся из effective settings; пропущенные во время downtime интервалы не воспроизводятся.
 
-Обязательные Application defaults для всех пяти `ProbeType` находятся в
+Обязательные Application defaults для всех `ProbeType` находятся в
 `cloudops.monitoring.defaults` файла `application.yml` и валидируются при старте.
 
 Параметры monitoring:
@@ -367,6 +367,20 @@ RabbitMQ-команду и не добавляет в результат при�
 ## Тесты
 
 Интеграционные тесты сами запускают PostgreSQL и RabbitMQ в Testcontainers, поэтому Docker должен быть доступен.
+
+Java-код форматируется через Spotless:
+
+```powershell
+./mvnw.cmd spotless:apply
+./mvnw.cmd spotless:check
+```
+
+На macOS и Linux используйте `./mvnw` вместо `./mvnw.cmd`. Проверка форматирования также
+выполняется в фазе `verify` и в CI.
+
+Spotless использует Palantir Java Format 2.96.0. Чтобы `Ctrl+Alt+L` в IntelliJ IDEA создавал
+тот же результат, установите плагин `palantir-java-format` из Marketplace и включите его для
+проекта в `Settings | palantir-java-format Settings | Enable palantir-java-format`.
 
 Windows:
 

@@ -2,14 +2,13 @@ package com.github.stimur1709.cloudops.task.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.stimur1709.cloudops.TestAuthentication;
+import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import com.github.stimur1709.cloudops.TestAuthentication;
-import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,15 +63,13 @@ class TaskClaimIntegrationTest {
             var claims = Arrays.asList(first.get(), second.get());
 
             assertThat(claims).filteredOn(task -> task != null).hasSize(1);
+            assertThat(jdbcTemplate.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, taskId))
+                    .isEqualTo("RUNNING");
+            assertThat(jdbcTemplate.queryForObject("SELECT execution_id FROM tasks WHERE id = ?", UUID.class, taskId))
+                    .isNotNull();
             assertThat(jdbcTemplate.queryForObject(
-                    "SELECT status FROM tasks WHERE id = ?", String.class, taskId
-            )).isEqualTo("RUNNING");
-            assertThat(jdbcTemplate.queryForObject(
-                    "SELECT execution_id FROM tasks WHERE id = ?", UUID.class, taskId
-            )).isNotNull();
-            assertThat(jdbcTemplate.queryForObject(
-                    "SELECT lease_expires_at > started_at FROM tasks WHERE id = ?", Boolean.class, taskId
-            )).isTrue();
+                            "SELECT lease_expires_at > started_at FROM tasks WHERE id = ?", Boolean.class, taskId))
+                    .isTrue();
         }
     }
 

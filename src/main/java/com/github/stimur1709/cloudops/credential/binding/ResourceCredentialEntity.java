@@ -13,10 +13,15 @@ import jakarta.persistence.Table;
 @Table(name = "resource_credentials")
 @IdClass(ResourceCredentialId.class)
 public class ResourceCredentialEntity {
-    @Id @Column(name = "resource_id", nullable = false)
+    @Id
+    @Column(name = "resource_id", nullable = false)
     private Long resourceId;
-    @Id @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
+
+    @Id
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     private CredentialPurpose purpose;
+
     @Column(name = "credential_id", nullable = false)
     private Long credentialId;
 
@@ -28,8 +33,19 @@ public class ResourceCredentialEntity {
         this.credentialId = credentialId;
     }
 
-    public void replace(long credentialId) { this.credentialId = credentialId; }
-    public Long resourceId() { return resourceId; }
-    public CredentialPurpose purpose() { return purpose; }
-    public Long credentialId() { return credentialId; }
+    public void replace(long credentialId) {
+        this.credentialId = credentialId;
+    }
+
+    public Long resourceId() {
+        return resourceId;
+    }
+
+    public CredentialPurpose purpose() {
+        return purpose;
+    }
+
+    public Long credentialId() {
+        return credentialId;
+    }
 }

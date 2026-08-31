@@ -1,11 +1,10 @@
 package com.github.stimur1709.cloudops.task.persistence;
 
+import com.github.stimur1709.cloudops.task.TaskErrorCode;
+import com.github.stimur1709.cloudops.task.TaskStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-
-import com.github.stimur1709.cloudops.task.TaskErrorCode;
-import com.github.stimur1709.cloudops.task.TaskStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -16,10 +15,11 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-            update TaskEntity task
-               set task.status = :running, task.startedAt = :startedAt,
+            UPDATE TaskEntity task
+               SET task.status = :running, task.startedAt = :startedAt,
                    task.executionId = :executionId, task.leaseExpiresAt = :leaseExpiresAt
-             where task.id = :taskId and task.status = :pending
+             WHERE task.id = :taskId
+               AND task.status = :pending
             """)
     int claimPending(
             @Param("taskId") long taskId,
@@ -27,41 +27,44 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
             @Param("executionId") UUID executionId,
             @Param("leaseExpiresAt") Instant leaseExpiresAt,
             @Param("pending") TaskStatus pending,
-            @Param("running") TaskStatus running
-    );
+            @Param("running") TaskStatus running);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-            update TaskEntity task
-               set task.attemptCount = task.attemptCount + 1, task.lastAttemptAt = :attemptedAt
-             where task.id = :taskId and task.status = :running and task.executionId = :executionId
+            UPDATE TaskEntity task
+               SET task.attemptCount = task.attemptCount + 1, task.lastAttemptAt = :attemptedAt
+             WHERE task.id = :taskId
+               AND task.status = :running
+               AND task.executionId = :executionId
             """)
     int recordAttempt(
             @Param("taskId") long taskId,
             @Param("attemptedAt") Instant attemptedAt,
             @Param("executionId") UUID executionId,
-            @Param("running") TaskStatus running
-    );
+            @Param("running") TaskStatus running);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-            update TaskEntity task
-               set task.leaseExpiresAt = :leaseExpiresAt
-             where task.id = :taskId and task.status = :running and task.executionId = :executionId
+            UPDATE TaskEntity task
+               SET task.leaseExpiresAt = :leaseExpiresAt
+             WHERE task.id = :taskId
+               AND task.status = :running
+               AND task.executionId = :executionId
             """)
     int renewLease(
             @Param("taskId") long taskId,
             @Param("executionId") UUID executionId,
             @Param("leaseExpiresAt") Instant leaseExpiresAt,
-            @Param("running") TaskStatus running
-    );
+            @Param("running") TaskStatus running);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-            update TaskEntity task
-               set task.status = :completed, task.result = :result, task.completedAt = :completedAt,
-                   task.executionId = null, task.leaseExpiresAt = null
-             where task.id = :taskId and task.status = :running and task.executionId = :executionId
+            UPDATE TaskEntity task
+               SET task.status = :completed, task.result = :result, task.completedAt = :completedAt,
+                   task.executionId = NULL, task.leaseExpiresAt = NULL
+             WHERE task.id = :taskId
+               AND task.status = :running
+               AND task.executionId = :executionId
             """)
     int completeRunning(
             @Param("taskId") long taskId,
@@ -69,15 +72,16 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
             @Param("result") tools.jackson.databind.JsonNode result,
             @Param("completedAt") Instant completedAt,
             @Param("running") TaskStatus running,
-            @Param("completed") TaskStatus completed
-    );
+            @Param("completed") TaskStatus completed);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-            update TaskEntity task
-               set task.status = :failed, task.errorCode = :errorCode, task.errorMessage = :errorMessage,
-                   task.completedAt = :completedAt, task.executionId = null, task.leaseExpiresAt = null
-             where task.id = :taskId and task.status = :running and task.executionId = :executionId
+            UPDATE TaskEntity task
+               SET task.status = :failed, task.errorCode = :errorCode, task.errorMessage = :errorMessage,
+                   task.completedAt = :completedAt, task.executionId = NULL, task.leaseExpiresAt = NULL
+             WHERE task.id = :taskId
+               AND task.status = :running
+               AND task.executionId = :executionId
             """)
     int failRunning(
             @Param("taskId") long taskId,
@@ -86,8 +90,7 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
             @Param("errorMessage") String errorMessage,
             @Param("completedAt") Instant completedAt,
             @Param("running") TaskStatus running,
-            @Param("failed") TaskStatus failed
-    );
+            @Param("failed") TaskStatus failed);
 
     @Query(value = """
             SELECT *
@@ -98,6 +101,6 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
             """, nativeQuery = true)
     List<TaskEntity> lockExpired(@Param("now") Instant now, Pageable pageable);
 
-    @Query("select task.status from TaskEntity task where task.id = :taskId")
+    @Query("SELECT task.status FROM TaskEntity task WHERE task.id = :taskId")
     TaskStatus findStatus(@Param("taskId") long taskId);
 }

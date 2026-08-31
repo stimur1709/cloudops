@@ -26,19 +26,18 @@ public class ProbeSettingsRequestValidator implements ConstraintValidator<ValidP
         boolean valid = true;
         context.disableDefaultConstraintViolation();
 
-        if (value.intervalSeconds() != null && value.intervalSeconds() > 0
+        if (value.intervalSeconds() != null
+                && value.intervalSeconds() > 0
                 && value.intervalSeconds() < properties.minimumIntervalSeconds()) {
             violation(
                     context,
                     "intervalSeconds",
-                    "Interval must be at least " + properties.minimumIntervalSeconds() + " seconds"
-            );
+                    "Interval must be at least " + properties.minimumIntervalSeconds() + " seconds");
             valid = false;
         }
 
-        boolean invalidHistoryRetention = value.retentionDays() == null
-                || value.retentionDays() < 1
-                || value.retentionDays() > 365;
+        boolean invalidHistoryRetention =
+                value.retentionDays() == null || value.retentionDays() < 1 || value.retentionDays() > 365;
         if (value.storageMode() == StorageMode.HISTORY && invalidHistoryRetention) {
             violation(context, "retentionDays", "Retention days must be between 1 and 365 for HISTORY");
             valid = false;
@@ -54,8 +53,7 @@ public class ProbeSettingsRequestValidator implements ConstraintValidator<ValidP
         } else if (type != null && type != ProbeType.DNS_CHECK && value.timeoutMs() == null) {
             violation(context, "timeoutMs", "Timeout is required");
             valid = false;
-        } else if (value.timeoutMs() != null
-                && (value.timeoutMs() < 1 || value.timeoutMs() > 60000)) {
+        } else if (value.timeoutMs() != null && (value.timeoutMs() < 1 || value.timeoutMs() > 60000)) {
             violation(context, "timeoutMs", "Timeout must be between 1 and 60000 milliseconds");
             valid = false;
         }
@@ -77,6 +75,8 @@ public class ProbeSettingsRequestValidator implements ConstraintValidator<ValidP
     }
 
     private void violation(ConstraintValidatorContext context, String field, String message) {
-        context.buildConstraintViolationWithTemplate(message).addPropertyNode(field).addConstraintViolation();
+        context.buildConstraintViolationWithTemplate(message)
+                .addPropertyNode(field)
+                .addConstraintViolation();
     }
 }

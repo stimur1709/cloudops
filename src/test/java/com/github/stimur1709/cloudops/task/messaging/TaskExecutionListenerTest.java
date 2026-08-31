@@ -1,10 +1,9 @@
 package com.github.stimur1709.cloudops.task.messaging;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.stimur1709.cloudops.task.execution.TaskExecutionOutcome;
 import com.github.stimur1709.cloudops.task.execution.TaskExecutionService;

@@ -2,19 +2,18 @@ package com.github.stimur1709.cloudops.probe.dns;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-
-import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import org.junit.jupiter.api.Test;
 
 class DnsCheckClientTest {
 
     @Test
     void returnsEveryResolvedAddressAndResponseTime() throws Exception {
-        InetAddress first = InetAddress.getByAddress(new byte[]{10, 0, 0, 1});
-        InetAddress second = InetAddress.getByAddress(new byte[]{10, 0, 0, 2});
-        DnsCheckClient client = new DnsCheckClient(host -> new InetAddress[]{first, second});
+        InetAddress first = InetAddress.getByAddress(new byte[] {10, 0, 0, 1});
+        InetAddress second = InetAddress.getByAddress(new byte[] {10, 0, 0, 2});
+        DnsCheckClient client = new DnsCheckClient(host -> new InetAddress[] {first, second});
 
         DnsCheckOutcome outcome = client.execute("service.local");
 

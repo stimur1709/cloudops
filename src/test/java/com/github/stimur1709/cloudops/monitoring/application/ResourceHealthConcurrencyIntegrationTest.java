@@ -2,14 +2,13 @@ package com.github.stimur1709.cloudops.monitoring.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.stimur1709.cloudops.TestcontainersConfiguration;
+import com.github.stimur1709.cloudops.monitoring.execution.MonitorExecutionPersistenceService;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import com.github.stimur1709.cloudops.TestcontainersConfiguration;
-import com.github.stimur1709.cloudops.monitoring.execution.MonitorExecutionPersistenceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +21,14 @@ import tools.jackson.databind.ObjectMapper;
 @SpringBootTest
 class ResourceHealthConcurrencyIntegrationTest {
 
-    @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private MonitorExecutionPersistenceService persistenceService;
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private MonitorExecutionPersistenceService persistenceService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
@@ -45,9 +49,7 @@ class ResourceHealthConcurrencyIntegrationTest {
                 VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{"url":"https://example.com"}'::jsonb, now(), now()) RETURNING id
                 """, Long.class, organizationId);
         jdbcTemplate.update(
-                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
-                resourceId
-        );
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')", resourceId);
 
         jdbcTemplate.execute("ALTER TABLE monitors DROP CONSTRAINT monitors_resource_type_key");
         try {
@@ -58,15 +60,11 @@ class ResourceHealthConcurrencyIntegrationTest {
             try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
                 Future<?> up = executor.submit(() -> {
                     await(start);
-                    persistenceService.saveResult(
-                            upMonitorId, Instant.now(), objectMapper.createObjectNode(), true
-                    );
+                    persistenceService.saveResult(upMonitorId, Instant.now(), objectMapper.createObjectNode(), true);
                 });
                 Future<?> down = executor.submit(() -> {
                     await(start);
-                    persistenceService.saveResult(
-                            downMonitorId, Instant.now(), objectMapper.createObjectNode(), false
-                    );
+                    persistenceService.saveResult(downMonitorId, Instant.now(), objectMapper.createObjectNode(), false);
                 });
                 start.countDown();
                 up.get();
@@ -74,19 +72,20 @@ class ResourceHealthConcurrencyIntegrationTest {
             }
 
             assertThat(jdbcTemplate.queryForObject(
-                    "SELECT health_status FROM resource_health WHERE resource_id = ?",
-                    String.class,
-                    resourceId
-            )).isEqualTo("DEGRADED");
+                            "SELECT health_status FROM resource_health WHERE resource_id = ?",
+                            String.class,
+                            resourceId))
+                    .isEqualTo("DEGRADED");
             assertThat(jdbcTemplate.queryForObject(
-                    "SELECT count(*) FROM resource_health_events WHERE resource_id = ?",
-                    Integer.class,
-                    resourceId
-            )).isEqualTo(1);
+                            "SELECT count(*) FROM resource_health_events WHERE resource_id = ?",
+                            Integer.class,
+                            resourceId))
+                    .isEqualTo(1);
             assertThat(jdbcTemplate.queryForObject("""
                     SELECT from_status || '->' || to_status FROM resource_health_events
                     WHERE resource_id = ?
-                    """, String.class, resourceId)).isEqualTo("UNKNOWN->DEGRADED");
+                    """, String.class, resourceId))
+                    .isEqualTo("UNKNOWN->DEGRADED");
         } finally {
             jdbcTemplate.update("DELETE FROM monitors WHERE resource_id = ?", resourceId);
             jdbcTemplate.execute("""

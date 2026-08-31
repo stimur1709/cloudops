@@ -1,9 +1,8 @@
 package com.github.stimur1709.cloudops.credential.binding;
 
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.credential.CredentialPurpose;
 import com.github.stimur1709.cloudops.credential.CredentialType;
+import java.time.Instant;
 
 public record ResourceCredentialDetails(
         CredentialPurpose purpose,
@@ -13,6 +12,4 @@ public record ResourceCredentialDetails(
         CredentialType type,
         String username,
         Instant createdAt,
-        Instant updatedAt
-) {
-}
+        Instant updatedAt) {}

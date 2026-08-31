@@ -59,12 +59,16 @@ class AuthorizationApiIntegrationTest {
 
         mockMvc.perform(get("/api/organizations/{id}", organization).with(as(MEMBER_ID)))
                 .andExpect(status().isOk());
-        mockMvc.perform(put("/api/organizations/{id}", organization).with(as(MEMBER_ID))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Denied\"}"))
+        mockMvc.perform(put("/api/organizations/{id}", organization)
+                        .with(as(MEMBER_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Denied\"}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
-        mockMvc.perform(put("/api/organizations/{id}", organization).with(as(ADMIN_ID))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Updated\"}"))
+        mockMvc.perform(put("/api/organizations/{id}", organization)
+                        .with(as(ADMIN_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Updated\"}"))
                 .andExpect(status().isOk());
         mockMvc.perform(delete("/api/organizations/{id}", organization).with(as(ADMIN_ID)))
                 .andExpect(status().isForbidden());
@@ -103,15 +107,19 @@ class AuthorizationApiIntegrationTest {
         long visibleResource = insertResource("visible", visibleOrganization);
         long hiddenResource = insertResource("hidden", hiddenOrganization);
 
-        mockMvc.perform(post("/api/resources").with(as(MEMBER_ID))
+        mockMvc.perform(post("/api/resources")
+                        .with(as(MEMBER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(resourceBody("member-create", visibleOrganization)))
                 .andExpect(status().isForbidden());
-        String created = mockMvc.perform(post("/api/resources").with(as(ADMIN_ID))
+        String created = mockMvc.perform(post("/api/resources")
+                        .with(as(ADMIN_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(resourceBody("admin-create", visibleOrganization)))
                 .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         long createdId = ((Number) com.jayway.jsonpath.JsonPath.read(created, "$.id")).longValue();
         mockMvc.perform(delete("/api/resources/{id}", createdId).with(as(MEMBER_ID)))
                 .andExpect(status().isForbidden());
@@ -120,11 +128,13 @@ class AuthorizationApiIntegrationTest {
 
         mockMvc.perform(get("/api/resources/{id}", visibleResource).with(as(MEMBER_ID)))
                 .andExpect(status().isOk());
-        mockMvc.perform(put("/api/resources/{id}", visibleResource).with(as(MEMBER_ID))
+        mockMvc.perform(put("/api/resources/{id}", visibleResource)
+                        .with(as(MEMBER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(resourceBody("denied", visibleOrganization)))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(put("/api/resources/{id}", visibleResource).with(as(ADMIN_ID))
+        mockMvc.perform(put("/api/resources/{id}", visibleResource)
+                        .with(as(ADMIN_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(resourceBody("updated", visibleOrganization)))
                 .andExpect(status().isOk());
@@ -154,15 +164,19 @@ class AuthorizationApiIntegrationTest {
         insertMembership(target, ADMIN_ID, "MEMBER");
         long resource = insertResource("server", source);
 
-        mockMvc.perform(put("/api/resources/{id}", resource).with(as(ADMIN_ID))
-                        .contentType(MediaType.APPLICATION_JSON).content(resourceBody("server", target)))
+        mockMvc.perform(put("/api/resources/{id}", resource)
+                        .with(as(ADMIN_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resourceBody("server", target)))
                 .andExpect(status().isForbidden());
         jdbcTemplate.update("""
                 UPDATE organization_memberships SET role = 'ADMIN', updated_at = now()
                 WHERE organization_id = ? AND user_id = ?
                 """, target, ADMIN_ID);
-        mockMvc.perform(put("/api/resources/{id}", resource).with(as(ADMIN_ID))
-                        .contentType(MediaType.APPLICATION_JSON).content(resourceBody("server", target)))
+        mockMvc.perform(put("/api/resources/{id}", resource)
+                        .with(as(ADMIN_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resourceBody("server", target)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.organizationId").value(target));
     }
@@ -196,9 +210,7 @@ class AuthorizationApiIntegrationTest {
                 VALUES (?, 'SERVER', 'ACTIVE', ?, '{"host":"server.internal"}', now(), now()) RETURNING id
                 """, Long.class, name, organizationId);
         jdbcTemplate.update(
-                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
-                resourceId
-        );
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')", resourceId);
         return resourceId;
     }
 

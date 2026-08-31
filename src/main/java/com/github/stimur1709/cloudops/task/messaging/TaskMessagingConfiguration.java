@@ -7,10 +7,10 @@ import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(TaskMessagingProperties.class)
@@ -33,8 +33,7 @@ public class TaskMessagingConfiguration {
     Binding taskExecutionBinding(
             @Qualifier("taskExecutionQueue") Queue taskExecutionQueue,
             @Qualifier("taskExchange") DirectExchange taskExchange,
-            TaskMessagingProperties properties
-    ) {
+            TaskMessagingProperties properties) {
         return BindingBuilder.bind(taskExecutionQueue).to(taskExchange).with(properties.routingKey());
     }
 
@@ -52,8 +51,7 @@ public class TaskMessagingConfiguration {
     Binding taskDeadLetterBinding(
             @Qualifier("taskDeadLetterQueue") Queue taskDeadLetterQueue,
             @Qualifier("taskDeadLetterExchange") DirectExchange taskDeadLetterExchange,
-            TaskMessagingProperties properties
-    ) {
+            TaskMessagingProperties properties) {
         return BindingBuilder.bind(taskDeadLetterQueue)
                 .to(taskDeadLetterExchange)
                 .with(properties.deadLetterRoutingKey());

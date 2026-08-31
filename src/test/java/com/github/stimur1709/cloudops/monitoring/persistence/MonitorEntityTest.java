@@ -2,9 +2,9 @@ package com.github.stimur1709.cloudops.monitoring.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Instant;
 import com.github.stimur1709.cloudops.monitoring.HealthStatus;
 import com.github.stimur1709.cloudops.probe.ProbeType;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 

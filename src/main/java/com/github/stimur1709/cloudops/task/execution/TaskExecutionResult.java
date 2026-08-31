@@ -4,11 +4,9 @@ import com.github.stimur1709.cloudops.task.TaskErrorCode;
 
 public sealed interface TaskExecutionResult {
 
-    record Completed(Object data) implements TaskExecutionResult {
-    }
+    record Completed(Object data) implements TaskExecutionResult {}
 
-    record Failed(TaskErrorCode errorCode, String message) implements TaskExecutionResult {
-    }
+    record Failed(TaskErrorCode errorCode, String message) implements TaskExecutionResult {}
 
     static TaskExecutionResult completed(Object data) {
         return new Completed(data);

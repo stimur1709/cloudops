@@ -16,9 +16,7 @@ public class TaskRetryConfiguration {
         return RetryTemplate.builder()
                 .maxAttempts(maxAttempts)
                 .retryOn(RetryableTaskExecutionException.class)
-                .exponentialBackoff(
-                        properties.initialInterval(), properties.multiplier(), properties.maxInterval()
-                )
+                .exponentialBackoff(properties.initialInterval(), properties.multiplier(), properties.maxInterval())
                 .build();
     }
 }

@@ -1,7 +1,6 @@
 package com.github.stimur1709.cloudops.common.config;
 
 import java.time.Clock;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,4 +12,3 @@ public class TimeConfiguration {
         return Clock.systemUTC();
     }
 }
-

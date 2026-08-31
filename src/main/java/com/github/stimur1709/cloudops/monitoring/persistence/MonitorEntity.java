@@ -1,7 +1,5 @@
 package com.github.stimur1709.cloudops.monitoring.persistence;
 
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.monitoring.HealthStatus;
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import jakarta.persistence.Column;
@@ -12,6 +10,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import tools.jackson.databind.JsonNode;
@@ -54,14 +53,9 @@ public class MonitorEntity {
     @Column(name = "consecutive_successes", nullable = false)
     private int consecutiveSuccesses;
 
-    protected MonitorEntity() {
-    }
+    protected MonitorEntity() {}
 
-    private MonitorEntity(
-            long resourceId,
-            ProbeType type,
-            Instant nextRunAt
-    ) {
+    private MonitorEntity(long resourceId, ProbeType type, Instant nextRunAt) {
         this.resourceId = resourceId;
         this.type = type;
         this.compatible = true;
@@ -69,15 +63,12 @@ public class MonitorEntity {
         this.healthStatus = HealthStatus.UNKNOWN;
     }
 
-    public static MonitorEntity create(
-            long resourceId,
-            ProbeType type,
-            Instant nextRunAt
-    ) {
+    public static MonitorEntity create(long resourceId, ProbeType type, Instant nextRunAt) {
         return new MonitorEntity(resourceId, type, nextRunAt);
     }
 
-    public void record(Instant checkedAt, JsonNode result, boolean success, int failureThreshold, int recoveryThreshold) {
+    public void record(
+            Instant checkedAt, JsonNode result, boolean success, int failureThreshold, int recoveryThreshold) {
         lastCheckedAt = checkedAt;
         lastResult = result;
         updateHealth(success, failureThreshold, recoveryThreshold);
@@ -85,6 +76,10 @@ public class MonitorEntity {
 
     public void scheduleNow(Instant now) {
         nextRunAt = now;
+    }
+
+    public void scheduleNext(Instant now, int intervalSeconds) {
+        nextRunAt = now.plusSeconds(intervalSeconds);
     }
 
     public void updateCompatibility(boolean compatible, Instant now) {
@@ -126,14 +121,43 @@ public class MonitorEntity {
         consecutiveSuccesses = 0;
     }
 
-    public Long id() { return id; }
-    public Long resourceId() { return resourceId; }
-    public ProbeType type() { return type; }
-    public boolean compatible() { return compatible; }
-    public Instant nextRunAt() { return nextRunAt; }
-    public Instant lastCheckedAt() { return lastCheckedAt; }
-    public JsonNode lastResult() { return lastResult; }
-    public HealthStatus healthStatus() { return healthStatus; }
-    public int consecutiveFailures() { return consecutiveFailures; }
-    public int consecutiveSuccesses() { return consecutiveSuccesses; }
+    public Long id() {
+        return id;
+    }
+
+    public Long resourceId() {
+        return resourceId;
+    }
+
+    public ProbeType type() {
+        return type;
+    }
+
+    public boolean compatible() {
+        return compatible;
+    }
+
+    public Instant nextRunAt() {
+        return nextRunAt;
+    }
+
+    public Instant lastCheckedAt() {
+        return lastCheckedAt;
+    }
+
+    public JsonNode lastResult() {
+        return lastResult;
+    }
+
+    public HealthStatus healthStatus() {
+        return healthStatus;
+    }
+
+    public int consecutiveFailures() {
+        return consecutiveFailures;
+    }
+
+    public int consecutiveSuccesses() {
+        return consecutiveSuccesses;
+    }
 }

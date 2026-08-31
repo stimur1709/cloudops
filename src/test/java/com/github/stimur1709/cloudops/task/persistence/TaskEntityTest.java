@@ -3,11 +3,9 @@ package com.github.stimur1709.cloudops.task.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
-import com.github.stimur1709.cloudops.task.TaskType;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 

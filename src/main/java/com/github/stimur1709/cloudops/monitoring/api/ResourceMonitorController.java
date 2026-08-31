@@ -1,9 +1,8 @@
 package com.github.stimur1709.cloudops.monitoring.api;
 
-import java.util.List;
-
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.monitoring.application.MonitorService;
+import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

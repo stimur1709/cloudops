@@ -4,6 +4,5 @@ public final class TestTaskTypes {
 
     public static final TaskType TYPE = TaskType.TEST_OPERATION;
 
-    private TestTaskTypes() {
-    }
+    private TestTaskTypes() {}
 }

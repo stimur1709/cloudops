@@ -9,10 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,13 +20,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.oauth2.jwt.JwsHeader;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -73,9 +72,7 @@ class AuthApiIntegrationTest {
                 .andExpect(jsonPath("$.password").doesNotExist())
                 .andExpect(jsonPath("$.passwordHash").doesNotExist());
 
-        String hash = jdbcTemplate.queryForObject(
-                "SELECT password_hash FROM users WHERE id = 1", String.class
-        );
+        String hash = jdbcTemplate.queryForObject("SELECT password_hash FROM users WHERE id = 1", String.class);
         assertThat(hash).isNotBlank().isNotEqualTo(" 12345678901").startsWith("{bcrypt}");
 
         login("alice@example.com", " 12345678901").andExpect(status().isOk());
@@ -91,8 +88,7 @@ class AuthApiIntegrationTest {
         register("short@example.com", "Short", "too-short")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("password"));
-        register("long@example.com", "Long", "x".repeat(73))
-                .andExpect(status().isBadRequest());
+        register("long@example.com", "Long", "x".repeat(73)).andExpect(status().isBadRequest());
     }
 
     @Test
@@ -102,7 +98,9 @@ class AuthApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.expiresIn").value(900))
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
         Jwt jwt = jwtDecoder.decode(JsonPath.read(body, "$.accessToken"));
         assertThat(jwt.getSubject()).isEqualTo(Long.toString(userId));
@@ -118,10 +116,14 @@ class AuthApiIntegrationTest {
         registerAndGetId("user@example.com", "User");
         String unknown = login("unknown@example.com", PASSWORD)
                 .andExpect(status().isUnauthorized())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         String wrong = login("user@example.com", "wrong-password-value")
                 .andExpect(status().isUnauthorized())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         assertThat(JsonPath.read(unknown, "$.code").toString())
                 .isEqualTo(JsonPath.read(wrong, "$.code").toString())
                 .isEqualTo("UNAUTHORIZED");
@@ -169,7 +171,8 @@ class AuthApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"other@example.com\",\"displayName\":\"Other\"}"))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(post("/api/organizations").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/organizations")
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Secret\"}"))
                 .andExpect(status().isUnauthorized());
     }
@@ -180,9 +183,8 @@ class AuthApiIntegrationTest {
         long otherId = registerAndGetId("other@example.com", "Other");
         String ownerToken = loginToken("owner@example.com", PASSWORD);
         String otherToken = loginToken("other@example.com", PASSWORD);
-        String originalHash = jdbcTemplate.queryForObject(
-                "SELECT password_hash FROM users WHERE id = ?", String.class, ownerId
-        );
+        String originalHash =
+                jdbcTemplate.queryForObject("SELECT password_hash FROM users WHERE id = ?", String.class, ownerId);
 
         mockMvc.perform(get("/api/users/{id}", otherId).header(HttpHeaders.AUTHORIZATION, bearer(ownerToken)))
                 .andExpect(status().isForbidden());
@@ -192,19 +194,24 @@ class AuthApiIntegrationTest {
                         .content("{\"email\":\"OWNER2@example.com\",\"displayName\":\"Owner 2\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("owner2@example.com"));
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT password_hash FROM users WHERE id = ?", String.class, ownerId
-        )).isEqualTo(originalHash);
+        assertThat(jdbcTemplate.queryForObject("SELECT password_hash FROM users WHERE id = ?", String.class, ownerId))
+                .isEqualTo(originalHash);
 
         String search = "{\"start\":0,\"size\":10,\"getTotal\":true}";
-        mockMvc.perform(post("/api/users/search").header(HttpHeaders.AUTHORIZATION, bearer(otherToken))
-                        .contentType(MediaType.APPLICATION_JSON).content(search))
+        mockMvc.perform(post("/api/users/search")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(otherToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(search))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(post("/api/organizations").header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Platform\"}"))
+        mockMvc.perform(post("/api/organizations")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Platform\"}"))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/users/search").header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
-                        .contentType(MediaType.APPLICATION_JSON).content(search))
+        mockMvc.perform(post("/api/users/search")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(search))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(2));
     }
@@ -218,12 +225,15 @@ class AuthApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Platform\"}"))
                 .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         long organizationId = ((Number) JsonPath.read(body, "$.id")).longValue();
         assertThat(jdbcTemplate.queryForObject("""
                 SELECT role FROM organization_memberships
                 WHERE organization_id = ? AND user_id = ?
-                """, String.class, organizationId, userId)).isEqualTo("OWNER");
+                """, String.class, organizationId, userId))
+                .isEqualTo("OWNER");
     }
 
     private ResultActions register(String email, String displayName, String password) throws Exception {
@@ -237,7 +247,9 @@ class AuthApiIntegrationTest {
     private long registerAndGetId(String email, String displayName) throws Exception {
         String body = register(email, displayName, PASSWORD)
                 .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }
 
@@ -248,8 +260,11 @@ class AuthApiIntegrationTest {
     }
 
     private String loginToken(String email, String password) throws Exception {
-        String body = login(email, password).andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+        String body = login(email, password)
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         return JsonPath.read(body, "$.accessToken");
     }
 
@@ -261,9 +276,10 @@ class AuthApiIntegrationTest {
                 .expiresAt(expiresAt)
                 .id("test-token")
                 .build();
-        return jwtEncoder.encode(JwtEncoderParameters.from(
-                JwsHeader.with(MacAlgorithm.HS256).build(), claims
-        )).getTokenValue();
+        return jwtEncoder
+                .encode(JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+                .getTokenValue();
     }
 
     private String bearer(String token) {

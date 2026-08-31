@@ -1,11 +1,5 @@
 package com.github.stimur1709.cloudops.monitoring.settings.application;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.monitoring.application.ResourceHealthService;
@@ -28,6 +22,11 @@ import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,8 +54,7 @@ public class ProbeSettingsService {
             MonitoringProperties properties,
             ProbeHandlerRegistry handlerRegistry,
             ResourceConfigMapper configMapper,
-            ResourceHealthService resourceHealthService
-    ) {
+            ResourceHealthService resourceHealthService) {
         this.organizationRepository = organizationRepository;
         this.resourceRepository = resourceRepository;
         this.organizationSettingsRepository = organizationSettingsRepository;
@@ -73,29 +71,28 @@ public class ProbeSettingsService {
     public List<ProbeSettingsResponse> listOrganization(long organizationId, long userId) {
         requireOrganization(organizationId);
         authorization.requireMember(organizationId, userId);
-        Map<ProbeType, OrganizationProbeSettingsEntity> ownSettings = organizationSettingsRepository
-                .findAllByOrganizationId(organizationId).stream()
-                .collect(Collectors.toMap(OrganizationProbeSettingsEntity::probeType, Function.identity()));
-        return Arrays.stream(ProbeType.values()).map(type -> {
-            var own = ownSettings.get(type);
-            EffectiveProbeSettings effective = own != null
-                    ? effective(type, own, SettingsSource.ORGANIZATION)
-                    : effective(type, properties.defaults().get(type), SettingsSource.APPLICATION);
-            return new ProbeSettingsResponse(type, true, effective.source(), effective, false);
-        }).toList();
+        Map<ProbeType, OrganizationProbeSettingsEntity> ownSettings =
+                organizationSettingsRepository.findAllByOrganizationId(organizationId).stream()
+                        .collect(Collectors.toMap(OrganizationProbeSettingsEntity::probeType, Function.identity()));
+        return Arrays.stream(ProbeType.values())
+                .map(type -> {
+                    var own = ownSettings.get(type);
+                    EffectiveProbeSettings effective = own != null
+                            ? effective(type, own, SettingsSource.ORGANIZATION)
+                            : effective(type, properties.defaults().get(type), SettingsSource.APPLICATION);
+                    return new ProbeSettingsResponse(type, true, effective.source(), effective, false);
+                })
+                .toList();
     }
 
     @Transactional
     public ProbeSettingsResponse putOrganization(
-            long organizationId,
-            ProbeType type,
-            ProbeSettingsRequest request,
-            long userId
-    ) {
+            long organizationId, ProbeType type, ProbeSettingsRequest request, long userId) {
         requireOrganization(organizationId);
         authorization.requireManager(organizationId, userId);
         ProbeSettings values = values(request);
-        var entity = organizationSettingsRepository.findByOrganizationIdAndProbeType(organizationId, type)
+        var entity = organizationSettingsRepository
+                .findByOrganizationIdAndProbeType(organizationId, type)
                 .orElseGet(() -> OrganizationProbeSettingsEntity.create(organizationId, type, values));
         entity.update(values);
         organizationSettingsRepository.save(entity);
@@ -119,30 +116,24 @@ public class ProbeSettingsService {
         authorization.requireMember(resource.organizationId(), userId);
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
         var effectiveSettings = resolver.resolveAll(resource);
-        return Arrays.stream(ProbeType.values()).map(type -> {
-            EffectiveProbeSettings effective = effectiveSettings.get(type);
-            boolean own = effective.source() == SettingsSource.RESOURCE;
-            return new ProbeSettingsResponse(
-                    type,
-                    handlerRegistry.supports(type, config),
-                    effective.source(),
-                    effective,
-                    own
-            );
-        }).toList();
+        return Arrays.stream(ProbeType.values())
+                .map(type -> {
+                    EffectiveProbeSettings effective = effectiveSettings.get(type);
+                    boolean own = effective.source() == SettingsSource.RESOURCE;
+                    return new ProbeSettingsResponse(
+                            type, handlerRegistry.supports(type, config), effective.source(), effective, own);
+                })
+                .toList();
     }
 
     @Transactional
     public ProbeSettingsResponse putResource(
-            long resourceId,
-            ProbeType type,
-            ProbeSettingsRequest request,
-            long userId
-    ) {
+            long resourceId, ProbeType type, ProbeSettingsRequest request, long userId) {
         ResourceEntity resource = requireResource(resourceId);
         authorization.requireManager(resource.organizationId(), userId);
         ProbeSettings values = values(request);
-        var entity = resourceSettingsRepository.findByResourceIdAndProbeType(resourceId, type)
+        var entity = resourceSettingsRepository
+                .findByResourceIdAndProbeType(resourceId, type)
                 .orElseGet(() -> ResourceProbeSettingsEntity.create(resourceId, type, values));
         entity.update(values);
         resourceSettingsRepository.saveAndFlush(entity);
@@ -150,12 +141,7 @@ public class ProbeSettingsService {
         EffectiveProbeSettings effective = effective(type, entity, SettingsSource.RESOURCE);
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
         return new ProbeSettingsResponse(
-                type,
-                handlerRegistry.supports(type, config),
-                effective.source(),
-                effective,
-                true
-        );
+                type, handlerRegistry.supports(type, config), effective.source(), effective, true);
     }
 
     @Transactional
@@ -168,7 +154,8 @@ public class ProbeSettingsService {
     }
 
     private void recalculateOrganization(long organizationId) {
-        resourceRepository.findAllByOrganizationId(organizationId)
+        resourceRepository
+                .findAllByOrganizationId(organizationId)
                 .forEach(resource -> resourceHealthService.recalculate(resource.id()));
     }
 
@@ -190,8 +177,7 @@ public class ProbeSettingsService {
                 request.recoveryThreshold(),
                 request.storageMode(),
                 request.retentionDays(),
-                request.timeoutMs()
-        );
+                request.timeoutMs());
     }
 
     private EffectiveProbeSettings effective(ProbeType type, ProbeSettings settings, SettingsSource source) {
@@ -204,7 +190,6 @@ public class ProbeSettingsService {
                 settings.storageMode(),
                 settings.retentionDays(),
                 settings.timeoutMs(),
-                source
-        );
+                source);
     }
 }

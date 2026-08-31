@@ -1,7 +1,7 @@
 package com.github.stimur1709.cloudops.task.api;
 
-import static org.awaitility.Awaitility.await;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -9,11 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Duration;
-
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,8 +31,11 @@ class TaskApiIntegrationTest {
 
     private static final long OTHER_USER_ID = 20_000L;
 
-    @Autowired private WebApplicationContext applicationContext;
-    @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private WebApplicationContext applicationContext;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private MockMvc mockMvc;
     private long organizationId;
@@ -76,16 +78,17 @@ class TaskApiIntegrationTest {
                 .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/api/tasks/\\d+")))
                 .andExpect(jsonPath("$.type").value("TEST_OPERATION"))
                 .andExpect(jsonPath("$.status").value("PENDING"))
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         long taskId = ((Number) JsonPath.read(response, "$.id")).longValue();
 
-        await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                mockMvc.perform(get("/api/tasks/{id}", taskId))
+        await().atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> mockMvc.perform(get("/api/tasks/{id}", taskId))
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.status").value("COMPLETED"))
                         .andExpect(jsonPath("$.result.operation").value("test"))
-                        .andExpect(jsonPath("$.attemptCount").value(1))
-        );
+                        .andExpect(jsonPath("$.attemptCount").value(1)));
     }
 
     @Test
@@ -99,7 +102,8 @@ class TaskApiIntegrationTest {
 
     @Test
     void foreignUserCannotCreateOrReadTask() throws Exception {
-        long taskId = jdbcTemplate.queryForObject("""
+        long taskId =
+                jdbcTemplate.queryForObject("""
                 INSERT INTO tasks (organization_id, resource_id, type, status, created_by, created_at)
                 VALUES (?, ?, 'TEST_OPERATION', 'PENDING', ?, now()) RETURNING id
                 """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID);

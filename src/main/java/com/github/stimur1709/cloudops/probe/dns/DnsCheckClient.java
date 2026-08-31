@@ -5,7 +5,6 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
-
 import org.springframework.stereotype.Component;
 
 @Component
@@ -28,7 +27,8 @@ public class DnsCheckClient {
                     .map(InetAddress::getHostAddress)
                     .distinct()
                     .toList();
-            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs =
+                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             return DnsCheckOutcome.completed(new DnsCheckResult(hostname, addresses, responseTimeMs));
         } catch (UnknownHostException exception) {
             return DnsCheckOutcome.failed("Host name could not be resolved");

@@ -1,5 +1,6 @@
 package com.github.stimur1709.cloudops.probe.port;
 
+import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -7,8 +8,6 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.time.Duration;
-
-import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -38,7 +37,8 @@ public class PortCheckClient {
         long startedAt = System.nanoTime();
         try {
             connector.connect(host, port, timeoutMs);
-            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs =
+                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             return PortCheckOutcome.completed(new PortCheckResult(host, port, responseTimeMs));
         } catch (UnknownHostException exception) {
             return PortCheckOutcome.failed(ProbeErrorCode.DNS_ERROR, "Host name could not be resolved");

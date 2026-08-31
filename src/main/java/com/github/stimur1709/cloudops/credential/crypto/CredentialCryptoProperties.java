@@ -1,10 +1,8 @@
 package com.github.stimur1709.cloudops.credential.crypto;
 
 import java.util.Base64;
-
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("cloudops.security.credentials")

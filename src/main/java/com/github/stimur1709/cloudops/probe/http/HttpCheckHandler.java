@@ -29,7 +29,8 @@ public class HttpCheckHandler implements ProbeHandler {
 
     @Override
     public ProbeExecutionResult execute(ProbeExecutionContext context) {
-        HttpCheckOutcome outcome = httpCheckClient.execute(serviceConfig(context.resourceConfig()), context.timeoutMs());
+        HttpCheckOutcome outcome =
+                httpCheckClient.execute(serviceConfig(context.resourceConfig()), context.timeoutMs());
         if (outcome.completed()) {
             return ProbeExecutionResult.completed(outcome.result().matchedExpectedStatus(), outcome.result());
         }

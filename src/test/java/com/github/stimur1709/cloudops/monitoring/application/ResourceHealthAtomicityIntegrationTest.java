@@ -5,12 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.monitoring.execution.MonitorExecutionPersistenceService;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventEntity;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventJpaRepository;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,11 +23,17 @@ import tools.jackson.databind.ObjectMapper;
 @SpringBootTest
 class ResourceHealthAtomicityIntegrationTest {
 
-    @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private MonitorExecutionPersistenceService persistenceService;
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-    @MockitoBean private ResourceHealthEventJpaRepository eventRepository;
+    @Autowired
+    private MonitorExecutionPersistenceService persistenceService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockitoBean
+    private ResourceHealthEventJpaRepository eventRepository;
 
     private long monitorId;
     private long resourceId;
@@ -49,9 +54,7 @@ class ResourceHealthAtomicityIntegrationTest {
                 VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{"url":"https://example.com"}'::jsonb, now(), now()) RETURNING id
                 """, Long.class, organizationId);
         jdbcTemplate.update(
-                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
-                resourceId
-        );
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')", resourceId);
         monitorId = jdbcTemplate.queryForObject("""
                 INSERT INTO monitors
                     (resource_id, type, next_run_at)
@@ -64,19 +67,15 @@ class ResourceHealthAtomicityIntegrationTest {
         when(eventRepository.save(any(ResourceHealthEventEntity.class)))
                 .thenThrow(new IllegalStateException("event persistence failed"));
 
-        assertThatThrownBy(() -> persistenceService.saveResult(
-                monitorId, Instant.now(), objectMapper.createObjectNode(), true
-        )).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() ->
+                        persistenceService.saveResult(monitorId, Instant.now(), objectMapper.createObjectNode(), true))
+                .isInstanceOf(IllegalStateException.class);
 
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT health_status FROM resource_health WHERE resource_id = ?",
-                String.class,
-                resourceId
-        )).isEqualTo("UNKNOWN");
+                        "SELECT health_status FROM resource_health WHERE resource_id = ?", String.class, resourceId))
+                .isEqualTo("UNKNOWN");
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT health_status FROM monitors WHERE id = ?",
-                String.class,
-                monitorId
-        )).isEqualTo("UNKNOWN");
+                        "SELECT health_status FROM monitors WHERE id = ?", String.class, monitorId))
+                .isEqualTo("UNKNOWN");
     }
 }

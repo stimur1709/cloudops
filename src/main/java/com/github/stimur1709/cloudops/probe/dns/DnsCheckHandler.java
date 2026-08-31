@@ -40,5 +40,4 @@ public class DnsCheckHandler implements ProbeHandler {
         }
         return ProbeExecutionResult.failed(outcome.errorCode(), outcome.errorMessage());
     }
-
 }

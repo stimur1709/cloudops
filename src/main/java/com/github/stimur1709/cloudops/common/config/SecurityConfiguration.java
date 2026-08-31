@@ -1,7 +1,7 @@
 package com.github.stimur1709.cloudops.common.config;
 
-import com.github.stimur1709.cloudops.common.api.error.ApiAuthenticationEntryPoint;
 import com.github.stimur1709.cloudops.common.api.error.ApiAccessDeniedHandler;
+import com.github.stimur1709.cloudops.common.api.error.ApiAuthenticationEntryPoint;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -47,15 +47,16 @@ public class SecurityConfiguration {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             ApiAuthenticationEntryPoint authenticationEntryPoint,
-            ApiAccessDeniedHandler accessDeniedHandler
-    ) {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
+            ApiAccessDeniedHandler accessDeniedHandler) {
+        return http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
-                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll())
+                        .requestMatchers("/api/auth/register", "/api/auth/login")
+                        .permitAll()
+                        .requestMatchers("/api/**")
+                        .authenticated()
+                        .anyRequest()
+                        .permitAll())
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .jwt(Customizer.withDefaults())
                         .authenticationEntryPoint(authenticationEntryPoint)

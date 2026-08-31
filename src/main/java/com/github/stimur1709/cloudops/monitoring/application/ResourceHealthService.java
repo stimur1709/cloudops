@@ -1,8 +1,5 @@
 package com.github.stimur1709.cloudops.monitoring.application;
 
-import java.time.Clock;
-import java.util.List;
-
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.monitoring.HealthStatus;
 import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
@@ -14,6 +11,8 @@ import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEvent
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.settings.MonitoringSettingsResolver;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
+import java.time.Clock;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,8 +30,7 @@ public class ResourceHealthService {
             ResourceHealthJpaRepository resourceHealthRepository,
             ResourceHealthEventJpaRepository eventRepository,
             Clock clock,
-            MonitoringSettingsResolver settingsResolver
-    ) {
+            MonitoringSettingsResolver settingsResolver) {
         this.monitorRepository = monitorRepository;
         this.resourceHealthRepository = resourceHealthRepository;
         this.eventRepository = eventRepository;
@@ -47,23 +45,22 @@ public class ResourceHealthService {
 
     @Transactional
     public ResourceHealthEntity recalculate(long resourceId) {
-        ResourceHealthEntity resourceHealth = resourceHealthRepository.findByResourceIdForUpdate(resourceId)
-                .orElseThrow(NotFoundException::new);
+        ResourceHealthEntity resourceHealth =
+                resourceHealthRepository.findByResourceIdForUpdate(resourceId).orElseThrow(NotFoundException::new);
         ResourceEntity resource = resourceHealth.resource();
         var effectiveSettings = settingsResolver.resolveAll(resource);
         List<HealthStatus> statuses = monitorRepository.findAllByResourceIdOrderById(resourceId).stream()
                 .filter(MonitorEntity::compatible)
                 .filter(monitor -> effectiveSettings.get(monitor.type()).enabled())
-                .map(MonitorEntity::healthStatus).toList();
+                .map(MonitorEntity::healthStatus)
+                .toList();
         ResourceHealthStatus status = aggregate(statuses);
         ResourceHealthStatus previousStatus = resourceHealth.healthStatus();
         if (previousStatus == status) {
             return resourceHealth;
         }
         resourceHealth.update(status);
-        eventRepository.save(ResourceHealthEventEntity.create(
-                resourceId, previousStatus, status, clock.instant()
-        ));
+        eventRepository.save(ResourceHealthEventEntity.create(resourceId, previousStatus, status, clock.instant()));
         return resourceHealth;
     }
 

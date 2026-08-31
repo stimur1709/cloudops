@@ -1,12 +1,11 @@
 package com.github.stimur1709.cloudops.common.persistence.search;
 
+import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
 
 public final class SearchValueConverter<T> {
 
@@ -31,19 +30,12 @@ public final class SearchValueConverter<T> {
     }
 
     public static <E extends Enum<E>> SearchValueConverter<E> enumeration(Class<E> enumType) {
-        String allowedValues = Arrays.stream(enumType.getEnumConstants())
-                .map(Enum::name)
-                .collect(Collectors.joining(", "));
-        return of(
-                value -> Enum.valueOf(enumType, value),
-                "Value must be one of: " + allowedValues
-        );
+        String allowedValues =
+                Arrays.stream(enumType.getEnumConstants()).map(Enum::name).collect(Collectors.joining(", "));
+        return of(value -> Enum.valueOf(enumType, value), "Value must be one of: " + allowedValues);
     }
 
-    public static <T> SearchValueConverter<T> of(
-            Function<String, T> converter,
-            String invalidValueMessage
-    ) {
+    public static <T> SearchValueConverter<T> of(Function<String, T> converter, String invalidValueMessage) {
         return new SearchValueConverter<>(converter, invalidValueMessage);
     }
 

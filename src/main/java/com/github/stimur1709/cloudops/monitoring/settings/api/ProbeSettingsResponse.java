@@ -9,6 +9,4 @@ public record ProbeSettingsResponse(
         boolean supported,
         SettingsSource source,
         EffectiveProbeSettings effective,
-        boolean resourceOverride
-) {
-}
+        boolean resourceOverride) {}

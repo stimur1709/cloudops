@@ -24,25 +24,19 @@ public class ResourceHealthEventService {
     public ResourceHealthEventService(
             ResourceJpaRepository resourceRepository,
             OrganizationAuthorization authorization,
-            JpaSearchService searchService
-    ) {
+            JpaSearchService searchService) {
         this.resourceRepository = resourceRepository;
         this.authorization = authorization;
         this.searchService = searchService;
     }
 
     @Transactional(readOnly = true)
-    public SearchResult<ResourceHealthEventEntity> search(
-            long resourceId,
-            SearchQuery query,
-            long currentUserId
-    ) {
+    public SearchResult<ResourceHealthEventEntity> search(long resourceId, SearchQuery query, long currentUserId) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
         return searchService.search(
                 query,
                 JpaSearchScopes.equal(ResourceHealthEventEntity_.resourceId, resourceId),
-                ResourceHealthEventSearchDefinition.DEFINITION
-        );
+                ResourceHealthEventSearchDefinition.DEFINITION);
     }
 }

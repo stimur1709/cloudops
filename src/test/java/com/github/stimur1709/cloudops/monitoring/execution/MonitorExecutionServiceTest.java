@@ -8,18 +8,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
-
+import com.github.stimur1709.cloudops.monitoring.StorageMode;
+import com.github.stimur1709.cloudops.monitoring.settings.EffectiveProbeSettings;
+import com.github.stimur1709.cloudops.monitoring.settings.SettingsSource;
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
 import com.github.stimur1709.cloudops.probe.execution.ProbeHandler;
 import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
 import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
-import com.github.stimur1709.cloudops.monitoring.StorageMode;
-import com.github.stimur1709.cloudops.monitoring.settings.EffectiveProbeSettings;
-import com.github.stimur1709.cloudops.monitoring.settings.SettingsSource;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
@@ -33,14 +32,12 @@ class MonitorExecutionServiceTest {
         ProbeHandlerRegistry registry = mock(ProbeHandlerRegistry.class);
         ProbeHandler handler = mock(ProbeHandler.class);
         ServiceResourceConfig config = new ServiceResourceConfig("https://example.com", 200);
-        when(persistence.loadIfExecutable(7)).thenReturn(new MonitorExecutionContext(
-                7, 8, ProbeType.HTTP_CHECK, config, settings()
-        ));
+        when(persistence.loadIfExecutable(7))
+                .thenReturn(new MonitorExecutionContext(7, 8, ProbeType.HTTP_CHECK, config, settings()));
         when(registry.get(ProbeType.HTTP_CHECK)).thenReturn(handler);
         when(handler.execute(any())).thenReturn(ProbeExecutionResult.completed(true, "ok"));
         MonitorExecutionService service = new MonitorExecutionService(
-                persistence, registry, new ObjectMapper(), Clock.fixed(NOW, ZoneOffset.UTC)
-        );
+                persistence, registry, new ObjectMapper(), Clock.fixed(NOW, ZoneOffset.UTC));
 
         service.execute(7);
 
@@ -54,15 +51,13 @@ class MonitorExecutionServiceTest {
         MonitorExecutionPersistenceService persistence = mock(MonitorExecutionPersistenceService.class);
         ProbeHandlerRegistry registry = mock(ProbeHandlerRegistry.class);
         ProbeHandler handler = mock(ProbeHandler.class);
-        when(persistence.loadIfExecutable(7)).thenReturn(new MonitorExecutionContext(
-                7, 8, ProbeType.HTTP_CHECK,
-                new ServiceResourceConfig("https://example.com", 200), settings()
-        ));
+        when(persistence.loadIfExecutable(7))
+                .thenReturn(new MonitorExecutionContext(
+                        7, 8, ProbeType.HTTP_CHECK, new ServiceResourceConfig("https://example.com", 200), settings()));
         when(registry.get(ProbeType.HTTP_CHECK)).thenReturn(handler);
         when(handler.execute(any())).thenThrow(new IllegalStateException("internal failure"));
         MonitorExecutionService service = new MonitorExecutionService(
-                persistence, registry, new ObjectMapper(), Clock.fixed(NOW, ZoneOffset.UTC)
-        );
+                persistence, registry, new ObjectMapper(), Clock.fixed(NOW, ZoneOffset.UTC));
 
         service.execute(7);
 
@@ -70,7 +65,7 @@ class MonitorExecutionServiceTest {
     }
 
     private EffectiveProbeSettings settings() {
-        return new EffectiveProbeSettings(ProbeType.HTTP_CHECK, true, 30, 3, 2,
-                StorageMode.LATEST_ONLY, null, 1000, SettingsSource.APPLICATION);
+        return new EffectiveProbeSettings(
+                ProbeType.HTTP_CHECK, true, 30, 3, 2, StorageMode.LATEST_ONLY, null, 1000, SettingsSource.APPLICATION);
     }
 }

@@ -2,7 +2,6 @@ package com.github.stimur1709.cloudops;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import org.hibernate.resource.jdbc.spi.StatementInspector;
 
 public final class SqlStatementRecorder implements StatementInspector {

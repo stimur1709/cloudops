@@ -33,8 +33,8 @@ class SecretCryptoServiceTest {
     @Test
     void rejectsCiphertextEncryptedWithAnotherMasterKey() {
         SecretCryptoService first = new SecretCryptoService(new CredentialCryptoProperties(KEY));
-        SecretCryptoService second = new SecretCryptoService(new CredentialCryptoProperties(
-                "YWJjZGVmMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODk="));
+        SecretCryptoService second =
+                new SecretCryptoService(new CredentialCryptoProperties("YWJjZGVmMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODk="));
         assertThatThrownBy(() -> second.decrypt(first.encrypt("sensitive-value")))
                 .isInstanceOf(SecretDecryptionException.class)
                 .hasMessageNotContaining("sensitive-value");
@@ -42,8 +42,7 @@ class SecretCryptoServiceTest {
 
     @Test
     void requiresValid256BitMasterKey() {
-        assertThatThrownBy(() -> new CredentialCryptoProperties(null))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CredentialCryptoProperties(null)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new CredentialCryptoProperties("bm90LTM yLWJ5dGVz"))
                 .isInstanceOf(IllegalArgumentException.class);
     }

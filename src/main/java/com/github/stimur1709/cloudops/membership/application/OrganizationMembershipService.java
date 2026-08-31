@@ -1,13 +1,10 @@
 package com.github.stimur1709.cloudops.membership.application;
 
-import java.time.Clock;
-import java.util.List;
-
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.ForbiddenException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
-import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchScopes;
+import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.membership.MembershipRole;
@@ -19,6 +16,8 @@ import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntit
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
 import com.github.stimur1709.cloudops.user.persistence.UserEntity;
 import com.github.stimur1709.cloudops.user.persistence.UserJpaRepository;
+import java.time.Clock;
+import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,8 +36,7 @@ public class OrganizationMembershipService {
             OrganizationJpaRepository organizationRepository,
             UserJpaRepository userRepository,
             JpaSearchService searchService,
-            Clock clock
-    ) {
+            Clock clock) {
         this.membershipRepository = membershipRepository;
         this.organizationRepository = organizationRepository;
         this.userRepository = userRepository;
@@ -47,12 +45,7 @@ public class OrganizationMembershipService {
     }
 
     @Transactional
-    public OrganizationMembershipEntity add(
-            long organizationId,
-            long userId,
-            MembershipRole role,
-            long currentUserId
-    ) {
+    public OrganizationMembershipEntity add(long organizationId, long userId, MembershipRole role, long currentUserId) {
         OrganizationEntity organization = getOrganizationForUpdate(organizationId);
         List<OrganizationMembershipEntity> memberships = membershipRepository.lockAllByOrganizationId(organizationId);
         OrganizationMembershipEntity actor = findActor(memberships, currentUserId);
@@ -63,8 +56,7 @@ public class OrganizationMembershipService {
         }
         try {
             return membershipRepository.saveAndFlush(
-                    OrganizationMembershipEntity.create(organization, user, role, clock.instant())
-            );
+                    OrganizationMembershipEntity.create(organization, user, role, clock.instant()));
         } catch (DataIntegrityViolationException exception) {
             throw membershipConflict();
         }
@@ -72,10 +64,7 @@ public class OrganizationMembershipService {
 
     @Transactional(readOnly = true)
     public SearchResult<OrganizationMembershipEntity> search(
-            long organizationId,
-            SearchQuery search,
-            long currentUserId
-    ) {
+            long organizationId, SearchQuery search, long currentUserId) {
         checkOrganization(organizationId);
         if (!membershipRepository.existsByOrganizationIdAndUserId(organizationId, currentUserId)) {
             throw new NotFoundException();
@@ -83,17 +72,12 @@ public class OrganizationMembershipService {
         return searchService.search(
                 search,
                 JpaSearchScopes.equal(OrganizationMembershipEntity_.organizationId, organizationId),
-                OrganizationMembershipSearchDefinition.DEFINITION
-        );
+                OrganizationMembershipSearchDefinition.DEFINITION);
     }
 
     @Transactional
     public OrganizationMembershipEntity updateRole(
-            long organizationId,
-            long userId,
-            MembershipRole role,
-            long currentUserId
-    ) {
+            long organizationId, long userId, MembershipRole role, long currentUserId) {
         getOrganizationForUpdate(organizationId);
         List<OrganizationMembershipEntity> memberships = membershipRepository.lockAllByOrganizationId(organizationId);
         OrganizationMembershipEntity actor = findActor(memberships, currentUserId);
@@ -104,8 +88,7 @@ public class OrganizationMembershipService {
         if (currentUserId == userId && rank(role) > rank(membership.role())) {
             throw new ForbiddenException();
         }
-        if (membership.role() == MembershipRole.OWNER && role != MembershipRole.OWNER
-                && ownerCount(memberships) == 1) {
+        if (membership.role() == MembershipRole.OWNER && role != MembershipRole.OWNER && ownerCount(memberships) == 1) {
             throw lastOwnerConflict();
         }
         membership.changeRole(role, clock.instant());
@@ -129,13 +112,11 @@ public class OrganizationMembershipService {
     }
 
     private void checkOrganization(long id) {
-        organizationRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
+        organizationRepository.findById(id).orElseThrow(NotFoundException::new);
     }
 
     private OrganizationEntity getOrganizationForUpdate(long id) {
-        return organizationRepository.findByIdForUpdate(id)
-                .orElseThrow(NotFoundException::new);
+        return organizationRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
     }
 
     private UserEntity getUser(long id) {
@@ -149,10 +130,7 @@ public class OrganizationMembershipService {
                 .orElseThrow(NotFoundException::new);
     }
 
-    private OrganizationMembershipEntity findActor(
-            List<OrganizationMembershipEntity> memberships,
-            long currentUserId
-    ) {
+    private OrganizationMembershipEntity findActor(List<OrganizationMembershipEntity> memberships, long currentUserId) {
         return memberships.stream()
                 .filter(item -> item.userId() == currentUserId)
                 .findFirst()
@@ -175,20 +153,16 @@ public class OrganizationMembershipService {
     }
 
     private long ownerCount(List<OrganizationMembershipEntity> memberships) {
-        return memberships.stream().filter(item -> item.role() == MembershipRole.OWNER).count();
+        return memberships.stream()
+                .filter(item -> item.role() == MembershipRole.OWNER)
+                .count();
     }
 
     private ConflictException membershipConflict() {
-        return new ConflictException(
-                "MEMBERSHIP_CONFLICT",
-                "User is already a member of this organization"
-        );
+        return new ConflictException("MEMBERSHIP_CONFLICT", "User is already a member of this organization");
     }
 
     private ConflictException lastOwnerConflict() {
-        return new ConflictException(
-                "LAST_OWNER_REQUIRED",
-                "Organization must have at least one owner"
-        );
+        return new ConflictException("LAST_OWNER_REQUIRED", "Organization must have at least one owner");
     }
 }
