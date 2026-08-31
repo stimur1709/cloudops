@@ -36,13 +36,16 @@ public class ResourceCredentialService {
 
     @Transactional(readOnly = true)
     public List<ResourceCredentialResponse> getAll(long resourceId, long userId) {
-        ResourceEntity resource = accessibleResource(resourceId, userId, false);
-        return repository.findAllByResourceIdOrderByPurpose(resourceId).stream()
-                .map(binding -> {
-                    CredentialEntity credential = credentialRepository.findById(binding.credentialId())
-                            .orElseThrow(NotFoundException::new);
-                    return new ResourceCredentialResponse(binding.purpose(), CredentialResponse.from(credential));
-                }).toList();
+        accessibleResource(resourceId, userId, false);
+        return repository.findDetailsByResourceIdOrderByPurpose(resourceId).stream()
+                .map(details -> new ResourceCredentialResponse(
+                        details.purpose(),
+                        new CredentialResponse(
+                                details.credentialId(), details.organizationId(), details.name(), details.type(),
+                                details.username(), details.createdAt(), details.updatedAt()
+                        )
+                ))
+                .toList();
     }
 
     @Transactional

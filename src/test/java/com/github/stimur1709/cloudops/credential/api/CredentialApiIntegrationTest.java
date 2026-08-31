@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
+import com.github.stimur1709.cloudops.SqlStatementRecorder;
 import com.github.stimur1709.cloudops.credential.application.CredentialResolver;
 import com.github.stimur1709.cloudops.credential.application.ResolvedSshPrivateKey;
 import com.github.stimur1709.cloudops.credential.CredentialPurpose;
@@ -31,6 +32,7 @@ class CredentialApiIntegrationTest {
     @Autowired WebApplicationContext context;
     @Autowired JdbcTemplate jdbc;
     @Autowired CredentialResolver resolver;
+    @Autowired SqlStatementRecorder statementRecorder;
     private MockMvc mockMvc;
     private long organizationId;
     private long resourceId;
@@ -102,12 +104,43 @@ class CredentialApiIntegrationTest {
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INCOMPATIBLE_CREDENTIAL"));
     }
 
+    @Test
+    void getsAllCredentialMetadataWithoutQueriesInLoop() throws Exception {
+        long databaseCredentialId = create("database", "USERNAME_PASSWORD", "password", "password");
+        long sshCredentialId = create("ssh", "SSH_PRIVATE_KEY", "privateKey", "private-key");
+        bind("DATABASE", databaseCredentialId);
+        bind("SSH", sshCredentialId);
+        statementRecorder.clear();
+
+        mockMvc.perform(get("/api/resources/{id}/credentials", resourceId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+
+        var relevantSelects = statementRecorder.statements().stream()
+                .map(String::toLowerCase)
+                .filter(sql -> sql.startsWith("select"))
+                .filter(sql -> sql.contains(" from resources ")
+                        || sql.contains(" from organization_memberships ")
+                        || sql.contains(" from resource_credentials "))
+                .toList();
+        assertThat(relevantSelects).hasSize(3);
+        assertThat(relevantSelects.stream().filter(sql -> sql.contains(" join credentials "))).hasSize(1);
+        assertThat(relevantSelects.stream().filter(sql -> sql.contains(" from credentials "))).isEmpty();
+    }
+
     private long create(String name, String type, String secretField, String secret) throws Exception {
         String response = mockMvc.perform(post("/api/organizations/{id}/credentials", organizationId)
                         .contentType(MediaType.APPLICATION_JSON).content(request(name, type, secretField, secret)))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$." + secretField).doesNotExist())
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(response, "$.id")).longValue();
+    }
+
+    private void bind(String purpose, long credentialId) throws Exception {
+        mockMvc.perform(put("/api/resources/{id}/credentials/{purpose}", resourceId, purpose)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"credentialId\":" + credentialId + "}"))
+                .andExpect(status().isOk());
     }
 
     private String request(String name, String type, String secretField, String secret) {
