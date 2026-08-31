@@ -11,7 +11,6 @@ public record MonitorResponse(
         long id,
         long resourceId,
         ProbeType type,
-        boolean compatible,
         Instant nextRunAt,
         Instant lastCheckedAt,
         JsonNode lastResult,
@@ -19,8 +18,13 @@ public record MonitorResponse(
 ) {
     public static MonitorResponse from(MonitorEntity monitor) {
         return new MonitorResponse(
-                monitor.id(), monitor.resourceId(), monitor.type(), monitor.compatible(), monitor.nextRunAt(), monitor.lastCheckedAt(),
-                monitor.lastResult(), monitor.healthStatus()
+                monitor.id(),
+                monitor.resourceId(),
+                monitor.type(),
+                monitor.nextRunAt(),
+                monitor.lastCheckedAt(),
+                monitor.lastResult(),
+                monitor.healthStatus()
         );
     }
 }

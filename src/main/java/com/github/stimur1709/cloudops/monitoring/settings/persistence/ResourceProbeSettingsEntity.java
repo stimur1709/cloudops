@@ -3,11 +3,24 @@ package com.github.stimur1709.cloudops.monitoring.settings.persistence;
 import com.github.stimur1709.cloudops.monitoring.StorageMode;
 import com.github.stimur1709.cloudops.monitoring.settings.ProbeSettings;
 import com.github.stimur1709.cloudops.probe.ProbeType;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "resource_probe_settings", uniqueConstraints =
-@UniqueConstraint(name = "resource_probe_settings_key", columnNames = {"resource_id", "probe_type"}))
+@Table(
+        name = "resource_probe_settings",
+        uniqueConstraints = @UniqueConstraint(
+                name = "resource_probe_settings_key",
+                columnNames = {"resource_id", "probe_type"}
+        )
+)
 public class ResourceProbeSettingsEntity implements ProbeSettings {
 
     @Id
@@ -46,22 +59,26 @@ public class ResourceProbeSettingsEntity implements ProbeSettings {
     protected ResourceProbeSettingsEntity() {
     }
 
-    public static ResourceProbeSettingsEntity create(long resourceId, ProbeType probeType, ProbeSettings s) {
+    public static ResourceProbeSettingsEntity create(
+            long resourceId,
+            ProbeType probeType,
+            ProbeSettings settings
+    ) {
         var entity = new ResourceProbeSettingsEntity();
         entity.resourceId = resourceId;
         entity.probeType = probeType;
-        entity.update(s);
+        entity.update(settings);
         return entity;
     }
 
-    public void update(ProbeSettings s) {
-        enabled = s.enabled();
-        intervalSeconds = s.intervalSeconds();
-        failureThreshold = s.failureThreshold();
-        recoveryThreshold = s.recoveryThreshold();
-        storageMode = s.storageMode();
-        retentionDays = s.retentionDays();
-        timeoutMs = s.timeoutMs();
+    public void update(ProbeSettings settings) {
+        enabled = settings.enabled();
+        intervalSeconds = settings.intervalSeconds();
+        failureThreshold = settings.failureThreshold();
+        recoveryThreshold = settings.recoveryThreshold();
+        storageMode = settings.storageMode();
+        retentionDays = settings.retentionDays();
+        timeoutMs = settings.timeoutMs();
     }
 
     public Long id() {

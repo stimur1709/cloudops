@@ -8,7 +8,13 @@ import com.github.stimur1709.cloudops.probe.ProbeType;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/resources/{resourceId}/monitoring-settings")
@@ -26,14 +32,21 @@ public class ResourceProbeSettingsController {
     }
 
     @PutMapping("/{probeType}")
-    public ProbeSettingsResponse put(@PathVariable long resourceId,
-                                     @PathVariable ProbeType probeType, @Valid @RequestBody ProbeSettingsRequest request, Authentication auth) {
+    public ProbeSettingsResponse put(
+            @PathVariable long resourceId,
+            @PathVariable ProbeType probeType,
+            @Valid @RequestBody ProbeSettingsRequest request,
+            Authentication auth
+    ) {
         return service.putResource(resourceId, probeType, request, CurrentUser.id(auth));
     }
 
     @DeleteMapping("/{probeType}")
-    public ResponseEntity<Void> delete(@PathVariable long resourceId,
-                                       @PathVariable ProbeType probeType, Authentication auth) {
+    public ResponseEntity<Void> delete(
+            @PathVariable long resourceId,
+            @PathVariable ProbeType probeType,
+            Authentication auth
+    ) {
         service.deleteResource(resourceId, probeType, CurrentUser.id(auth));
         return ResponseEntity.noContent().build();
     }

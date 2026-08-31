@@ -20,21 +20,33 @@ public class ProbeSettingsRequestValidator implements ConstraintValidator<ValidP
 
     @Override
     public boolean isValid(ProbeSettingsRequest value, ConstraintValidatorContext context) {
-        if (value == null) return true;
+        if (value == null) {
+            return true;
+        }
         boolean valid = true;
         context.disableDefaultConstraintViolation();
+
         if (value.intervalSeconds() != null && value.intervalSeconds() > 0
                 && value.intervalSeconds() < properties.minimumIntervalSeconds()) {
-            violation(context, "intervalSeconds", "Interval must be at least " + properties.minimumIntervalSeconds() + " seconds");
+            violation(
+                    context,
+                    "intervalSeconds",
+                    "Interval must be at least " + properties.minimumIntervalSeconds() + " seconds"
+            );
             valid = false;
         }
-        if (value.storageMode() == StorageMode.HISTORY && (value.retentionDays() == null || value.retentionDays() < 1 || value.retentionDays() > 365)) {
+
+        boolean invalidHistoryRetention = value.retentionDays() == null
+                || value.retentionDays() < 1
+                || value.retentionDays() > 365;
+        if (value.storageMode() == StorageMode.HISTORY && invalidHistoryRetention) {
             violation(context, "retentionDays", "Retention days must be between 1 and 365 for HISTORY");
             valid = false;
         } else if (value.storageMode() == StorageMode.LATEST_ONLY && value.retentionDays() != null) {
             violation(context, "retentionDays", "Retention days must be omitted for LATEST_ONLY");
             valid = false;
         }
+
         ProbeType type = pathProbeType();
         if (type == ProbeType.DNS_CHECK && value.timeoutMs() != null) {
             violation(context, "timeoutMs", "Timeout is not supported for DNS_CHECK");
@@ -42,7 +54,8 @@ public class ProbeSettingsRequestValidator implements ConstraintValidator<ValidP
         } else if (type != null && type != ProbeType.DNS_CHECK && value.timeoutMs() == null) {
             violation(context, "timeoutMs", "Timeout is required");
             valid = false;
-        } else if (value.timeoutMs() != null && (value.timeoutMs() < 1 || value.timeoutMs() > 60000)) {
+        } else if (value.timeoutMs() != null
+                && (value.timeoutMs() < 1 || value.timeoutMs() > 60000)) {
             violation(context, "timeoutMs", "Timeout must be between 1 and 60000 milliseconds");
             valid = false;
         }
@@ -51,7 +64,9 @@ public class ProbeSettingsRequestValidator implements ConstraintValidator<ValidP
 
     private ProbeType pathProbeType() {
         RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
-        if (!(attributes instanceof ServletRequestAttributes servlet)) return null;
+        if (!(attributes instanceof ServletRequestAttributes servlet)) {
+            return null;
+        }
         String value = servlet.getRequest().getRequestURI();
         int slash = value.lastIndexOf('/');
         try {

@@ -10,10 +10,17 @@ import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.monitoring.application.ResourceHealthService;
 import com.github.stimur1709.cloudops.monitoring.config.MonitoringProperties;
-import com.github.stimur1709.cloudops.monitoring.settings.*;
+import com.github.stimur1709.cloudops.monitoring.settings.EffectiveProbeSettings;
+import com.github.stimur1709.cloudops.monitoring.settings.MonitoringSettingsResolver;
+import com.github.stimur1709.cloudops.monitoring.settings.ProbeSettings;
+import com.github.stimur1709.cloudops.monitoring.settings.ProbeSettingsValues;
+import com.github.stimur1709.cloudops.monitoring.settings.SettingsSource;
 import com.github.stimur1709.cloudops.monitoring.settings.api.ProbeSettingsRequest;
 import com.github.stimur1709.cloudops.monitoring.settings.api.ProbeSettingsResponse;
-import com.github.stimur1709.cloudops.monitoring.settings.persistence.*;
+import com.github.stimur1709.cloudops.monitoring.settings.persistence.OrganizationProbeSettingsEntity;
+import com.github.stimur1709.cloudops.monitoring.settings.persistence.OrganizationProbeSettingsJpaRepository;
+import com.github.stimur1709.cloudops.monitoring.settings.persistence.ResourceProbeSettingsEntity;
+import com.github.stimur1709.cloudops.monitoring.settings.persistence.ResourceProbeSettingsJpaRepository;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationJpaRepository;
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
@@ -38,13 +45,18 @@ public class ProbeSettingsService {
     private final ResourceConfigMapper configMapper;
     private final ResourceHealthService resourceHealthService;
 
-    public ProbeSettingsService(OrganizationJpaRepository organizationRepository,
-                                ResourceJpaRepository resourceRepository,
-                                OrganizationProbeSettingsJpaRepository organizationSettingsRepository,
-                                ResourceProbeSettingsJpaRepository resourceSettingsRepository,
-                                OrganizationAuthorization authorization, MonitoringSettingsResolver resolver,
-                                MonitoringProperties properties, ProbeHandlerRegistry handlerRegistry,
-                                ResourceConfigMapper configMapper, ResourceHealthService resourceHealthService) {
+    public ProbeSettingsService(
+            OrganizationJpaRepository organizationRepository,
+            ResourceJpaRepository resourceRepository,
+            OrganizationProbeSettingsJpaRepository organizationSettingsRepository,
+            ResourceProbeSettingsJpaRepository resourceSettingsRepository,
+            OrganizationAuthorization authorization,
+            MonitoringSettingsResolver resolver,
+            MonitoringProperties properties,
+            ProbeHandlerRegistry handlerRegistry,
+            ResourceConfigMapper configMapper,
+            ResourceHealthService resourceHealthService
+    ) {
         this.organizationRepository = organizationRepository;
         this.resourceRepository = resourceRepository;
         this.organizationSettingsRepository = organizationSettingsRepository;
@@ -74,8 +86,12 @@ public class ProbeSettingsService {
     }
 
     @Transactional
-    public ProbeSettingsResponse putOrganization(long organizationId, ProbeType type,
-                                                 ProbeSettingsRequest request, long userId) {
+    public ProbeSettingsResponse putOrganization(
+            long organizationId,
+            ProbeType type,
+            ProbeSettingsRequest request,
+            long userId
+    ) {
         requireOrganization(organizationId);
         authorization.requireManager(organizationId, userId);
         ProbeSettings values = values(request);
@@ -106,14 +122,23 @@ public class ProbeSettingsService {
         return Arrays.stream(ProbeType.values()).map(type -> {
             EffectiveProbeSettings effective = effectiveSettings.get(type);
             boolean own = effective.source() == SettingsSource.RESOURCE;
-            return new ProbeSettingsResponse(type, handlerRegistry.supports(type, config),
-                    effective.source(), effective, own);
+            return new ProbeSettingsResponse(
+                    type,
+                    handlerRegistry.supports(type, config),
+                    effective.source(),
+                    effective,
+                    own
+            );
         }).toList();
     }
 
     @Transactional
-    public ProbeSettingsResponse putResource(long resourceId, ProbeType type,
-                                             ProbeSettingsRequest request, long userId) {
+    public ProbeSettingsResponse putResource(
+            long resourceId,
+            ProbeType type,
+            ProbeSettingsRequest request,
+            long userId
+    ) {
         ResourceEntity resource = requireResource(resourceId);
         authorization.requireManager(resource.organizationId(), userId);
         ProbeSettings values = values(request);
@@ -124,8 +149,13 @@ public class ProbeSettingsService {
         resourceHealthService.recalculate(resourceId);
         EffectiveProbeSettings effective = effective(type, entity, SettingsSource.RESOURCE);
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
-        return new ProbeSettingsResponse(type, handlerRegistry.supports(type, config),
-                effective.source(), effective, true);
+        return new ProbeSettingsResponse(
+                type,
+                handlerRegistry.supports(type, config),
+                effective.source(),
+                effective,
+                true
+        );
     }
 
     @Transactional
@@ -147,43 +177,34 @@ public class ProbeSettingsService {
     }
 
     private void requireOrganization(long id) {
-        if (!organizationRepository.existsById(id)) throw new NotFoundException();
+        if (!organizationRepository.existsById(id)) {
+            throw new NotFoundException();
+        }
     }
 
-    private ProbeSettings values(ProbeSettingsRequest r) {
-        return new ProbeSettings() {
-            public boolean enabled() {
-                return r.enabled();
-            }
-
-            public int intervalSeconds() {
-                return r.intervalSeconds();
-            }
-
-            public int failureThreshold() {
-                return r.failureThreshold();
-            }
-
-            public int recoveryThreshold() {
-                return r.recoveryThreshold();
-            }
-
-            public com.github.stimur1709.cloudops.monitoring.StorageMode storageMode() {
-                return r.storageMode();
-            }
-
-            public Integer retentionDays() {
-                return r.retentionDays();
-            }
-
-            public Integer timeoutMs() {
-                return r.timeoutMs();
-            }
-        };
+    private ProbeSettings values(ProbeSettingsRequest request) {
+        return new ProbeSettingsValues(
+                request.enabled(),
+                request.intervalSeconds(),
+                request.failureThreshold(),
+                request.recoveryThreshold(),
+                request.storageMode(),
+                request.retentionDays(),
+                request.timeoutMs()
+        );
     }
 
-    private EffectiveProbeSettings effective(ProbeType type, ProbeSettings s, SettingsSource source) {
-        return new EffectiveProbeSettings(type, s.enabled(), s.intervalSeconds(), s.failureThreshold(),
-                s.recoveryThreshold(), s.storageMode(), s.retentionDays(), s.timeoutMs(), source);
+    private EffectiveProbeSettings effective(ProbeType type, ProbeSettings settings, SettingsSource source) {
+        return new EffectiveProbeSettings(
+                type,
+                settings.enabled(),
+                settings.intervalSeconds(),
+                settings.failureThreshold(),
+                settings.recoveryThreshold(),
+                settings.storageMode(),
+                settings.retentionDays(),
+                settings.timeoutMs(),
+                source
+        );
     }
 }

@@ -65,7 +65,10 @@ public class MonitorService {
             throw new ConflictException("MONITOR_HISTORY_NOT_ENABLED",
                     "History is available only for HISTORY storage mode");
         }
-        return searchService.search(query, JpaSearchScopes.equal(MonitoringResultEntity_.monitorId, monitorId),
-                MonitoringResultSearchDefinition.DEFINITION);
+        return searchService.search(
+                query,
+                JpaSearchScopes.equal(MonitoringResultEntity_.monitorId, monitorId),
+                MonitoringResultSearchDefinition.DEFINITION
+        );
     }
 }

@@ -8,6 +8,7 @@ import java.util.List;
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.monitoring.execution.MonitorClaimService;
+import com.github.stimur1709.cloudops.monitoring.execution.MonitorExecutionPersistenceService;
 import com.github.stimur1709.cloudops.monitoring.retention.MonitoringRetentionService;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,7 @@ class MonitorApiIntegrationTest {
     @Autowired private WebApplicationContext applicationContext;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private MonitorClaimService claimService;
+    @Autowired private MonitorExecutionPersistenceService executionPersistenceService;
     @Autowired private MonitoringRetentionService retentionService;
     private MockMvc mockMvc;
     private long organizationId;
@@ -65,6 +67,9 @@ class MonitorApiIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM monitors WHERE resource_id = ? AND compatible", Integer.class, resourceId))
                 .isZero();
+        long monitorId = jdbcTemplate.queryForObject(
+                "SELECT id FROM monitors WHERE resource_id = ? ORDER BY id LIMIT 1", Long.class, resourceId);
+        assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNull();
         mockMvc.perform(post("/api/resources/{id}/monitors", resourceId)
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isMethodNotAllowed());

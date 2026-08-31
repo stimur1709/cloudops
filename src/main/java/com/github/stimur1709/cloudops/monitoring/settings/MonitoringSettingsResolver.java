@@ -7,7 +7,9 @@ import java.util.stream.Collectors;
 
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.monitoring.config.MonitoringProperties;
+import com.github.stimur1709.cloudops.monitoring.settings.persistence.OrganizationProbeSettingsEntity;
 import com.github.stimur1709.cloudops.monitoring.settings.persistence.OrganizationProbeSettingsJpaRepository;
+import com.github.stimur1709.cloudops.monitoring.settings.persistence.ResourceProbeSettingsEntity;
 import com.github.stimur1709.cloudops.monitoring.settings.persistence.ResourceProbeSettingsJpaRepository;
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
@@ -17,15 +19,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MonitoringSettingsResolver {
+
     private final ResourceJpaRepository resourceRepository;
     private final ResourceProbeSettingsJpaRepository resourceSettingsRepository;
     private final OrganizationProbeSettingsJpaRepository organizationSettingsRepository;
     private final MonitoringProperties properties;
 
-    public MonitoringSettingsResolver(ResourceJpaRepository resourceRepository,
-                                      ResourceProbeSettingsJpaRepository resourceSettingsRepository,
-                                      OrganizationProbeSettingsJpaRepository organizationSettingsRepository,
-                                      MonitoringProperties properties) {
+    public MonitoringSettingsResolver(
+            ResourceJpaRepository resourceRepository,
+            ResourceProbeSettingsJpaRepository resourceSettingsRepository,
+            OrganizationProbeSettingsJpaRepository organizationSettingsRepository,
+            MonitoringProperties properties
+    ) {
         this.resourceRepository = resourceRepository;
         this.resourceSettingsRepository = resourceSettingsRepository;
         this.organizationSettingsRepository = organizationSettingsRepository;
@@ -51,10 +56,10 @@ public class MonitoringSettingsResolver {
 
     public Map<ProbeType, EffectiveProbeSettings> resolveAll(ResourceEntity resource) {
         var resourceSettings = resourceSettingsRepository.findAllByResourceId(resource.id()).stream()
-                .collect(Collectors.toMap(settings -> settings.probeType(), Function.identity()));
+                .collect(Collectors.toMap(ResourceProbeSettingsEntity::probeType, Function.identity()));
         var organizationSettings = organizationSettingsRepository
                 .findAllByOrganizationId(resource.organizationId()).stream()
-                .collect(Collectors.toMap(settings -> settings.probeType(), Function.identity()));
+                .collect(Collectors.toMap(OrganizationProbeSettingsEntity::probeType, Function.identity()));
         var effectiveSettings = new EnumMap<ProbeType, EffectiveProbeSettings>(ProbeType.class);
         for (ProbeType type : ProbeType.values()) {
             ProbeSettings settings = resourceSettings.get(type);
@@ -73,8 +78,16 @@ public class MonitoringSettingsResolver {
     }
 
     private EffectiveProbeSettings effective(ProbeType type, ProbeSettings settings, SettingsSource source) {
-        return new EffectiveProbeSettings(type, settings.enabled(), settings.intervalSeconds(),
-                settings.failureThreshold(), settings.recoveryThreshold(), settings.storageMode(),
-                settings.retentionDays(), settings.timeoutMs(), source);
+        return new EffectiveProbeSettings(
+                type,
+                settings.enabled(),
+                settings.intervalSeconds(),
+                settings.failureThreshold(),
+                settings.recoveryThreshold(),
+                settings.storageMode(),
+                settings.retentionDays(),
+                settings.timeoutMs(),
+                source
+        );
     }
 }

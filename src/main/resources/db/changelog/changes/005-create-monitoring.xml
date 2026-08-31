@@ -10,11 +10,11 @@
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="monitors_pkey"/>
             </column>
-            <column name="resource_id" type="BIGINT"><constraints nullable="false"/></column>
-            <column name="type" type="VARCHAR(30)"><constraints nullable="false"/></column>
-            <column name="compatible" type="BOOLEAN" defaultValueBoolean="true">
-                <constraints nullable="false"/>
-            </column>
+              <column name="resource_id" type="BIGINT"><constraints nullable="false"/></column>
+              <column name="type" type="VARCHAR(30)"><constraints nullable="false"/></column>
+              <column name="compatible" type="BOOLEAN" defaultValueBoolean="true">
+                  <constraints nullable="false"/>
+              </column>
             <column name="next_run_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
             <column name="last_checked_at" type="TIMESTAMP WITH TIME ZONE"/>
             <column name="last_result" type="JSONB"/>

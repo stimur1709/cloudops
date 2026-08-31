@@ -6,11 +6,15 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MonitorBackfill implements ApplicationRunner {
+public class MonitorProvisioningBackfill implements ApplicationRunner {
+
     private final ResourceJpaRepository resourceRepository;
     private final MonitorProvisioningService provisioningService;
 
-    public MonitorBackfill(ResourceJpaRepository resourceRepository, MonitorProvisioningService provisioningService) {
+    public MonitorProvisioningBackfill(
+            ResourceJpaRepository resourceRepository,
+            MonitorProvisioningService provisioningService
+    ) {
         this.resourceRepository = resourceRepository;
         this.provisioningService = provisioningService;
     }

@@ -87,7 +87,7 @@ public class MonitorEntity {
         nextRunAt = now;
     }
 
-    public void setCompatible(boolean compatible, Instant now) {
+    public void updateCompatibility(boolean compatible, Instant now) {
         if (compatible && !this.compatible) {
             nextRunAt = now;
         }
