@@ -5,6 +5,8 @@ import java.time.Instant;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.monitoring.StorageMode;
 import com.github.stimur1709.cloudops.monitoring.application.ResourceHealthService;
+import com.github.stimur1709.cloudops.monitoring.settings.EffectiveProbeSettings;
+import com.github.stimur1709.cloudops.monitoring.settings.MonitoringSettingsResolver;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorEntity;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitoringResultEntity;
@@ -26,25 +28,28 @@ public class MonitorExecutionPersistenceService {
     private final ResourceJpaRepository resourceRepository;
     private final ResourceConfigMapper configMapper;
     private final ResourceHealthService resourceHealthService;
+    private final MonitoringSettingsResolver settingsResolver;
 
     public MonitorExecutionPersistenceService(
             MonitorJpaRepository monitorRepository,
             MonitoringResultJpaRepository resultRepository,
             ResourceJpaRepository resourceRepository,
             ResourceConfigMapper configMapper,
-            ResourceHealthService resourceHealthService
+            ResourceHealthService resourceHealthService,
+            MonitoringSettingsResolver settingsResolver
     ) {
         this.monitorRepository = monitorRepository;
         this.resultRepository = resultRepository;
         this.resourceRepository = resourceRepository;
         this.configMapper = configMapper;
         this.resourceHealthService = resourceHealthService;
+        this.settingsResolver = settingsResolver;
     }
 
     @Transactional(readOnly = true)
     public MonitorExecutionContext loadIfExecutable(long monitorId) {
         MonitorEntity monitor = monitorRepository.findById(monitorId).orElse(null);
-        if (monitor == null || !monitor.enabled()) {
+        if (monitor == null || !monitor.compatible()) {
             return null;
         }
         ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElse(null);
@@ -52,8 +57,12 @@ public class MonitorExecutionPersistenceService {
             return null;
         }
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
+        EffectiveProbeSettings settings = settingsResolver.resolve(resource, monitor.type());
+        if (!settings.enabled()) {
+            return null;
+        }
         return new MonitorExecutionContext(
-                monitor.id(), resource.id(), monitor.type(), config
+                monitor.id(), resource.id(), monitor.type(), config, settings
         );
     }
 
@@ -61,11 +70,12 @@ public class MonitorExecutionPersistenceService {
     public void saveResult(long monitorId, Instant checkedAt, JsonNode result, boolean success) {
         MonitorEntity monitor = monitorRepository.findByIdForUpdate(monitorId)
                 .orElseThrow(NotFoundException::new);
-        if (!monitor.enabled()) {
+        EffectiveProbeSettings settings = settingsResolver.resolve(monitor.resourceId(), monitor.type());
+        if (!settings.enabled()) {
             return;
         }
-        monitor.record(checkedAt, result, success);
-        if (monitor.storageMode() == StorageMode.HISTORY) {
+        monitor.record(checkedAt, result, success, settings.failureThreshold(), settings.recoveryThreshold());
+        if (settings.storageMode() == StorageMode.HISTORY) {
             resultRepository.save(MonitoringResultEntity.create(monitorId, checkedAt, result));
         }
         monitorRepository.flush();

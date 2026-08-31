@@ -14,7 +14,6 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
-import com.github.stimur1709.cloudops.probe.config.TlsCheckProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -26,8 +25,8 @@ public class TlsCheckClient {
     private final Connector connector;
 
     @Autowired
-    public TlsCheckClient(TlsCheckProperties properties, Clock clock) {
-        this(properties.timeout(), clock, TlsCheckClient::connect);
+    public TlsCheckClient(Clock clock) {
+        this(Duration.ZERO, clock, TlsCheckClient::connect);
     }
 
     TlsCheckClient(Duration timeout, Clock clock, Connector connector) {
@@ -41,9 +40,13 @@ public class TlsCheckClient {
     }
 
     TlsCheckOutcome execute(String host, int port) {
+        return execute(host, port, Math.toIntExact(timeout.toMillis()));
+    }
+
+    TlsCheckOutcome execute(String host, int port, int timeoutMs) {
         long startedAt = System.nanoTime();
         try {
-            X509Certificate certificate = connector.connect(host, port, Math.toIntExact(timeout.toMillis()));
+            X509Certificate certificate = connector.connect(host, port, timeoutMs);
             long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             long daysUntilExpiry = Duration.between(clock.instant(), certificate.getNotAfter().toInstant()).toDays();
             return TlsCheckOutcome.completed(new TlsCheckResult(

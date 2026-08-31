@@ -1,6 +1,7 @@
 package com.github.stimur1709.cloudops.resource.persistence;
 
 import java.util.Optional;
+import java.util.List;
 
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,8 @@ public interface ResourceJpaRepository extends JpaRepository<ResourceEntity, Lon
     boolean existsByOrganizationIdAndNameAndIdNot(long organizationId, String name, long id);
 
     boolean existsByOrganizationId(long organizationId);
+
+    List<ResourceEntity> findAllByOrganizationId(long organizationId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select resource from ResourceEntity resource where resource.id = :id")

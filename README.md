@@ -288,36 +288,43 @@ Non-retryable poison messages также сразу направляются в 
 
 ## Monitoring
 
-Для активного ресурса `SERVICE` можно создать один периодический monitor типа `HTTP_CHECK`:
+При создании ресурса приложение автоматически создаёт Monitor для каждого совместимого
+`ProbeType`. При изменении type/config выполняется reconciliation: новые совместимые Monitor
+добавляются, несовместимые больше не запускаются, а накопленная история не удаляется.
+Ручной `POST /api/resources/{resourceId}/monitors` больше не используется.
+
+Полные настройки каждого probe разрешаются одним уровнем в порядке
+`Resource -> Organization -> Application`; значения разных уровней не смешиваются. Например,
+задать policy для HTTP-проверок организации можно так:
 
 ```shell
-curl -i -X POST http://localhost:8080/api/resources/1/monitors \
+curl -i -X PUT http://localhost:8080/api/organizations/1/monitoring-settings/HTTP_CHECK \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"type":"HTTP_CHECK","intervalSeconds":60,"enabled":true,"storageMode":"HISTORY","retentionDays":30}'
+  -d '{"enabled":true,"intervalSeconds":60,"failureThreshold":3,"recoveryThreshold":2,"storageMode":"HISTORY","retentionDays":30,"timeoutMs":5000}'
 ```
 
-Для поддерживаемого ресурса тот же API принимает `PORT_CHECK`:
+Полностью переопределить эту policy для одного ресурса:
 
 ```shell
-curl -i -X POST http://localhost:8080/api/resources/2/monitors \
+curl -i -X PUT http://localhost:8080/api/resources/2/monitoring-settings/HTTP_CHECK \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"type":"PORT_CHECK","intervalSeconds":60,"enabled":true,"storageMode":"HISTORY","retentionDays":30}'
+  -d '{"enabled":false,"intervalSeconds":120,"failureThreshold":4,"recoveryThreshold":2,"storageMode":"LATEST_ONLY","retentionDays":null,"timeoutMs":3000}'
 ```
 
-TCP probe только открывает и закрывает соединение, не выполняя протокол прикладного уровня.
-Timeout соединения задаётся через `PORT_CHECK_TIMEOUT` (`3s`) и должен быть положительным.
+`GET /api/organizations/{organizationId}/monitoring-settings` и
+`GET /api/resources/{resourceId}/monitoring-settings` возвращают все probe types, источник
+effective settings и совместимость с ресурсом. `DELETE` соответствующего endpoint удаляет
+override и возвращает наследование с родительского уровня. Для `DNS_CHECK` поле `timeoutMs`
+должно отсутствовать; для остальных probes оно обязательно.
 
-Тот же Monitor API принимает `DNS_CHECK`, `PING` и `TLS_CHECK` для совместимых ресурсов.
 `DNS_CHECK` и `PING` используют host у `SERVER`, `NETWORK_DEVICE`, `DATABASE` или host из URL
 у `SERVICE`. `TLS_CHECK` использует настроенный порт host-ресурса либо HTTPS URL (`443` по
 умолчанию); HTTP URL не поддерживается.
 
-Настройки и последний результат возвращает `GET /api/resources/{resourceId}/monitors`.
-Monitor изменяется через `PUT /api/monitors/{id}` и удаляется через
-`DELETE /api/monitors/{id}`. История monitor-а в режиме `HISTORY` доступна через
-`POST /api/monitors/{id}/results/search`; переход на `LATEST_ONLY` удаляет накопленную историю.
+Runtime/state и последний результат возвращает `GET /api/resources/{resourceId}/monitors`.
+История в effective режиме `HISTORY` доступна через `POST /api/monitors/{id}/results/search`.
 
 Probe — способ диагностической проверки Resource, а Monitor хранит runtime/state периодического
 Probe. `POST /api/monitors/{id}/run` асинхронно ставит включённый Monitor на ближайший запуск:
@@ -329,7 +336,11 @@ RabbitMQ-команду и не добавляет в результат при�
 Несовпадение HTTP status сохраняется как завершённый probe с
 `success=false`; timeout, DNS, connection и TLS ошибки сохраняются как failed probe result.
 Планировщик заранее сдвигает `nextRunAt` и координирует экземпляры приложения через PostgreSQL
-`FOR UPDATE SKIP LOCKED`. Пропущенные во время downtime интервалы не воспроизводятся.
+`FOR UPDATE SKIP LOCKED`. `enabled`, interval, thresholds, storage, retention и timeout на каждом
+запуске берутся из effective settings; пропущенные во время downtime интервалы не воспроизводятся.
+
+Обязательные Application defaults для всех пяти `ProbeType` находятся в
+`cloudops.monitoring.defaults` файла `application.yml` и валидируются при старте.
 
 Параметры monitoring:
 

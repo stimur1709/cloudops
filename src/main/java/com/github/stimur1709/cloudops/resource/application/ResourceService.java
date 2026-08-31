@@ -9,6 +9,7 @@ import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.monitoring.application.ResourceHealthService;
+import com.github.stimur1709.cloudops.monitoring.application.MonitorProvisioningService;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntity;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntity_;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthJpaRepository;
@@ -39,6 +40,7 @@ public class ResourceService {
     private final ResourceConfigMapper configMapper;
     private final ResourceHealthService resourceHealthService;
     private final ResourceHealthJpaRepository resourceHealthRepository;
+    private final MonitorProvisioningService monitorProvisioningService;
 
     public ResourceService(
             ResourceJpaRepository resourceRepository,
@@ -48,7 +50,8 @@ public class ResourceService {
             Clock clock,
             ResourceConfigMapper configMapper,
             ResourceHealthService resourceHealthService,
-            ResourceHealthJpaRepository resourceHealthRepository
+            ResourceHealthJpaRepository resourceHealthRepository,
+            MonitorProvisioningService monitorProvisioningService
     ) {
         this.resourceRepository = resourceRepository;
         this.searchService = searchService;
@@ -58,6 +61,7 @@ public class ResourceService {
         this.configMapper = configMapper;
         this.resourceHealthService = resourceHealthService;
         this.resourceHealthRepository = resourceHealthRepository;
+        this.monitorProvisioningService = monitorProvisioningService;
     }
 
     @Transactional
@@ -79,7 +83,9 @@ public class ResourceService {
                 name, type, status, organization, configMapper.toJson(config), now
         );
         ResourceEntity saved = save(resource);
-        return details(resourceHealthService.initialize(saved));
+        ResourceHealthEntity health = resourceHealthService.initialize(saved);
+        monitorProvisioningService.reconcile(saved);
+        return details(health);
     }
 
     @Transactional(readOnly = true)
@@ -130,6 +136,8 @@ public class ResourceService {
         }
         resource.update(name, type, status, organization, configMapper.toJson(config), clock.instant());
         ResourceEntity saved = save(resource);
+        monitorProvisioningService.reconcile(saved);
+        resourceHealthService.recalculate(saved.id());
         return new ResourceDetails(saved, resourceHealthRepository.findById(id)
                 .orElseThrow(NotFoundException::new).healthStatus());
     }

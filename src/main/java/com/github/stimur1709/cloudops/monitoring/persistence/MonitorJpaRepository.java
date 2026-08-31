@@ -17,13 +17,6 @@ public interface MonitorJpaRepository extends JpaRepository<MonitorEntity, Long>
 
     boolean existsByResourceIdAndType(long resourceId, ProbeType type);
 
-    @Query("""
-            select monitor.healthStatus
-            from MonitorEntity monitor
-            where monitor.resourceId = :resourceId and monitor.enabled = true
-            """)
-    List<HealthStatus> findHealthStatusesByResourceIdAndEnabledTrue(@Param("resourceId") long resourceId);
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select monitor from MonitorEntity monitor where monitor.id = :id")
     Optional<MonitorEntity> findByIdForUpdate(@Param("id") long id);

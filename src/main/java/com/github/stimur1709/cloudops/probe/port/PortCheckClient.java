@@ -9,8 +9,6 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 
 import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
-import com.github.stimur1709.cloudops.probe.config.PortCheckProperties;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,9 +17,12 @@ public class PortCheckClient {
     private final Duration timeout;
     private final Connector connector;
 
-    @Autowired
-    public PortCheckClient(PortCheckProperties properties) {
-        this(properties.timeout(), PortCheckClient::connect);
+    public PortCheckClient() {
+        this(Duration.ZERO, PortCheckClient::connect);
+    }
+
+    PortCheckClient(Duration timeout) {
+        this(timeout, PortCheckClient::connect);
     }
 
     PortCheckClient(Duration timeout, Connector connector) {
@@ -30,9 +31,13 @@ public class PortCheckClient {
     }
 
     PortCheckOutcome execute(String host, int port) {
+        return execute(host, port, Math.toIntExact(timeout.toMillis()));
+    }
+
+    PortCheckOutcome execute(String host, int port, int timeoutMs) {
         long startedAt = System.nanoTime();
         try {
-            connector.connect(host, port, Math.toIntExact(timeout.toMillis()));
+            connector.connect(host, port, timeoutMs);
             long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             return PortCheckOutcome.completed(new PortCheckResult(host, port, responseTimeMs));
         } catch (UnknownHostException exception) {

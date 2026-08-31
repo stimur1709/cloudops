@@ -25,20 +25,20 @@ class PingHandlerTest {
         assertThat(handler.isCompatibleWith(new ServerResourceConfig("server", null))).isTrue();
         assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", null))).isTrue();
         assertThat(handler.isCompatibleWith(new DatabaseResourceConfig("database", 5432, "db"))).isTrue();
-        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("http://127.0.0.1/path", 200, 1000))).isTrue();
+        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("http://127.0.0.1/path", 200))).isTrue();
         assertThat(handler.isCompatibleWith(new OtherResourceConfig())).isFalse();
     }
 
     @Test
     void serviceUsesHostFromUrl() {
         PingResult checkResult = new PingResult("127.0.0.1", 1);
-        when(client.execute("127.0.0.1")).thenReturn(PingOutcome.completed(checkResult));
+        when(client.execute("127.0.0.1", 5000)).thenReturn(PingOutcome.completed(checkResult));
 
         ProbeExecutionResult result = handler.execute(new ProbeExecutionContext(
-                1, ProbeType.PING, new ServiceResourceConfig("http://127.0.0.1/path", 200, 1000)
+                1, ProbeType.PING, new ServiceResourceConfig("http://127.0.0.1/path", 200)
         ));
 
         assertThat(result).isEqualTo(ProbeExecutionResult.completed(true, checkResult));
-        verify(client).execute("127.0.0.1");
+        verify(client).execute("127.0.0.1", 5000);
     }
 }

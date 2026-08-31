@@ -15,13 +15,6 @@ spring:
         default-requeue-rejected: false
 
 cloudops:
-  probe:
-    port:
-      timeout: 500ms
-    ping:
-      timeout: 500ms
-    tls:
-      timeout: 500ms
   monitoring:
     scheduler-enabled: false
     poll-interval: 100ms
@@ -29,6 +22,26 @@ cloudops:
     minimum-interval-seconds: 30
     retention-poll-interval: 1h
     retention-batch-size: 50
+    defaults:
+      HTTP_CHECK: &default-timeout-probe
+        enabled: true
+        interval-seconds: 30
+        failure-threshold: 3
+        recovery-threshold: 2
+        storage-mode: LATEST_ONLY
+        timeout-ms: 500
+      PORT_CHECK:
+        <<: *default-timeout-probe
+      DNS_CHECK:
+        enabled: true
+        interval-seconds: 30
+        failure-threshold: 3
+        recovery-threshold: 2
+        storage-mode: LATEST_ONLY
+      PING:
+        <<: *default-timeout-probe
+      TLS_CHECK:
+        <<: *default-timeout-probe
   task:
     messaging:
       exchange: cloudops.tasks.test

@@ -29,8 +29,8 @@ class TlsCheckHandlerTest {
         assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", 443))).isTrue();
         assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", null))).isFalse();
         assertThat(handler.isCompatibleWith(new DatabaseResourceConfig("database", 5432, "db"))).isTrue();
-        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("https://api.local/path", 200, 1000))).isTrue();
-        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("http://api.local/path", 200, 1000))).isFalse();
+        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("https://api.local/path", 200))).isTrue();
+        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("http://api.local/path", 200))).isFalse();
         assertThat(handler.isCompatibleWith(new OtherResourceConfig())).isFalse();
     }
 
@@ -40,14 +40,14 @@ class TlsCheckHandlerTest {
                 "api.local", 8443, 5, "CN=api.local", "CN=CA",
                 Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z"), 365
         );
-        when(client.execute("api.local", 8443)).thenReturn(TlsCheckOutcome.completed(checkResult));
+        when(client.execute("api.local", 8443, 5000)).thenReturn(TlsCheckOutcome.completed(checkResult));
 
         ProbeExecutionResult result = handler.execute(new ProbeExecutionContext(
-                1, ProbeType.TLS_CHECK, new ServiceResourceConfig("https://api.local:8443/path", 200, 1000)
+                1, ProbeType.TLS_CHECK, new ServiceResourceConfig("https://api.local:8443/path", 200)
         ));
 
         assertThat(result).isEqualTo(ProbeExecutionResult.completed(true, checkResult));
-        verify(client).execute("api.local", 8443);
-        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("https://api.local", 200, 1000))).isTrue();
+        verify(client).execute("api.local", 8443, 5000);
+        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("https://api.local", 200))).isTrue();
     }
 }

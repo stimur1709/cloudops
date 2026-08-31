@@ -40,7 +40,7 @@ class ResourceConfigApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
@@ -69,7 +69,7 @@ class ResourceConfigApiIntegrationTest {
         create("database", "DATABASE", "{\"host\":\"db.internal\",\"port\":5432,\"database\":\"orders\"}")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.config.database").value("orders"));
-        create("service", "SERVICE", "{\"url\":\"https://api.example.com\",\"expectedStatus\":204,\"timeoutMs\":1000}")
+        create("service", "SERVICE", "{\"url\":\"https://api.example.com\",\"expectedStatus\":204}")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.config.url").value("https://api.example.com"));
         create("other", "OTHER", "{}")
@@ -107,12 +107,12 @@ class ResourceConfigApiIntegrationTest {
         create("service", "SERVICE", "{\"url\":\"https://api.example.com\"}")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.config.expectedStatus").value(200))
-                .andExpect(jsonPath("$.config.timeoutMs").value(5000));
+                .andExpect(jsonPath("$.config.timeoutMs").doesNotExist());
 
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT (config ->> 'timeoutMs')::integer FROM resources WHERE name = 'service'",
-                Integer.class
-        )).isEqualTo(5000);
+                "SELECT config ? 'timeoutMs' FROM resources WHERE name = 'service'",
+                Boolean.class
+        )).isFalse();
     }
 
     @Test

@@ -39,7 +39,7 @@ public class TlsCheckHandler implements ProbeHandler {
         if (endpoint == null) {
             throw new IllegalArgumentException("TLS_CHECK requires a resource configuration with a TLS host and port");
         }
-        TlsCheckOutcome outcome = client.execute(endpoint.host(), endpoint.port());
+        TlsCheckOutcome outcome = client.execute(endpoint.host(), endpoint.port(), context.timeoutMs());
         if (outcome.completed()) {
             return ProbeExecutionResult.completed(true, outcome.result());
         }

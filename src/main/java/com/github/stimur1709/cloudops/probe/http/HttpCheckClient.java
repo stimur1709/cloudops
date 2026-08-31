@@ -22,9 +22,9 @@ public class HttpCheckClient {
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
-    public HttpCheckOutcome execute(ServiceResourceConfig config) {
+    public HttpCheckOutcome execute(ServiceResourceConfig config, int timeoutMs) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(config.url()))
-                .timeout(Duration.ofMillis(config.timeoutMs()))
+                .timeout(Duration.ofMillis(timeoutMs))
                 .GET()
                 .build();
         long startedAt = System.nanoTime();

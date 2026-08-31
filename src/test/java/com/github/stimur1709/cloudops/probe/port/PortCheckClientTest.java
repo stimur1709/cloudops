@@ -9,7 +9,6 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 
 import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
-import com.github.stimur1709.cloudops.probe.config.PortCheckProperties;
 import org.junit.jupiter.api.Test;
 
 class PortCheckClientTest {
@@ -17,7 +16,7 @@ class PortCheckClientTest {
     @Test
     void connectsToLocalTcpServerAndReportsResponseTime() throws Exception {
         try (ServerSocket server = new ServerSocket(0)) {
-            PortCheckOutcome outcome = new PortCheckClient(new PortCheckProperties(Duration.ofSeconds(1)))
+            PortCheckOutcome outcome = new PortCheckClient(Duration.ofSeconds(1))
                     .execute("127.0.0.1", server.getLocalPort());
 
             assertThat(outcome.completed()).isTrue();

@@ -10,8 +10,7 @@ Content-Type: application/json
   "organizationId": 1,
   "config": {
     "url": "https://httpbin.io/status/200",
-    "expectedStatus": 200,
-    "timeoutMs": 5000
+    "expectedStatus": 200
   }
 }
 
@@ -50,8 +49,7 @@ Content-Type: application/json
   "organizationId": 1,
   "config": {
     "url": "https://example.com",
-    "expectedStatus": 200,
-    "timeoutMs": 5000
+    "expectedStatus": 200
   }
 }
 

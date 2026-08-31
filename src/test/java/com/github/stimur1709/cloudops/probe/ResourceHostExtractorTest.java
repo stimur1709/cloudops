@@ -20,7 +20,7 @@ class ResourceHostExtractorTest {
         assertThat(ResourceHostExtractor.extract(new DatabaseResourceConfig("database.local", 5432, "cloudops")))
                 .isEqualTo("database.local");
         assertThat(ResourceHostExtractor.extract(
-                new ServiceResourceConfig("https://api.local:8443/status", 200, 1000)
+                new ServiceResourceConfig("https://api.local:8443/status", 200)
         )).isEqualTo("api.local");
     }
 
