@@ -11,6 +11,7 @@ import com.github.stimur1709.cloudops.credential.CredentialType;
 import com.github.stimur1709.cloudops.credential.binding.ResourceCredentialJpaRepository;
 import com.github.stimur1709.cloudops.credential.crypto.SecretCryptoService;
 import com.github.stimur1709.cloudops.credential.persistence.CredentialEntity;
+import com.github.stimur1709.cloudops.credential.persistence.CredentialEntity_;
 import com.github.stimur1709.cloudops.credential.persistence.CredentialJpaRepository;
 import com.github.stimur1709.cloudops.credential.persistence.CredentialSearchDefinition;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
@@ -71,7 +72,7 @@ public class CredentialService {
     public SearchResult<CredentialEntity> search(SearchQuery query, long userId) {
         return searchService.search(
                 query,
-                OrganizationMembershipScopes.visibleTo(userId, root -> root.get("organizationId")),
+                OrganizationMembershipScopes.visibleTo(userId, root -> root.get(CredentialEntity_.ORGANIZATION_ID)),
                 CredentialSearchDefinition.DEFINITION);
     }
 

@@ -2,8 +2,10 @@ package com.github.stimur1709.cloudops.monitoring.execution;
 
 import com.github.stimur1709.cloudops.monitoring.config.MonitoringProperties;
 import com.github.stimur1709.cloudops.monitoring.settings.MonitoringSettingsResolver;
+
 import java.time.Clock;
 import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
