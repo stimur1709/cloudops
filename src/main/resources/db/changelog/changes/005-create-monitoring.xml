@@ -10,22 +10,21 @@
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="monitors_pkey"/>
             </column>
-            <column name="resource_id" type="BIGINT"><constraints nullable="false"/></column>
-            <column name="type" type="VARCHAR(30)"><constraints nullable="false"/></column>
-            <column name="enabled" type="BOOLEAN"><constraints nullable="false"/></column>
-            <column name="interval_seconds" type="INTEGER"><constraints nullable="false"/></column>
-            <column name="next_run_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
-            <column name="storage_mode" type="VARCHAR(20)"><constraints nullable="false"/></column>
-            <column name="retention_days" type="INTEGER"/>
+            <column name="resource_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="compatible" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="next_run_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
             <column name="last_checked_at" type="TIMESTAMP WITH TIME ZONE"/>
             <column name="last_result" type="JSONB"/>
             <column name="health_status" type="VARCHAR(10)" defaultValue="UNKNOWN">
-                <constraints nullable="false"/>
-            </column>
-            <column name="failure_threshold" type="INTEGER" defaultValueNumeric="3">
-                <constraints nullable="false"/>
-            </column>
-            <column name="recovery_threshold" type="INTEGER" defaultValueNumeric="2">
                 <constraints nullable="false"/>
             </column>
             <column name="consecutive_failures" type="INTEGER" defaultValueNumeric="0">
@@ -36,13 +35,77 @@
             </column>
         </createTable>
 
+        <createTable tableName="organization_probe_settings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="organization_probe_settings_pkey"/>
+            </column>
+            <column name="organization_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="probe_type" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enabled" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="interval_seconds" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="failure_threshold" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recovery_threshold" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_mode" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retention_days" type="INTEGER"/>
+            <column name="timeout_ms" type="INTEGER"/>
+        </createTable>
+
+        <createTable tableName="resource_probe_settings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="resource_probe_settings_pkey"/>
+            </column>
+            <column name="resource_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="probe_type" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enabled" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="interval_seconds" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="failure_threshold" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recovery_threshold" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_mode" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retention_days" type="INTEGER"/>
+            <column name="timeout_ms" type="INTEGER"/>
+        </createTable>
+
         <createTable tableName="monitoring_results">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="monitoring_results_pkey"/>
             </column>
-            <column name="monitor_id" type="BIGINT"><constraints nullable="false"/></column>
-            <column name="checked_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
-            <column name="result" type="JSONB"><constraints nullable="false"/></column>
+            <column name="monitor_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="checked_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="result" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
 
         <addForeignKeyConstraint baseTableName="monitors" baseColumnNames="resource_id"
@@ -51,37 +114,71 @@
         <addForeignKeyConstraint baseTableName="monitoring_results" baseColumnNames="monitor_id"
                                  constraintName="monitoring_results_monitor_fk" referencedTableName="monitors"
                                  referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="organization_probe_settings" baseColumnNames="organization_id"
+                                 constraintName="organization_probe_settings_organization_fk"
+                                 referencedTableName="organizations"
+                                 referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="resource_probe_settings" baseColumnNames="resource_id"
+                                 constraintName="resource_probe_settings_resource_fk" referencedTableName="resources"
+                                 referencedColumnNames="id" onDelete="CASCADE"/>
         <addUniqueConstraint tableName="monitors" columnNames="resource_id,type"
                              constraintName="monitors_resource_type_key"/>
+        <addUniqueConstraint tableName="organization_probe_settings" columnNames="organization_id,probe_type"
+                             constraintName="organization_probe_settings_key"/>
+        <addUniqueConstraint tableName="resource_probe_settings" columnNames="resource_id,probe_type"
+                             constraintName="resource_probe_settings_key"/>
         <createIndex tableName="monitoring_results" indexName="monitoring_results_monitor_checked_idx">
             <column name="monitor_id"/>
             <column name="checked_at" descending="true"/>
         </createIndex>
 
         <sql dbms="postgresql">
-            ALTER TABLE monitors ADD CONSTRAINT monitors_type_check CHECK (type IN ('HTTP_CHECK'));
-            ALTER TABLE monitors ADD CONSTRAINT monitors_storage_mode_check
-                CHECK (storage_mode IN ('LATEST_ONLY', 'HISTORY'));
-            ALTER TABLE monitors ADD CONSTRAINT monitors_interval_check CHECK (interval_seconds &gt; 0);
-            ALTER TABLE monitors ADD CONSTRAINT monitors_retention_check CHECK (
-                (storage_mode = 'LATEST_ONLY' AND retention_days IS NULL)
-                OR (storage_mode = 'HISTORY' AND retention_days BETWEEN 1 AND 365)
-            );
-            ALTER TABLE monitors ADD CONSTRAINT monitors_health_status_check
-                CHECK (health_status IN ('UNKNOWN', 'UP', 'DOWN'));
-            ALTER TABLE monitors ADD CONSTRAINT monitors_failure_threshold_check
-                CHECK (failure_threshold BETWEEN 1 AND 10);
-            ALTER TABLE monitors ADD CONSTRAINT monitors_recovery_threshold_check
-                CHECK (recovery_threshold BETWEEN 1 AND 10);
-            ALTER TABLE monitors ADD CONSTRAINT monitors_consecutive_failures_check
-                CHECK (consecutive_failures &gt;= 0);
-            ALTER TABLE monitors ADD CONSTRAINT monitors_consecutive_successes_check
-                CHECK (consecutive_successes &gt;= 0);
-            CREATE INDEX monitors_due_idx ON monitors (next_run_at, id) WHERE enabled = true;
+            ALTER TABLE monitors
+                ADD CONSTRAINT monitors_type_check CHECK (type IN ('HTTP_CHECK'));
+            ALTER TABLE monitors
+                ADD CONSTRAINT monitors_health_status_check
+                    CHECK (health_status IN ('UNKNOWN', 'UP', 'DOWN'));
+            ALTER TABLE monitors
+                ADD CONSTRAINT monitors_consecutive_failures_check
+                    CHECK (consecutive_failures &gt;= 0);
+            ALTER TABLE monitors
+                ADD CONSTRAINT monitors_consecutive_successes_check
+                    CHECK (consecutive_successes &gt;= 0);
+            CREATE INDEX monitors_due_idx ON monitors (next_run_at, id);
+            ALTER TABLE organization_probe_settings
+                ADD CONSTRAINT organization_probe_settings_probe_type_check CHECK (probe_type IN
+                                                                                   ('HTTP_CHECK', 'PORT_CHECK',
+                                                                                    'DNS_CHECK', 'PING', 'TLS_CHECK'));
+            ALTER TABLE resource_probe_settings
+                ADD CONSTRAINT resource_probe_settings_probe_type_check CHECK (probe_type IN
+                                                                               ('HTTP_CHECK', 'PORT_CHECK', 'DNS_CHECK',
+                                                                                'PING', 'TLS_CHECK'));
+            ALTER TABLE organization_probe_settings
+                ADD CONSTRAINT organization_probe_settings_values_check CHECK (interval_seconds &gt; 0 AND
+                                                                               failure_threshold BETWEEN 1 AND 10 AND
+                                                                               recovery_threshold BETWEEN 1 AND 10 AND
+                                                                               storage_mode IN
+                                                                               ('LATEST_ONLY', 'HISTORY') AND
+                                                                               ((storage_mode = 'LATEST_ONLY' AND retention_days IS NULL) OR
+                                                                                (storage_mode = 'HISTORY' AND retention_days BETWEEN 1 AND 365)) AND
+                                                                               ((probe_type = 'DNS_CHECK' AND timeout_ms IS NULL) OR
+                                                                                (probe_type &lt;&gt; 'DNS_CHECK' AND timeout_ms BETWEEN 1 AND 60000)));
+            ALTER TABLE resource_probe_settings
+                ADD CONSTRAINT resource_probe_settings_values_check CHECK (interval_seconds &gt; 0 AND
+                                                                           failure_threshold BETWEEN 1 AND 10 AND
+                                                                           recovery_threshold BETWEEN 1 AND 10 AND
+                                                                           storage_mode IN
+                                                                           ('LATEST_ONLY', 'HISTORY') AND
+                                                                           ((storage_mode = 'LATEST_ONLY' AND retention_days IS NULL) OR
+                                                                            (storage_mode = 'HISTORY' AND retention_days BETWEEN 1 AND 365)) AND
+                                                                           ((probe_type = 'DNS_CHECK' AND timeout_ms IS NULL) OR
+                                                                            (probe_type &lt;&gt; 'DNS_CHECK' AND timeout_ms BETWEEN 1 AND 60000)));
         </sql>
 
         <rollback>
             <dropTable tableName="monitoring_results"/>
+            <dropTable tableName="resource_probe_settings"/>
+            <dropTable tableName="organization_probe_settings"/>
             <dropTable tableName="monitors"/>
         </rollback>
     </changeSet>

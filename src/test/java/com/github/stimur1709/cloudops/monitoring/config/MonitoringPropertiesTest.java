@@ -2,6 +2,11 @@ package com.github.stimur1709.cloudops.monitoring.config;
 
 import java.time.Duration;
 import java.util.Set;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import com.github.stimur1709.cloudops.monitoring.StorageMode;
+import com.github.stimur1709.cloudops.monitoring.settings.DefaultProbeSettings;
+import com.github.stimur1709.cloudops.probe.ProbeType;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -31,6 +36,9 @@ class MonitoringPropertiesTest {
     }
 
     private MonitoringProperties properties(Duration pollInterval, Duration retentionPollInterval) {
-        return new MonitoringProperties(true, pollInterval, 10, 30, retentionPollInterval, 10);
+        var defaults = Arrays.stream(ProbeType.values()).collect(Collectors.toMap(type -> type,
+                type -> new DefaultProbeSettings(true, 30, 3, 2, StorageMode.LATEST_ONLY, null,
+                        type == ProbeType.DNS_CHECK ? null : 500)));
+        return new MonitoringProperties(true, pollInterval, 10, 30, retentionPollInterval, 10, defaults);
     }
 }

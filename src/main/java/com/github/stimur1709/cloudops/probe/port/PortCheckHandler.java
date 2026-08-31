@@ -37,7 +37,7 @@ public class PortCheckHandler implements ProbeHandler {
     @Override
     public ProbeExecutionResult execute(ProbeExecutionContext context) {
         Endpoint endpoint = endpoint(context.resourceConfig());
-        PortCheckOutcome outcome = client.execute(endpoint.host(), endpoint.port());
+        PortCheckOutcome outcome = client.execute(endpoint.host(), endpoint.port(), context.timeoutMs());
         if (outcome.completed()) {
             return ProbeExecutionResult.completed(true, outcome.result());
         }

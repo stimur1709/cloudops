@@ -33,7 +33,7 @@ public class PingHandler implements ProbeHandler {
         if (host == null) {
             throw new IllegalArgumentException("PING requires a resource configuration with a host");
         }
-        PingOutcome outcome = client.execute(host);
+        PingOutcome outcome = client.execute(host, context.timeoutMs());
         if (outcome.completed()) {
             return ProbeExecutionResult.completed(true, outcome.result());
         }

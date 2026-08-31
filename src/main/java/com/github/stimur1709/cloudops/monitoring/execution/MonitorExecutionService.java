@@ -43,7 +43,8 @@ public class MonitorExecutionService {
             }
             ProbeHandler handler = handlerRegistry.get(monitor.type());
             ProbeExecutionResult executionResult = handler.execute(new ProbeExecutionContext(
-                    monitor.resourceId(), monitor.type(), monitor.resourceConfig()
+                    monitor.resourceId(), monitor.type(), monitor.resourceConfig(),
+                    monitor.settings().timeoutMs() == null ? 0 : monitor.settings().timeoutMs()
             ));
             Instant checkedAt = clock.instant();
             JsonNode result = objectMapper.valueToTree(executionResult);

@@ -32,7 +32,7 @@ class TaskClaimIntegrationTest {
     @BeforeEach
     void setUp() {
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
@@ -45,7 +45,7 @@ class TaskClaimIntegrationTest {
         long resourceId = jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
                 VALUES ('service', 'SERVICE', 'ACTIVE', ?,
-                        CAST('{"url":"https://example.com","expectedStatus":200,"timeoutMs":1000}' AS jsonb),
+                        CAST('{"url":"https://example.com","expectedStatus":200}' AS jsonb),
                         now(), now()) RETURNING id
                 """, Long.class, organizationId);
         taskId = jdbcTemplate.queryForObject("""

@@ -33,14 +33,14 @@ class PortCheckHandlerTest {
         assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", 161))).isTrue();
         assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", null))).isFalse();
         assertThat(handler.isCompatibleWith(new DatabaseResourceConfig("database", 5432, "cloudops"))).isTrue();
-        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("https://example.com", 200, 1000))).isFalse();
+        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("https://example.com", 200))).isFalse();
         assertThat(handler.isCompatibleWith(new OtherResourceConfig())).isFalse();
     }
 
     @Test
     void mapsClientResultAndUsesResourceEndpoint() {
         PortCheckResult checkResult = new PortCheckResult("database", 5432, 18);
-        when(client.execute("database", 5432)).thenReturn(PortCheckOutcome.completed(checkResult));
+        when(client.execute("database", 5432, 5000)).thenReturn(PortCheckOutcome.completed(checkResult));
 
         ProbeExecutionResult result = handler.execute(new ProbeExecutionContext(
                 1, ProbeType.PORT_CHECK, new DatabaseResourceConfig("database", 5432, "cloudops")
@@ -48,7 +48,7 @@ class PortCheckHandlerTest {
 
         assertThat(handler.type()).isEqualTo(ProbeType.PORT_CHECK);
         assertThat(result).isEqualTo(ProbeExecutionResult.completed(true, checkResult));
-        verify(client).execute("database", 5432);
+        verify(client).execute("database", 5432, 5000);
     }
 
     @Test

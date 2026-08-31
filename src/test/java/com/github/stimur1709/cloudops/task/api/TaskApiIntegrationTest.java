@@ -43,7 +43,7 @@ class TaskApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, resource_health_events, resource_health,
+                TRUNCATE TABLE resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health,
                 outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         insertUser(TestAuthentication.USER_ID, "current@example.com");

@@ -16,9 +16,9 @@ class HttpCheckHandlerTest {
     @Test
     void executesHttpCheckAndReturnsTypedResult() {
         HttpCheckClient client = mock(HttpCheckClient.class);
-        ServiceResourceConfig config = new ServiceResourceConfig("https://example.com", 204, 1000);
+        ServiceResourceConfig config = new ServiceResourceConfig("https://example.com", 204);
         HttpCheckResult checkResult = new HttpCheckResult("https://example.com", 204, 204, 10, true);
-        when(client.execute(config)).thenReturn(HttpCheckOutcome.completed(checkResult));
+        when(client.execute(config, 5000)).thenReturn(HttpCheckOutcome.completed(checkResult));
         HttpCheckHandler handler = new HttpCheckHandler(client);
 
         ProbeExecutionResult result = handler.execute(
@@ -28,6 +28,6 @@ class HttpCheckHandlerTest {
         assertThat(handler.type()).isEqualTo(ProbeType.HTTP_CHECK);
         assertThat(handler.isCompatibleWith(config)).isTrue();
         assertThat(result).isEqualTo(ProbeExecutionResult.completed(true, checkResult));
-        verify(client).execute(config);
+        verify(client).execute(config, 5000);
     }
 }

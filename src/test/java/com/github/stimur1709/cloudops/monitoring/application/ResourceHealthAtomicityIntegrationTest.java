@@ -36,7 +36,7 @@ class ResourceHealthAtomicityIntegrationTest {
     @BeforeEach
     void setUp() {
         jdbcTemplate.execute("""
-                TRUNCATE TABLE monitoring_results, monitors, resource_health_events, resource_health,
+                TRUNCATE TABLE resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health,
                     outbox_messages, tasks, organization_memberships, resources, users, organizations
                     RESTART IDENTITY
                 """);
@@ -46,7 +46,7 @@ class ResourceHealthAtomicityIntegrationTest {
                 """, Long.class);
         resourceId = jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
-                VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{}'::jsonb, now(), now()) RETURNING id
+                VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{"url":"https://example.com"}'::jsonb, now(), now()) RETURNING id
                 """, Long.class, organizationId);
         jdbcTemplate.update(
                 "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
@@ -54,8 +54,8 @@ class ResourceHealthAtomicityIntegrationTest {
         );
         monitorId = jdbcTemplate.queryForObject("""
                 INSERT INTO monitors
-                    (resource_id, type, enabled, interval_seconds, next_run_at, storage_mode, retention_days)
-                VALUES (?, 'HTTP_CHECK', true, 30, now(), 'LATEST_ONLY', null) RETURNING id
+                    (resource_id, type, next_run_at)
+                VALUES (?, 'HTTP_CHECK', now()) RETURNING id
                 """, Long.class, resourceId);
     }
 

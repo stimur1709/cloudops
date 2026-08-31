@@ -55,7 +55,7 @@ class OutboxRelayIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        jdbcTemplate.execute("TRUNCATE TABLE outbox_messages");
+        jdbcTemplate.execute("TRUNCATE TABLE resource_probe_settings, organization_probe_settings, outbox_messages");
         reset(publisher);
         when(publisher.publish(any(), any())).thenReturn(true);
         relay = new OutboxRelay(repository, processor, new OutboxRelayProperties(false, Duration.ofSeconds(1), 2));
