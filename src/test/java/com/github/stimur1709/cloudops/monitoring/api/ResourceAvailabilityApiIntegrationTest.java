@@ -5,12 +5,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.List;
-
 import com.github.stimur1709.cloudops.SqlStatementRecorder;
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.resource.ResourceType;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,9 +25,14 @@ import org.springframework.web.context.WebApplicationContext;
 @SpringBootTest
 class ResourceAvailabilityApiIntegrationTest {
 
-    @Autowired private WebApplicationContext applicationContext;
-    @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private SqlStatementRecorder sqlStatementRecorder;
+    @Autowired
+    private WebApplicationContext applicationContext;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private SqlStatementRecorder sqlStatementRecorder;
 
     private MockMvc mockMvc;
     private long organizationId;
@@ -107,8 +111,9 @@ class ResourceAvailabilityApiIntegrationTest {
                 .toList();
         assertThat(eventQueries).hasSize(2).allMatch(statement -> statement.contains("resource_id"));
         assertThat(sqlStatementRecorder.statements().stream()
-                .map(String::toLowerCase)
-                .noneMatch(statement -> statement.contains(" from monitoring_results "))).isTrue();
+                        .map(String::toLowerCase)
+                        .noneMatch(statement -> statement.contains(" from monitoring_results ")))
+                .isTrue();
     }
 
     @Test
@@ -185,9 +190,7 @@ class ResourceAvailabilityApiIntegrationTest {
                 VALUES (?, ?, 'ACTIVE', ?, '{}'::jsonb, now(), now()) RETURNING id
                 """, Long.class, name, type.name(), targetOrganizationId);
         jdbcTemplate.update(
-                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
-                resourceId
-        );
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')", resourceId);
         return resourceId;
     }
 

@@ -49,6 +49,5 @@ class JpaSearchScopeTest {
         assertThat(result).isSameAs(combinedPredicate);
     }
 
-    private static final class TestEntity {
-    }
+    private static final class TestEntity {}
 }

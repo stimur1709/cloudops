@@ -2,12 +2,11 @@ package com.github.stimur1709.cloudops.probe.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
 import javax.net.ssl.SSLException;
-
-import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import org.junit.jupiter.api.Test;
 
 class HttpCheckClientTest {

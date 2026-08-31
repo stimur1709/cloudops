@@ -1,11 +1,10 @@
 package com.github.stimur1709.cloudops.task.api;
 
-import java.net.URI;
-
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.task.application.TaskService;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
 import jakarta.validation.Valid;
+import java.net.URI;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,8 +27,7 @@ public class ResourceTaskController {
     public ResponseEntity<TaskResponse> run(
             @PathVariable long resourceId,
             @Valid @RequestBody CreateTaskRequest request,
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         TaskEntity task = taskService.create(resourceId, request.type(), CurrentUser.id(authentication));
         return ResponseEntity.accepted()
                 .location(URI.create("/api/tasks/" + task.id()))

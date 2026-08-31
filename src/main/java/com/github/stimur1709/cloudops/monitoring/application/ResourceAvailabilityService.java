@@ -1,5 +1,12 @@
 package com.github.stimur1709.cloudops.monitoring.application;
 
+import com.github.stimur1709.cloudops.common.application.NotFoundException;
+import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
+import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
+import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventEntity;
+import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventJpaRepository;
+import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
+import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -8,14 +15,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
-
-import com.github.stimur1709.cloudops.common.application.NotFoundException;
-import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
-import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
-import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventEntity;
-import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventJpaRepository;
-import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
-import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,8 +30,7 @@ public class ResourceAvailabilityService {
     public ResourceAvailabilityService(
             ResourceJpaRepository resourceRepository,
             ResourceHealthEventJpaRepository eventRepository,
-            OrganizationAuthorization authorization
-    ) {
+            OrganizationAuthorization authorization) {
         this.resourceRepository = resourceRepository;
         this.eventRepository = eventRepository;
         this.authorization = authorization;
@@ -47,19 +45,14 @@ public class ResourceAvailabilityService {
                 .findFirstByResourceIdAndChangedAtLessThanEqualOrderByChangedAtDescIdDesc(resourceId, from)
                 .map(ResourceHealthEventEntity::toStatus)
                 .orElse(ResourceHealthStatus.UNKNOWN);
-        List<ResourceHealthEventEntity> events = eventRepository
-                .findAllByResourceIdAndChangedAtGreaterThanAndChangedAtLessThanOrderByChangedAtAscIdAsc(
-                        resourceId, from, to
-                );
+        List<ResourceHealthEventEntity> events =
+                eventRepository.findAllByResourceIdAndChangedAtGreaterThanAndChangedAtLessThanOrderByChangedAtAscIdAsc(
+                        resourceId, from, to);
         return calculate(from, to, initialStatus, events);
     }
 
     static ResourceAvailability calculate(
-            Instant from,
-            Instant to,
-            ResourceHealthStatus initialStatus,
-            List<ResourceHealthEventEntity> events
-    ) {
+            Instant from, Instant to, ResourceHealthStatus initialStatus, List<ResourceHealthEventEntity> events) {
         EnumMap<ResourceHealthStatus, Duration> durations = new EnumMap<>(ResourceHealthStatus.class);
         for (ResourceHealthStatus status : ResourceHealthStatus.values()) {
             durations.put(status, Duration.ZERO);
@@ -93,14 +86,11 @@ public class ResourceAvailabilityService {
                 knownSeconds,
                 percentage(upSeconds, knownSeconds),
                 percentage(upSeconds + degradedSeconds, knownSeconds),
-                percentage(knownSeconds, periodSeconds)
-        );
+                percentage(knownSeconds, periodSeconds));
     }
 
     private static EnumMap<ResourceHealthStatus, Long> roundedSeconds(
-            EnumMap<ResourceHealthStatus, Duration> durations,
-            long periodSeconds
-    ) {
+            EnumMap<ResourceHealthStatus, Duration> durations, long periodSeconds) {
         EnumMap<ResourceHealthStatus, Long> seconds = new EnumMap<>(ResourceHealthStatus.class);
         long allocatedSeconds = 0;
         for (ResourceHealthStatus status : ResourceHealthStatus.values()) {
@@ -111,9 +101,9 @@ public class ResourceAvailabilityService {
 
         long remainder = periodSeconds - allocatedSeconds;
         List<ResourceHealthStatus> byLargestFraction = Arrays.stream(ResourceHealthStatus.values())
-                .sorted(Comparator.comparingInt(
-                        (ResourceHealthStatus status) -> durations.get(status).getNano()
-                ).reversed())
+                .sorted(Comparator.comparingInt((ResourceHealthStatus status) ->
+                                durations.get(status).getNano())
+                        .reversed())
                 .toList();
         for (int index = 0; index < remainder; index++) {
             seconds.merge(byLargestFraction.get(index), 1L, Long::sum);

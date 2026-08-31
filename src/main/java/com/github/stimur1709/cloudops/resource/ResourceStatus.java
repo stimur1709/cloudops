@@ -4,4 +4,3 @@ public enum ResourceStatus {
     ACTIVE,
     INACTIVE
 }
-

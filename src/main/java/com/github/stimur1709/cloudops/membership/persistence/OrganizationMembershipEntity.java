@@ -1,7 +1,5 @@
 package com.github.stimur1709.cloudops.membership.persistence;
 
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.membership.MembershipRole;
 import com.github.stimur1709.cloudops.organization.persistence.OrganizationEntity;
 import com.github.stimur1709.cloudops.user.persistence.UserEntity;
@@ -17,15 +15,15 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.Instant;
 
 @Entity
 @Table(
         name = "organization_memberships",
-        uniqueConstraints = @UniqueConstraint(
-                name = "organization_memberships_organization_user_key",
-                columnNames = {"organization_id", "user_id"}
-        )
-)
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "organization_memberships_organization_user_key",
+                        columnNames = {"organization_id", "user_id"}))
 public class OrganizationMembershipEntity {
 
     @Id
@@ -56,15 +54,10 @@ public class OrganizationMembershipEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected OrganizationMembershipEntity() {
-    }
+    protected OrganizationMembershipEntity() {}
 
     private OrganizationMembershipEntity(
-            OrganizationEntity organization,
-            UserEntity user,
-            MembershipRole role,
-            Instant createdAt
-    ) {
+            OrganizationEntity organization, UserEntity user, MembershipRole role, Instant createdAt) {
         this.organization = organization;
         this.organizationId = organization.id();
         this.user = user;
@@ -75,11 +68,7 @@ public class OrganizationMembershipEntity {
     }
 
     public static OrganizationMembershipEntity create(
-            OrganizationEntity organization,
-            UserEntity user,
-            MembershipRole role,
-            Instant createdAt
-    ) {
+            OrganizationEntity organization, UserEntity user, MembershipRole role, Instant createdAt) {
         return new OrganizationMembershipEntity(organization, user, role, createdAt);
     }
 
@@ -88,10 +77,27 @@ public class OrganizationMembershipEntity {
         this.updatedAt = updatedAt;
     }
 
-    public Long id() { return id; }
-    public Long organizationId() { return organizationId; }
-    public Long userId() { return userId; }
-    public MembershipRole role() { return role; }
-    public Instant createdAt() { return createdAt; }
-    public Instant updatedAt() { return updatedAt; }
+    public Long id() {
+        return id;
+    }
+
+    public Long organizationId() {
+        return organizationId;
+    }
+
+    public Long userId() {
+        return userId;
+    }
+
+    public MembershipRole role() {
+        return role;
+    }
+
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    public Instant updatedAt() {
+        return updatedAt;
+    }
 }

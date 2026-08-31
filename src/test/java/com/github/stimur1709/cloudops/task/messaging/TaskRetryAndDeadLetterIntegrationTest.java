@@ -7,21 +7,20 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.task.TestTaskTypes;
+import com.github.stimur1709.cloudops.task.execution.RetryableTaskExecutionException;
 import com.github.stimur1709.cloudops.task.execution.TaskExecutionContext;
 import com.github.stimur1709.cloudops.task.execution.TaskExecutionResult;
 import com.github.stimur1709.cloudops.task.execution.TaskHandler;
 import com.github.stimur1709.cloudops.task.execution.TaskHandlerNotFoundException;
 import com.github.stimur1709.cloudops.task.execution.TaskHandlerRegistry;
-import com.github.stimur1709.cloudops.task.execution.RetryableTaskExecutionException;
 import com.github.stimur1709.cloudops.task.outbox.TaskExecutionCommandPublisher;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
@@ -96,14 +95,14 @@ class TaskRetryAndDeadLetterIntegrationTest {
         publish(taskId);
 
         awaitStatus(taskId, "COMPLETED");
+        assertThat(jdbcTemplate.queryForObject("SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId))
+                .isEqualTo(2);
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId
-        )).isEqualTo(2);
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT last_attempt_at IS NOT NULL FROM tasks WHERE id = ?", Boolean.class, taskId
-        )).isTrue();
+                        "SELECT last_attempt_at IS NOT NULL FROM tasks WHERE id = ?", Boolean.class, taskId))
+                .isTrue();
         verify(handler, times(2)).execute(org.mockito.ArgumentMatchers.any(TaskExecutionContext.class));
-        assertThat(rabbitTemplate.receive(messagingProperties.deadLetterQueue())).isNull();
+        assertThat(rabbitTemplate.receive(messagingProperties.deadLetterQueue()))
+                .isNull();
     }
 
     @Test
@@ -117,15 +116,12 @@ class TaskRetryAndDeadLetterIntegrationTest {
         commandPublisher.publish(messageId, new TaskExecutionCommand(taskId));
 
         awaitStatus(taskId, "FAILED");
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT error_code FROM tasks WHERE id = ?", String.class, taskId
-        )).isEqualTo("RETRY_EXHAUSTED");
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT error_message FROM tasks WHERE id = ?", String.class, taskId
-        )).isEqualTo("Task execution failed after retry attempts");
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId
-        )).isEqualTo(3);
+        assertThat(jdbcTemplate.queryForObject("SELECT error_code FROM tasks WHERE id = ?", String.class, taskId))
+                .isEqualTo("RETRY_EXHAUSTED");
+        assertThat(jdbcTemplate.queryForObject("SELECT error_message FROM tasks WHERE id = ?", String.class, taskId))
+                .isEqualTo("Task execution failed after retry attempts");
+        assertThat(jdbcTemplate.queryForObject("SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId))
+                .isEqualTo(3);
 
         Message deadLetter = awaitDeadLetter();
         assertThat(deadLetter.getMessageProperties().getMessageId()).isEqualTo(messageId.toString());
@@ -143,9 +139,8 @@ class TaskRetryAndDeadLetterIntegrationTest {
         publish(taskId);
 
         awaitStatus(taskId, "FAILED");
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId
-        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId))
+                .isEqualTo(1);
         verify(handler).execute(org.mockito.ArgumentMatchers.any(TaskExecutionContext.class));
         assertThat(awaitDeadLetter()).isNotNull();
     }
@@ -153,18 +148,15 @@ class TaskRetryAndDeadLetterIntegrationTest {
     @Test
     void missingHandlerFailsWithoutAttemptAndIsDeadLettered() throws Exception {
         long taskId = insertPendingTask();
-        when(handlerRegistry.get(TestTaskTypes.TYPE))
-                .thenThrow(new TaskHandlerNotFoundException(TestTaskTypes.TYPE));
+        when(handlerRegistry.get(TestTaskTypes.TYPE)).thenThrow(new TaskHandlerNotFoundException(TestTaskTypes.TYPE));
 
         publish(taskId);
 
         awaitStatus(taskId, "FAILED");
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT error_code FROM tasks WHERE id = ?", String.class, taskId
-        )).isEqualTo("HANDLER_NOT_FOUND");
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId
-        )).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT error_code FROM tasks WHERE id = ?", String.class, taskId))
+                .isEqualTo("HANDLER_NOT_FOUND");
+        assertThat(jdbcTemplate.queryForObject("SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId))
+                .isZero();
         assertThat(awaitDeadLetter()).isNotNull();
     }
 
@@ -175,9 +167,9 @@ class TaskRetryAndDeadLetterIntegrationTest {
         properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
         properties.setMessageId("malformed-message");
         rabbitTemplate.send(
-                messagingProperties.exchange(), messagingProperties.routingKey(),
-                new Message(invalidPayload.getBytes(StandardCharsets.UTF_8), properties)
-        );
+                messagingProperties.exchange(),
+                messagingProperties.routingKey(),
+                new Message(invalidPayload.getBytes(StandardCharsets.UTF_8), properties));
 
         Message deadLetter = awaitDeadLetter();
         assertThat(deadLetter.getBody()).isEqualTo(invalidPayload.getBytes(StandardCharsets.UTF_8));
@@ -199,8 +191,10 @@ class TaskRetryAndDeadLetterIntegrationTest {
 
         long taskId = insertTerminalTask();
         publish(taskId);
-        await().during(Duration.ofMillis(200)).atMost(Duration.ofSeconds(2))
-                .untilAsserted(() -> assertThat(rabbitTemplate.receive(messagingProperties.deadLetterQueue())).isNull());
+        await().during(Duration.ofMillis(200))
+                .atMost(Duration.ofSeconds(2))
+                .untilAsserted(() -> assertThat(rabbitTemplate.receive(messagingProperties.deadLetterQueue()))
+                        .isNull());
         verify(handlerRegistry, org.mockito.Mockito.never()).get(org.mockito.ArgumentMatchers.any());
     }
 
@@ -220,13 +214,15 @@ class TaskRetryAndDeadLetterIntegrationTest {
     }
 
     private void publish(long taskId) throws Exception {
-        assertThat(commandPublisher.publish(UUID.randomUUID(), new TaskExecutionCommand(taskId))).isTrue();
+        assertThat(commandPublisher.publish(UUID.randomUUID(), new TaskExecutionCommand(taskId)))
+                .isTrue();
     }
 
     private void awaitStatus(long taskId, String expectedStatus) {
-        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(jdbcTemplate.queryForObject(
-                "SELECT status FROM tasks WHERE id = ?", String.class, taskId
-        )).isEqualTo(expectedStatus));
+        await().atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertThat(jdbcTemplate.queryForObject(
+                                "SELECT status FROM tasks WHERE id = ?", String.class, taskId))
+                        .isEqualTo(expectedStatus));
     }
 
     private Message awaitDeadLetter() {

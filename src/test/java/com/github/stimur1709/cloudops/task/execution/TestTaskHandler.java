@@ -1,9 +1,8 @@
 package com.github.stimur1709.cloudops.task.execution;
 
-import java.util.Map;
-
 import com.github.stimur1709.cloudops.task.TaskType;
 import com.github.stimur1709.cloudops.task.TestTaskTypes;
+import java.util.Map;
 import org.springframework.stereotype.Component;
 
 @Component

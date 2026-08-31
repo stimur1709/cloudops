@@ -6,12 +6,11 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.github.stimur1709.cloudops.TestAuthentication;
+import com.github.stimur1709.cloudops.TestcontainersConfiguration;
+import com.jayway.jsonpath.JsonPath;
 import java.sql.Timestamp;
 import java.time.Instant;
-
-import com.github.stimur1709.cloudops.TestcontainersConfiguration;
-import com.github.stimur1709.cloudops.TestAuthentication;
-import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,7 +87,9 @@ class OrganizationApiIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/organizations/1"))
                 .andExpect(jsonPath("$.name").value("Platform"))
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         long id = ((Number) JsonPath.read(created, "$.id")).longValue();
 
         mockMvc.perform(get("/api/organizations/{id}", id))
@@ -100,7 +101,9 @@ class OrganizationApiIntegrationTest {
                         .content("{\"name\":\"Core Platform\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Core Platform"))
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         assertThat(Instant.parse(JsonPath.read(updated, "$.updatedAt"))).isNotNull();
     }
 
@@ -174,7 +177,9 @@ class OrganizationApiIntegrationTest {
         String resource = createResource("router", first)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.organizationId").value(first))
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         long resourceId = ((Number) JsonPath.read(resource, "$.id")).longValue();
 
         mockMvc.perform(post("/api/resources/search")
@@ -248,7 +253,8 @@ class OrganizationApiIntegrationTest {
 
     private ResultActions search(String body) throws Exception {
         return mockMvc.perform(post("/api/organizations/search")
-                .contentType(MediaType.APPLICATION_JSON).content(body));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
     }
 
     private String filter(String field, String operation, String value) {
@@ -285,9 +291,7 @@ class OrganizationApiIntegrationTest {
                 VALUES (?, 'SERVER', 'ACTIVE', ?, '{"host":"server.internal"}', now(), now()) RETURNING id
                 """, Long.class, name, organizationId);
         jdbcTemplate.update(
-                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')",
-                resourceId
-        );
+                "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')", resourceId);
         return resourceId;
     }
 }

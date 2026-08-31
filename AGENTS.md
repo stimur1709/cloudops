@@ -1,86 +1,61 @@
-# Инструкции для агента CloudOps
+# CloudOps Agent Guidelines
 
-## О проекте
+## Project
 
-- CloudOps — учебный backend-проект для портфолио на Java 25 и Spring Boot.
-- Работай только над одной задачей GitHub за раз и не выходи за её рамки.
-- Используй простой модульный монолит. Не добавляй распределённую инфраструктуру, если она явно не требуется в задаче.
+- Work on one GitHub issue at a time and stay within its scope.
+- Keep CloudOps a simple modular monolith on Java 25 and Spring Boot.
+- Do not add distributed infrastructure unless the issue requires it.
 
-## Архитектура
+## Architecture
 
-- Организуй код по функциональным модулям, а не по общим техническим слоям.
-- Каждую предметную область оформляй отдельным функциональным пакетом, например `resource`, `deployment` или `monitoring`.
-- Для простого CRUD-модуля используй пакеты `api`, `application` и `persistence`; не добавляй промежуточный `infrastructure` только ради дополнительного слоя вложенности.
-- Когда функциональный модуль перестаёт быть простым CRUD и в нём появляются несколько самостоятельных обязанностей, группируй классы по назначению внутри этого модуля. Например, используй `task.execution` для механизма выполнения и `task.httpcheck` для конкретного типа Task, а не складывай все классы в `task.application`.
-- Оставляй в `application` основные use-case сервисы модуля. Модульную Spring-конфигурацию размещай в `<module>.config`, а реализацию конкретной возможности — в отдельном пакете с предметным именем.
-- Не создавай пакет ради одного случайного класса: выделяй подпакет, когда у группы есть общая ответственность и она отделима от остальных частей модуля.
-- Общий для нескольких модулей код размещай в `common`; не переноси туда код, который относится только к одной предметной области.
-- Общие REST-ошибки размещай в `common.api.error`, а общую конфигурацию приложения — в `common.config`.
-- Не используй JPA-сущности напрямую в API. Создавай отдельные DTO для запросов и ответов.
-- В простых CRUD-модулях прикладной сервис может напрямую использовать Spring Data repository.
-- Не создавай отдельные доменные модели, repository ports и persistence adapters, если в модуле нет самостоятельной доменной логики или требования заменить способ хранения данных.
-- Если в модуле появляется самостоятельная доменная логика, добавляй `domain` и усложняй архитектуру только в объёме, необходимом этой логике.
-- Используй внедрение зависимостей через конструктор. Не используй внедрение в поля.
-- Не добавляй лишние абстракции и зависимости.
+- Organize code by functional module and group larger modules by responsibility.
+- Add layers, packages, domain models, ports, and abstractions only when they solve a practical need.
+- Keep shared code in `common`; do not move feature-specific behavior there.
+- Do not expose JPA entities through the API.
+- Use constructor injection.
 
-## Соглашения Java
+## Java
 
-- Используй Java 25 для сборки и запуска проекта.
-- По возможности используй `record` для неизменяемых DTO.
-- Отдавай предпочтение понятным именам и небольшим методам, а не комментариям, повторяющим код.
-- Не используй `Optional` в полях сущностей и моделях API.
-- Не перехватывай общие исключения, если они не преобразуются на границе приложения.
+- Prefer clear names, small methods, and immutable `record` DTOs.
+- Use `Instant` for timestamps.
+- Do not use `Optional` in entity or API fields.
+- Do not catch broad exceptions unless they are translated at an application boundary.
 
-## База данных
+## Database and SQL
 
-- Используй PostgreSQL как единственную базу данных приложения.
-- Все изменения схемы выполняй через Liquibase. Не используй Hibernate для создания или обновления схемы.
-- Настрой Hibernate на проверку схемы.
-- Для идентификаторов сущностей используй генерируемые базой столбцы `BIGINT IDENTITY`, если в задаче не указано иное.
-- Храни дату и время с часовым поясом, а в Java используй `Instant`.
-- Не добавляй H2 в тестовые зависимости.
+- Use PostgreSQL only, with schema changes managed by Liquibase and Hibernate set to validate.
+- Use database-generated `BIGINT IDENTITY` identifiers unless an issue says otherwise.
+- Keep structural integrity and stable invariants in DB constraints; validate changeable feature rules in Java.
+- Do not encode extensible enum/type lists in DB constraints when normal extension would require a migration.
+- Keep one source of truth for finite value sets and business rules. If duplication is required for performance, explain it and test it.
+- Format embedded and Liquibase SQL with UPPER CASE keywords and `lower_snake_case` identifiers.
 
-## API
+## API and errors
 
-- Используй `/api` как базовый путь.
-- Проверяй DTO запросов с помощью Bean Validation.
-- Проверки связанных полей одного DTO выполняй class-level Bean Validation constraint и отдельным
-  `ConstraintValidator`; привязывай violation к конкретному полю через `addPropertyNode`. Не размещай
-  ручную валидацию параметров API в application-сервисе.
-- Используй единый формат ошибок во всех endpoint.
-- В ошибке валидации поля указывай имя поля в `field` и понятное пользователю сообщение в `message`.
-- Не возвращай клиенту стектрейсы, ошибки SQL и внутренние сообщения исключений.
-- Для динамической фильтрации и сортировки явно перечисляй доступные клиенту поля и допустимые для каждого поля операции; не передавай имена полей из запроса напрямую в JPA Criteria API.
-- Преобразуй значения динамических фильтров в тип поля до построения запроса и возвращай контролируемую ошибку `400`, если поле, операция или значение недопустимы.
-- Не выноси поиск в общий framework, пока он нужен только одному функциональному модулю.
+- Use `/api` as the base path and Bean Validation at the API boundary.
+- Use class-level constraints with a dedicated `ConstraintValidator` for related request fields, attaching violations to fields.
+- Return the shared API error format without stack traces, SQL errors, or internal exception messages.
+- Keep `common.api.error` limited to common HTTP, API, and framework errors.
+- Handle feature-specific exceptions beside that feature's API; do not teach `GlobalExceptionHandler` feature types.
+- Explicitly allow-list dynamic search fields and operations, and convert values before building JPA criteria.
 
-## Тестирование
+## Testing
 
-- Добавляй тесты для каждого изменённого поведения.
-- Используй JUnit 5 и средства тестирования Spring Boot.
-- Для интеграционных тестов используй PostgreSQL Testcontainers. Не заменяй PostgreSQL на H2 или замоканные репозитории.
-- Для API предпочитай интеграционные тесты, а для доменной логики — небольшие модульные тесты.
-- Тесты должны быть независимыми и воспроизводимыми.
-- Если требование относится к количеству или отсутствию SQL-запросов, проверяй реально выполненные statements, а не только форму API-ответа. Не используй `Page`, когда по сценарию запрещён дополнительный count-запрос.
+- Test every changed behavior with JUnit 5 and Spring Boot test support.
+- Use PostgreSQL Testcontainers for integration tests; do not add H2 or replace integration persistence with mocks.
+- Prefer API integration tests and focused unit tests for domain logic.
+- When an issue specifies performance, SQL, transaction, or concurrency behavior, assert the actual behavior in an integration test.
 
-## Проверка изменений
+## Formatting and verification
 
-- Используй Maven Wrapper, добавленный в репозиторий.
-- На Windows перед завершением задачи запускай `./mvnw.cmd verify`.
-- На macOS и Linux запускай `./mvnw verify`.
-- Если проект ещё не создан и Maven Wrapper отсутствует, сообщи, что проверить сборку пока невозможно. Не подменяй команду сборки недокументированной командой.
-- Обновляй README, когда меняются настройка проекта или команды для разработчика.
+- Format Java through Spotless with `./mvnw spotless:apply`; do not maintain an individual manual style.
+- Run `./mvnw.cmd verify` on Windows or `./mvnw verify` on macOS and Linux before completion.
+- For version-sensitive third-party behavior, check current official documentation.
+- Update README when developer setup or commands change.
 
-## Документация
+## Git
 
-- При работе со Spring Boot и сторонними библиотеками используй Context7 для проверки актуальной документации и примеров.
-- Обращайся к Context7, если решение зависит от версии библиотеки или незнакомого API.
-- Не используй Context7 для вопросов, на которые можно достоверно ответить по коду проекта.
-- Если Context7 недоступен, используй официальную документацию и сообщи об этом.
-
-## Работа с Git
-
-- Для каждой задачи создавай отдельную ветку от основной ветки разработки.
-- Используй Conventional Commits: `type(scope): краткое описание`.
-- Не смешивай изменения по задаче с несвязанным рефакторингом или уборкой кода.
-- Не добавляй в репозиторий секреты, локальные настройки IDE, результаты сборки и файлы `.env`.
+- Create a separate branch from the main development branch for each issue.
+- Use Conventional Commits: `type(scope): short description`.
+- Do not mix unrelated refactoring or cleanup into an issue.
+- Never commit secrets, `.env` files, IDE-local settings, or build outputs.

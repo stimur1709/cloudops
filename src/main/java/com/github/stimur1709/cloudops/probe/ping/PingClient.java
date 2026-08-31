@@ -1,11 +1,10 @@
 package com.github.stimur1709.cloudops.probe.ping;
 
+import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
-
-import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -31,7 +30,8 @@ public class PingClient {
         long startedAt = System.nanoTime();
         try {
             boolean reachable = reachability.isReachable(host, timeoutMs);
-            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs =
+                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             if (reachable) {
                 return PingOutcome.completed(new PingResult(host, responseTimeMs));
             }

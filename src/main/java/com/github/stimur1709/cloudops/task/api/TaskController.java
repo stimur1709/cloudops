@@ -30,12 +30,8 @@ public class TaskController {
 
     @PostMapping("/search")
     public SearchResponse<TaskResponse> search(
-            @Valid @RequestBody SearchRequest request,
-            Authentication authentication
-    ) {
+            @Valid @RequestBody SearchRequest request, Authentication authentication) {
         return SearchResponse.from(
-                taskService.search(request.toQuery(), CurrentUser.id(authentication)),
-                TaskResponse::from
-        );
+                taskService.search(request.toQuery(), CurrentUser.id(authentication)), TaskResponse::from);
     }
 }

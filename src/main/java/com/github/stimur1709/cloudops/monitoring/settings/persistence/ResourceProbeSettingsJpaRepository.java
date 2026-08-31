@@ -1,9 +1,8 @@
 package com.github.stimur1709.cloudops.monitoring.settings.persistence;
 
+import com.github.stimur1709.cloudops.probe.ProbeType;
 import java.util.List;
 import java.util.Optional;
-
-import com.github.stimur1709.cloudops.probe.ProbeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ResourceProbeSettingsJpaRepository extends JpaRepository<ResourceProbeSettingsEntity, Long> {

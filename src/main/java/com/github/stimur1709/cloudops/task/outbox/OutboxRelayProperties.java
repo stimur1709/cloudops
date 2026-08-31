@@ -1,9 +1,8 @@
 package com.github.stimur1709.cloudops.task.outbox;
 
-import java.time.Duration;
-
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -12,6 +11,4 @@ import org.springframework.validation.annotation.Validated;
 public record OutboxRelayProperties(
         boolean enabled,
         @NotNull Duration pollInterval,
-        @Positive int batchSize
-) {
-}
+        @Positive int batchSize) {}

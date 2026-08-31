@@ -4,13 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.util.List;
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.monitoring.execution.MonitorClaimService;
 import com.github.stimur1709.cloudops.monitoring.execution.MonitorExecutionPersistenceService;
 import com.github.stimur1709.cloudops.monitoring.retention.MonitoringRetentionService;
 import com.jayway.jsonpath.JsonPath;
+import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,11 +28,21 @@ import org.springframework.web.context.WebApplicationContext;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class MonitorApiIntegrationTest {
-    @Autowired private WebApplicationContext applicationContext;
-    @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private MonitorClaimService claimService;
-    @Autowired private MonitorExecutionPersistenceService executionPersistenceService;
-    @Autowired private MonitoringRetentionService retentionService;
+    @Autowired
+    private WebApplicationContext applicationContext;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private MonitorClaimService claimService;
+
+    @Autowired
+    private MonitorExecutionPersistenceService executionPersistenceService;
+
+    @Autowired
+    private MonitoringRetentionService retentionService;
+
     private MockMvc mockMvc;
     private long organizationId;
 
@@ -65,13 +79,16 @@ class MonitorApiIntegrationTest {
         updateResource(resourceId, "OTHER", "{}");
         assertThat(types(resourceId)).hasSize(4);
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM monitors WHERE resource_id = ? AND compatible", Integer.class, resourceId))
+                        "SELECT count(*) FROM monitors WHERE resource_id = ? AND compatible",
+                        Integer.class,
+                        resourceId))
                 .isZero();
         long monitorId = jdbcTemplate.queryForObject(
                 "SELECT id FROM monitors WHERE resource_id = ? ORDER BY id LIMIT 1", Long.class, resourceId);
         assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNull();
         mockMvc.perform(post("/api/resources/{id}/monitors", resourceId)
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
                 .andExpect(status().isMethodNotAllowed());
     }
 
@@ -81,7 +98,8 @@ class MonitorApiIntegrationTest {
         mockMvc.perform(get("/api/resources/{id}/monitoring-settings", resourceId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].source").value("APPLICATION"))
-                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.intervalSeconds").value(30));
+                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.intervalSeconds")
+                        .value(30));
 
         putOrganization("HTTP_CHECK", settings(false, 41, 4, 5, "HISTORY", 21, 901))
                 .andExpect(status().isOk());
@@ -114,9 +132,10 @@ class MonitorApiIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("intervalSeconds"));
 
-        jdbcTemplate.update("UPDATE organization_memberships SET role = 'MEMBER' WHERE organization_id = ?",
-                organizationId);
-        mockMvc.perform(get("/api/resources/{id}/monitoring-settings", resourceId)).andExpect(status().isOk());
+        jdbcTemplate.update(
+                "UPDATE organization_memberships SET role = 'MEMBER' WHERE organization_id = ?", organizationId);
+        mockMvc.perform(get("/api/resources/{id}/monitoring-settings", resourceId))
+                .andExpect(status().isOk());
         putResource(resourceId, "HTTP_CHECK", settings(true, 30, 3, 2, "LATEST_ONLY", null, 500))
                 .andExpect(status().isForbidden());
 
@@ -136,15 +155,58 @@ class MonitorApiIntegrationTest {
         long monitorId = jdbcTemplate.queryForObject(
                 "SELECT id FROM monitors WHERE resource_id = ? AND type = 'PING'", Long.class, resourceId);
         jdbcTemplate.update("UPDATE monitors SET next_run_at = now() - interval '1 second'");
-        assertThat(claimService.claimDue()).doesNotContain(monitorId);
+        assertThat(claimService.claimDue()).contains(monitorId);
+        assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNull();
 
         putResource(resourceId, "PING", settings(true, 30, 3, 2, "LATEST_ONLY", null, 500))
                 .andExpect(status().isOk());
         jdbcTemplate.update("UPDATE monitors SET next_run_at = now() - interval '1 second' WHERE id = ?", monitorId);
         assertThat(claimService.claimDue()).contains(monitorId);
+        assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNotNull();
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM monitors WHERE resource_id = ? AND type = 'PING'", Integer.class, resourceId))
+                        "SELECT count(*) FROM monitors WHERE resource_id = ? AND type = 'PING'",
+                        Integer.class,
+                        resourceId))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void schedulesNextRunFromCurrentEffectiveIntervalAtEverySettingsLevel() throws Exception {
+        long resourceId = createService("https://example.com");
+        long monitorId = jdbcTemplate.queryForObject(
+                "SELECT id FROM monitors WHERE resource_id = ? AND type = 'HTTP_CHECK'", Long.class, resourceId);
+
+        assertNextRunUsesInterval(monitorId, 30);
+
+        putOrganization("HTTP_CHECK", settings(true, 41, 3, 2, "LATEST_ONLY", null, 500))
+                .andExpect(status().isOk());
+        assertNextRunUsesInterval(monitorId, 41);
+
+        putResource(resourceId, "HTTP_CHECK", settings(true, 52, 3, 2, "LATEST_ONLY", null, 500))
+                .andExpect(status().isOk());
+        assertNextRunUsesInterval(monitorId, 52);
+    }
+
+    @Test
+    void concurrentSchedulerClaimsReturnDueMonitorOnlyOnce() throws Exception {
+        long resourceId = createService("https://example.com");
+        long monitorId = jdbcTemplate.queryForObject(
+                "SELECT id FROM monitors WHERE resource_id = ? AND type = 'HTTP_CHECK'", Long.class, resourceId);
+        jdbcTemplate.update("UPDATE monitors SET next_run_at = now() + interval '1 hour'");
+        jdbcTemplate.update("UPDATE monitors SET next_run_at = now() - interval '1 second' WHERE id = ?", monitorId);
+
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Future<List<Long>> first = executor.submit(() -> claimAfter(start));
+            Future<List<Long>> second = executor.submit(() -> claimAfter(start));
+            start.countDown();
+
+            long claimCount = List.of(first.get(), second.get()).stream()
+                    .flatMap(List::stream)
+                    .filter(id -> id == monitorId)
+                    .count();
+            assertThat(claimCount).isEqualTo(1);
+        }
     }
 
     @Test
@@ -156,11 +218,37 @@ class MonitorApiIntegrationTest {
                 "SELECT id FROM monitors WHERE resource_id = ? AND type = 'HTTP_CHECK'", Long.class, resourceId);
         long expiredId = insertResult(monitorId, "now() - interval '11 days'");
         long retainedId = insertResult(monitorId, "now() - interval '9 days'");
+        long latestOnlyMonitorId = jdbcTemplate.queryForObject(
+                "SELECT id FROM monitors WHERE resource_id = ? AND type = 'PING'", Long.class, resourceId);
+        long latestOnlyResultId = insertResult(latestOnlyMonitorId, "now() - interval '20 days'");
 
         assertThat(retentionService.deleteExpiredBatch()).isEqualTo(1);
-        assertThat(jdbcTemplate.queryForList(
-                "SELECT id FROM monitoring_results ORDER BY id", Long.class)).containsExactly(retainedId);
+        assertThat(jdbcTemplate.queryForList("SELECT id FROM monitoring_results ORDER BY id", Long.class))
+                .containsExactly(retainedId, latestOnlyResultId);
         assertThat(expiredId).isNotEqualTo(retainedId);
+    }
+
+    @Test
+    void databaseKeepsStableSettingsRangesWithoutExtensibleTypeLists() throws Exception {
+        long resourceId = createService("https://example.com");
+        putResource(resourceId, "HTTP_CHECK", settings(true, 30, 3, 2, "HISTORY", 10, 500))
+                .andExpect(status().isOk());
+
+        List<String> constraints = jdbcTemplate.queryForList(
+                "SELECT conname FROM pg_constraint WHERE connamespace = 'public'::regnamespace", String.class);
+        assertThat(constraints)
+                .doesNotContain(
+                        "resources_type_check",
+                        "tasks_type_check",
+                        "monitors_type_check",
+                        "organization_probe_settings_probe_type_check",
+                        "resource_probe_settings_probe_type_check",
+                        "credentials_type_check",
+                        "resource_credentials_purpose_check");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbcTemplate.update(
+                        "UPDATE resource_probe_settings SET interval_seconds = 0 WHERE resource_id = ?", resourceId))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     @Test
@@ -169,23 +257,37 @@ class MonitorApiIntegrationTest {
                 SELECT column_name FROM information_schema.columns
                 WHERE table_schema = 'public' AND table_name = 'monitors'
                 """, String.class);
-        assertThat(columns).doesNotContain("enabled", "interval_seconds", "failure_threshold",
-                "recovery_threshold", "storage_mode", "retention_days");
+        assertThat(columns)
+                .doesNotContain(
+                        "enabled",
+                        "interval_seconds",
+                        "failure_threshold",
+                        "recovery_threshold",
+                        "storage_mode",
+                        "retention_days");
     }
 
     private long createService(String url) throws Exception {
-        String response = mockMvc.perform(post("/api/resources").contentType(MediaType.APPLICATION_JSON).content("""
+        String response = mockMvc.perform(post("/api/resources")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
                 {"name":"service-%d","type":"SERVICE","status":"ACTIVE","organizationId":%d,
                  "config":{"url":"%s"}}
                 """.formatted(System.nanoTime(), organizationId, url)))
-                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         return ((Number) JsonPath.read(response, "$.id")).longValue();
     }
 
     private void updateResource(long resourceId, String type, String config) throws Exception {
-        mockMvc.perform(put("/api/resources/{id}", resourceId).contentType(MediaType.APPLICATION_JSON).content("""
+        mockMvc.perform(put("/api/resources/{id}", resourceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
                 {"name":"updated","type":"%s","status":"ACTIVE","organizationId":%d,"config":%s}
-                """.formatted(type, organizationId, config))).andExpect(status().isOk());
+                """.formatted(type, organizationId, config)))
+                .andExpect(status().isOk());
     }
 
     private List<String> types(long resourceId) {
@@ -200,43 +302,90 @@ class MonitorApiIntegrationTest {
                 """.formatted(checkedAtExpression), Long.class, monitorId);
     }
 
-    private org.springframework.test.web.servlet.ResultActions putOrganization(String type, String body) throws Exception {
+    private void assertNextRunUsesInterval(long monitorId, int intervalSeconds) {
+        jdbcTemplate.update("UPDATE monitors SET next_run_at = now() - interval '1 second' WHERE id = ?", monitorId);
+        Instant before = Instant.now();
+        assertThat(claimService.claimDue()).contains(monitorId);
+        Instant nextRunAt =
+                jdbcTemplate.queryForObject("SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId);
+        assertThat(nextRunAt)
+                .isBetween(before.plusSeconds(intervalSeconds), Instant.now().plusSeconds(intervalSeconds + 2));
+    }
+
+    private List<Long> claimAfter(CountDownLatch start) throws InterruptedException {
+        start.await();
+        return claimService.claimDue();
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putOrganization(String type, String body)
+            throws Exception {
         return mockMvc.perform(put("/api/organizations/{id}/monitoring-settings/{type}", organizationId, type)
-                .contentType(MediaType.APPLICATION_JSON).content(body));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
     }
 
     private org.springframework.test.web.servlet.ResultActions putResource(long resourceId, String type, String body)
             throws Exception {
         return mockMvc.perform(put("/api/resources/{id}/monitoring-settings/{type}", resourceId, type)
-                .contentType(MediaType.APPLICATION_JSON).content(body));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
     }
 
-    private String settings(boolean enabled, int interval, int failure, int recovery,
-            String storage, Integer retention, Integer timeout) {
+    private String settings(
+            boolean enabled,
+            int interval,
+            int failure,
+            int recovery,
+            String storage,
+            Integer retention,
+            Integer timeout) {
         return """
                 {"enabled":%s,"intervalSeconds":%d,"failureThreshold":%d,"recoveryThreshold":%d,
                  "storageMode":"%s","retentionDays":%s,"timeoutMs":%s}
-                """.formatted(enabled, interval, failure, recovery, storage,
-                retention == null ? "null" : retention, timeout == null ? "null" : timeout);
+                """.formatted(
+                        enabled,
+                        interval,
+                        failure,
+                        recovery,
+                        storage,
+                        retention == null ? "null" : retention,
+                        timeout == null ? "null" : timeout);
     }
 
-    private void assertHttpSettings(long resourceId, String source, boolean enabled, int interval,
-            int failure, int recovery, String storage, Integer retention, int timeout, boolean override)
+    private void assertHttpSettings(
+            long resourceId,
+            String source,
+            boolean enabled,
+            int interval,
+            int failure,
+            int recovery,
+            String storage,
+            Integer retention,
+            int timeout,
+            boolean override)
             throws Exception {
         var result = mockMvc.perform(get("/api/resources/{id}/monitoring-settings", resourceId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].source").value(source))
-                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.enabled").value(enabled))
-                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.intervalSeconds").value(interval))
-                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.failureThreshold").value(failure))
-                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.recoveryThreshold").value(recovery))
-                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.storageMode").value(storage))
-                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.timeoutMs").value(timeout))
-                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].resourceOverride").value(override));
-        if (retention == null) result.andExpect(jsonPath(
-                "$[?(@.probeType == 'HTTP_CHECK')].effective.retentionDays").value(
-                        org.hamcrest.Matchers.contains((Object) null)));
-        else result.andExpect(jsonPath(
-                "$[?(@.probeType == 'HTTP_CHECK')].effective.retentionDays").value(retention));
+                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.enabled")
+                        .value(enabled))
+                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.intervalSeconds")
+                        .value(interval))
+                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.failureThreshold")
+                        .value(failure))
+                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.recoveryThreshold")
+                        .value(recovery))
+                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.storageMode")
+                        .value(storage))
+                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.timeoutMs")
+                        .value(timeout))
+                .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].resourceOverride")
+                        .value(override));
+        if (retention == null)
+            result.andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.retentionDays")
+                    .value(org.hamcrest.Matchers.contains((Object) null)));
+        else
+            result.andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].effective.retentionDays")
+                    .value(retention));
     }
 }

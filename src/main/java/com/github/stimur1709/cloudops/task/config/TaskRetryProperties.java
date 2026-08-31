@@ -1,11 +1,10 @@
 package com.github.stimur1709.cloudops.task.config;
 
-import java.time.Duration;
-
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -16,10 +15,8 @@ public record TaskRetryProperties(
         @Min(1) int maxAttempts,
         @NotNull Duration initialInterval,
         @DecimalMin("1.0") double multiplier,
-        @NotNull Duration maxInterval
-) {
-    @AssertTrue(message = "retry intervals must be positive and max interval must not be less than initial interval")
-    public boolean isBackoffValid() {
+        @NotNull Duration maxInterval) {
+    @AssertTrue(message = "retry intervals must be positive and max interval must not be less than initial interval") public boolean isBackoffValid() {
         return initialInterval != null
                 && maxInterval != null
                 && initialInterval.isPositive()

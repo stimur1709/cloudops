@@ -1,8 +1,5 @@
 package com.github.stimur1709.cloudops.task.outbox.persistence;
 
-import java.time.Instant;
-import java.util.UUID;
-
 import com.github.stimur1709.cloudops.task.outbox.OutboxAggregateType;
 import com.github.stimur1709.cloudops.task.outbox.OutboxMessageType;
 import jakarta.persistence.Column;
@@ -11,6 +8,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import tools.jackson.databind.JsonNode;
@@ -46,8 +45,7 @@ public class OutboxMessageEntity {
     @Column(name = "deduplication_key", nullable = false, length = 150)
     private String deduplicationKey;
 
-    protected OutboxMessageEntity() {
-    }
+    protected OutboxMessageEntity() {}
 
     private OutboxMessageEntity(UUID id, long taskId, JsonNode payload, Instant createdAt, String deduplicationKey) {
         this.id = id;
@@ -60,12 +58,9 @@ public class OutboxMessageEntity {
     }
 
     public static OutboxMessageEntity taskExecutionRequested(
-            long taskId, int recoveryCount, JsonNode payload, Instant createdAt
-    ) {
+            long taskId, int recoveryCount, JsonNode payload, Instant createdAt) {
         return new OutboxMessageEntity(
-                UUID.randomUUID(), taskId, payload, createdAt,
-                "task:%d:execution:%d".formatted(taskId, recoveryCount)
-        );
+                UUID.randomUUID(), taskId, payload, createdAt, "task:%d:execution:%d".formatted(taskId, recoveryCount));
     }
 
     public void markPublished(Instant now) {
@@ -75,12 +70,35 @@ public class OutboxMessageEntity {
         publishedAt = now;
     }
 
-    public UUID id() { return id; }
-    public OutboxMessageType messageType() { return messageType; }
-    public OutboxAggregateType aggregateType() { return aggregateType; }
-    public Long aggregateId() { return aggregateId; }
-    public JsonNode payload() { return payload; }
-    public Instant createdAt() { return createdAt; }
-    public Instant publishedAt() { return publishedAt; }
-    public String deduplicationKey() { return deduplicationKey; }
+    public UUID id() {
+        return id;
+    }
+
+    public OutboxMessageType messageType() {
+        return messageType;
+    }
+
+    public OutboxAggregateType aggregateType() {
+        return aggregateType;
+    }
+
+    public Long aggregateId() {
+        return aggregateId;
+    }
+
+    public JsonNode payload() {
+        return payload;
+    }
+
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    public Instant publishedAt() {
+        return publishedAt;
+    }
+
+    public String deduplicationKey() {
+        return deduplicationKey;
+    }
 }

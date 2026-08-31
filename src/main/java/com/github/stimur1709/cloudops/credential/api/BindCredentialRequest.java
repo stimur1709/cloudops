@@ -4,7 +4,4 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 public record BindCredentialRequest(
-        @NotNull(message = "Credential id is required") @Positive(message = "Credential id must be positive")
-        Long credentialId
-) {
-}
+        @NotNull(message = "Credential id is required") @Positive(message = "Credential id must be positive") Long credentialId) {}

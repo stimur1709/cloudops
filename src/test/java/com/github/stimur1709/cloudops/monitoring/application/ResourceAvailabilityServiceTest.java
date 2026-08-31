@@ -2,12 +2,11 @@ package com.github.stimur1709.cloudops.monitoring.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
+import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventEntity;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-
-import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
-import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventEntity;
 import org.junit.jupiter.api.Test;
 
 class ResourceAvailabilityServiceTest {
@@ -39,10 +38,11 @@ class ResourceAvailabilityServiceTest {
 
     @Test
     void calculatesUpDownUpSequence() {
-        ResourceAvailability result = calculate(ResourceHealthStatus.UP, List.of(
-                event(ResourceHealthStatus.UP, ResourceHealthStatus.DOWN, "2026-08-28T10:20:00Z"),
-                event(ResourceHealthStatus.DOWN, ResourceHealthStatus.UP, "2026-08-28T10:35:00Z")
-        ));
+        ResourceAvailability result = calculate(
+                ResourceHealthStatus.UP,
+                List.of(
+                        event(ResourceHealthStatus.UP, ResourceHealthStatus.DOWN, "2026-08-28T10:20:00Z"),
+                        event(ResourceHealthStatus.DOWN, ResourceHealthStatus.UP, "2026-08-28T10:35:00Z")));
 
         assertThat(result.upSeconds()).isEqualTo(2700);
         assertThat(result.downSeconds()).isEqualTo(900);
@@ -54,11 +54,12 @@ class ResourceAvailabilityServiceTest {
 
     @Test
     void keepsDegradedSeparateAndIncludesItOnlyInAvailability() {
-        ResourceAvailability result = calculate(ResourceHealthStatus.UP, List.of(
-                event(ResourceHealthStatus.UP, ResourceHealthStatus.DEGRADED, "2026-08-28T10:15:00Z"),
-                event(ResourceHealthStatus.DEGRADED, ResourceHealthStatus.DOWN, "2026-08-28T10:30:00Z"),
-                event(ResourceHealthStatus.DOWN, ResourceHealthStatus.UP, "2026-08-28T10:45:00Z")
-        ));
+        ResourceAvailability result = calculate(
+                ResourceHealthStatus.UP,
+                List.of(
+                        event(ResourceHealthStatus.UP, ResourceHealthStatus.DEGRADED, "2026-08-28T10:15:00Z"),
+                        event(ResourceHealthStatus.DEGRADED, ResourceHealthStatus.DOWN, "2026-08-28T10:30:00Z"),
+                        event(ResourceHealthStatus.DOWN, ResourceHealthStatus.UP, "2026-08-28T10:45:00Z")));
 
         assertThat(result.upSeconds()).isEqualTo(1800);
         assertThat(result.degradedSeconds()).isEqualTo(900);
@@ -71,10 +72,11 @@ class ResourceAvailabilityServiceTest {
 
     @Test
     void excludesUnknownTimeBeforeFirstKnownStateFromKnownDenominator() {
-        ResourceAvailability result = calculate(ResourceHealthStatus.UNKNOWN, List.of(
-                event(ResourceHealthStatus.UNKNOWN, ResourceHealthStatus.UP, "2026-08-28T10:10:00Z"),
-                event(ResourceHealthStatus.UP, ResourceHealthStatus.DOWN, "2026-08-28T10:40:00Z")
-        ));
+        ResourceAvailability result = calculate(
+                ResourceHealthStatus.UNKNOWN,
+                List.of(
+                        event(ResourceHealthStatus.UNKNOWN, ResourceHealthStatus.UP, "2026-08-28T10:10:00Z"),
+                        event(ResourceHealthStatus.UP, ResourceHealthStatus.DOWN, "2026-08-28T10:40:00Z")));
 
         assertThat(result.unknownSeconds()).isEqualTo(600);
         assertThat(result.upSeconds()).isEqualTo(1800);
@@ -96,9 +98,7 @@ class ResourceAvailabilityServiceTest {
                 ResourceHealthStatus.UP,
                 List.of(
                         event(ResourceHealthStatus.UP, ResourceHealthStatus.DOWN, "2026-08-28T10:00:00.600Z"),
-                        event(ResourceHealthStatus.DOWN, ResourceHealthStatus.UP, "2026-08-28T10:00:01.200Z")
-                )
-        );
+                        event(ResourceHealthStatus.DOWN, ResourceHealthStatus.UP, "2026-08-28T10:00:01.200Z")));
 
         assertThat(result.periodSeconds()).isEqualTo(2);
         assertThat(result.upSeconds()).isEqualTo(1);
@@ -106,10 +106,7 @@ class ResourceAvailabilityServiceTest {
         assertDurationsCoverPeriod(result);
     }
 
-    private ResourceAvailability calculate(
-            ResourceHealthStatus initialStatus,
-            List<ResourceHealthEventEntity> events
-    ) {
+    private ResourceAvailability calculate(ResourceHealthStatus initialStatus, List<ResourceHealthEventEntity> events) {
         return ResourceAvailabilityService.calculate(FROM, TO, initialStatus, events);
     }
 
@@ -119,8 +116,7 @@ class ResourceAvailabilityServiceTest {
             long degradedSeconds,
             long downSeconds,
             String uptimePercent,
-            String availabilityPercent
-    ) {
+            String availabilityPercent) {
         ResourceAvailability result = calculate(status, List.of());
 
         assertThat(result.upSeconds()).isEqualTo(upSeconds);
@@ -139,11 +135,7 @@ class ResourceAvailabilityServiceTest {
                 .isEqualTo(result.periodSeconds());
     }
 
-    private ResourceHealthEventEntity event(
-            ResourceHealthStatus from,
-            ResourceHealthStatus to,
-            String changedAt
-    ) {
+    private ResourceHealthEventEntity event(ResourceHealthStatus from, ResourceHealthStatus to, String changedAt) {
         return ResourceHealthEventEntity.create(1L, from, to, Instant.parse(changedAt));
     }
 }

@@ -1,11 +1,10 @@
 package com.github.stimur1709.cloudops.task.api;
 
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.TaskType;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
+import java.time.Instant;
 import tools.jackson.databind.JsonNode;
 
 public record TaskResponse(
@@ -23,13 +22,23 @@ public record TaskResponse(
         String errorMessage,
         int attemptCount,
         Instant lastAttemptAt,
-        int recoveryCount
-) {
+        int recoveryCount) {
     public static TaskResponse from(TaskEntity task) {
         return new TaskResponse(
-                task.id(), task.organizationId(), task.resourceId(), task.type(), task.status(), task.createdBy(),
-                task.createdAt(), task.startedAt(), task.completedAt(), task.result(), task.errorCode(),
-                task.errorMessage(), task.attemptCount(), task.lastAttemptAt(), task.recoveryCount()
-        );
+                task.id(),
+                task.organizationId(),
+                task.resourceId(),
+                task.type(),
+                task.status(),
+                task.createdBy(),
+                task.createdAt(),
+                task.startedAt(),
+                task.completedAt(),
+                task.result(),
+                task.errorCode(),
+                task.errorMessage(),
+                task.attemptCount(),
+                task.lastAttemptAt(),
+                task.recoveryCount());
     }
 }

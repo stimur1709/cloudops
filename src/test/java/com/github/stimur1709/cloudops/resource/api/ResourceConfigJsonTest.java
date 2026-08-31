@@ -39,9 +39,7 @@ class ResourceConfigJsonTest {
                 }
                 """, CreateResourceRequest.class);
 
-        assertThat(request.config()).isEqualTo(
-                new ServiceResourceConfig("https://api.example.com", 200)
-        );
+        assertThat(request.config()).isEqualTo(new ServiceResourceConfig("https://api.example.com", 200));
     }
 
     @Test

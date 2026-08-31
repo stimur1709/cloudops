@@ -1,14 +1,13 @@
 package com.github.stimur1709.cloudops.resource.api;
 
-import java.time.Instant;
-
+import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.ResourceType;
-import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
 import com.github.stimur1709.cloudops.resource.application.ResourceDetails;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
+import java.time.Instant;
 
 public record ResourceResponse(
         Long id,
@@ -19,8 +18,7 @@ public record ResourceResponse(
         Long organizationId,
         ResourceConfig config,
         Instant createdAt,
-        Instant updatedAt
-) {
+        Instant updatedAt) {
 
     static ResourceResponse from(ResourceDetails details, ResourceConfigMapper configMapper) {
         ResourceEntity resource = details.resource();
@@ -33,7 +31,6 @@ public record ResourceResponse(
                 resource.organizationId(),
                 configMapper.fromJson(resource.type(), resource.config()),
                 resource.createdAt(),
-                resource.updatedAt()
-        );
+                resource.updatedAt());
     }
 }

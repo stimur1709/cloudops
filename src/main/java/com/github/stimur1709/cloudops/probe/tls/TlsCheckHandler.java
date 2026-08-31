@@ -1,8 +1,5 @@
 package com.github.stimur1709.cloudops.probe.tls;
 
-import java.net.URI;
-import java.util.Locale;
-
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionContext;
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
@@ -12,6 +9,8 @@ import com.github.stimur1709.cloudops.resource.config.NetworkDeviceResourceConfi
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ServerResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
+import java.net.URI;
+import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -49,8 +48,8 @@ public class TlsCheckHandler implements ProbeHandler {
     private Endpoint endpoint(ResourceConfig resourceConfig) {
         return switch (resourceConfig) {
             case ServerResourceConfig server when server.port() != null -> new Endpoint(server.host(), server.port());
-            case NetworkDeviceResourceConfig device when device.managementPort() != null ->
-                    new Endpoint(device.host(), device.managementPort());
+            case NetworkDeviceResourceConfig device
+            when device.managementPort() != null -> new Endpoint(device.host(), device.managementPort());
             case DatabaseResourceConfig database -> new Endpoint(database.host(), database.port());
             case ServiceResourceConfig service -> serviceEndpoint(service);
             default -> null;
@@ -65,6 +64,5 @@ public class TlsCheckHandler implements ProbeHandler {
         return new Endpoint(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort());
     }
 
-    private record Endpoint(String host, int port) {
-    }
+    private record Endpoint(String host, int port) {}
 }

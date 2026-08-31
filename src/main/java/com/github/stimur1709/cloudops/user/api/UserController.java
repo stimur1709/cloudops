@@ -33,24 +33,16 @@ public class UserController {
 
     @PostMapping("/search")
     public SearchResponse<UserResponse> search(
-            @Valid @RequestBody SearchRequest request,
-            Authentication authentication
-    ) {
+            @Valid @RequestBody SearchRequest request, Authentication authentication) {
         return SearchResponse.from(
-                userService.search(request.toQuery(), CurrentUser.id(authentication)),
-                UserResponse::from
-        );
+                userService.search(request.toQuery(), CurrentUser.id(authentication)), UserResponse::from);
     }
 
     @PutMapping("/{id}")
     public UserResponse update(
-            @PathVariable long id,
-            @Valid @RequestBody UpdateUserRequest request,
-            Authentication authentication
-    ) {
+            @PathVariable long id, @Valid @RequestBody UpdateUserRequest request, Authentication authentication) {
         return UserResponse.from(
-                userService.update(id, request.email(), request.displayName(), CurrentUser.id(authentication))
-        );
+                userService.update(id, request.email(), request.displayName(), CurrentUser.id(authentication)));
     }
 
     @DeleteMapping("/{id}")

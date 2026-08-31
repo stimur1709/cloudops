@@ -1,13 +1,12 @@
 package com.github.stimur1709.cloudops.monitoring.persistence;
 
-import java.time.Instant;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import tools.jackson.databind.JsonNode;
@@ -30,8 +29,7 @@ public class MonitoringResultEntity {
     @Column(nullable = false, columnDefinition = "jsonb")
     private JsonNode result;
 
-    protected MonitoringResultEntity() {
-    }
+    protected MonitoringResultEntity() {}
 
     private MonitoringResultEntity(long monitorId, Instant checkedAt, JsonNode result) {
         this.monitorId = monitorId;
@@ -43,8 +41,19 @@ public class MonitoringResultEntity {
         return new MonitoringResultEntity(monitorId, checkedAt, result);
     }
 
-    public Long id() { return id; }
-    public Long monitorId() { return monitorId; }
-    public Instant checkedAt() { return checkedAt; }
-    public JsonNode result() { return result; }
+    public Long id() {
+        return id;
+    }
+
+    public Long monitorId() {
+        return monitorId;
+    }
+
+    public Instant checkedAt() {
+        return checkedAt;
+    }
+
+    public JsonNode result() {
+        return result;
+    }
 }

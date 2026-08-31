@@ -1,8 +1,5 @@
 package com.github.stimur1709.cloudops.task.persistence;
 
-import java.time.Instant;
-import java.util.UUID;
-
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.TaskType;
@@ -14,6 +11,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import tools.jackson.databind.JsonNode;
@@ -78,8 +77,7 @@ public class TaskEntity {
     @Column(name = "recovery_count", nullable = false)
     private int recoveryCount;
 
-    protected TaskEntity() {
-    }
+    protected TaskEntity() {}
 
     private TaskEntity(long organizationId, long resourceId, TaskType type, long createdBy, Instant createdAt) {
         this.organizationId = organizationId;
@@ -144,21 +142,71 @@ public class TaskEntity {
         }
     }
 
-    public Long id() { return id; }
-    public Long organizationId() { return organizationId; }
-    public Long resourceId() { return resourceId; }
-    public TaskType type() { return type; }
-    public TaskStatus status() { return status; }
-    public Long createdBy() { return createdBy; }
-    public Instant createdAt() { return createdAt; }
-    public Instant startedAt() { return startedAt; }
-    public Instant completedAt() { return completedAt; }
-    public JsonNode result() { return result; }
-    public TaskErrorCode errorCode() { return errorCode; }
-    public String errorMessage() { return errorMessage; }
-    public int attemptCount() { return attemptCount; }
-    public Instant lastAttemptAt() { return lastAttemptAt; }
-    public UUID executionId() { return executionId; }
-    public Instant leaseExpiresAt() { return leaseExpiresAt; }
-    public int recoveryCount() { return recoveryCount; }
+    public Long id() {
+        return id;
+    }
+
+    public Long organizationId() {
+        return organizationId;
+    }
+
+    public Long resourceId() {
+        return resourceId;
+    }
+
+    public TaskType type() {
+        return type;
+    }
+
+    public TaskStatus status() {
+        return status;
+    }
+
+    public Long createdBy() {
+        return createdBy;
+    }
+
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    public Instant startedAt() {
+        return startedAt;
+    }
+
+    public Instant completedAt() {
+        return completedAt;
+    }
+
+    public JsonNode result() {
+        return result;
+    }
+
+    public TaskErrorCode errorCode() {
+        return errorCode;
+    }
+
+    public String errorMessage() {
+        return errorMessage;
+    }
+
+    public int attemptCount() {
+        return attemptCount;
+    }
+
+    public Instant lastAttemptAt() {
+        return lastAttemptAt;
+    }
+
+    public UUID executionId() {
+        return executionId;
+    }
+
+    public Instant leaseExpiresAt() {
+        return leaseExpiresAt;
+    }
+
+    public int recoveryCount() {
+        return recoveryCount;
+    }
 }

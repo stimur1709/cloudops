@@ -39,5 +39,4 @@ public class PingHandler implements ProbeHandler {
         }
         return ProbeExecutionResult.failed(outcome.errorCode(), outcome.errorMessage());
     }
-
 }

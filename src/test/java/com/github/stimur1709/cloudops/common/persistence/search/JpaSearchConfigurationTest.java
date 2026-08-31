@@ -4,10 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
-import java.util.Map;
-
 import com.github.stimur1709.cloudops.common.search.InvalidSearchException;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class JpaSearchConfigurationTest {
@@ -15,18 +14,15 @@ class JpaSearchConfigurationTest {
     @Test
     void buildsDefinitionForAnyEntityFromExplicitFields() {
         JpaSearchField<FutureEntity, Long> id = JpaSearchField.<FutureEntity, Long>comparable(
-                root -> root.get("id"),
-                SearchValueConverter.longInteger()
-        ).allowing(SearchQuery.Operation.EQ, SearchQuery.Operation.GE).sortable();
-        JpaSearchField<FutureEntity, String> code = JpaSearchField.<FutureEntity>text(
-                root -> root.get("code")
-        ).allowing(SearchQuery.Operation.CONTAINS).sortable();
+                        root -> root.get("id"), SearchValueConverter.longInteger())
+                .allowing(SearchQuery.Operation.EQ, SearchQuery.Operation.GE)
+                .sortable();
+        JpaSearchField<FutureEntity, String> code = JpaSearchField.<FutureEntity>text(root -> root.get("code"))
+                .allowing(SearchQuery.Operation.CONTAINS)
+                .sortable();
 
-        JpaSearchDefinition<FutureEntity> definition = new JpaSearchDefinition<>(
-                FutureEntity.class,
-                Map.of("id", id, "code", code),
-                "id"
-        );
+        JpaSearchDefinition<FutureEntity> definition =
+                new JpaSearchDefinition<>(FutureEntity.class, Map.of("id", id, "code", code), "id");
 
         assertThat(definition.entityType()).isEqualTo(FutureEntity.class);
         assertThat(definition.fields()).containsOnlyKeys("id", "code");
@@ -37,10 +33,8 @@ class JpaSearchConfigurationTest {
 
     @Test
     void convertsValuesWithoutUsingEntityReflection() {
-        JpaSearchField<FutureEntity, Long> id = JpaSearchField.comparable(
-                root -> root.get("id"),
-                SearchValueConverter.longInteger()
-        );
+        JpaSearchField<FutureEntity, Long> id =
+                JpaSearchField.comparable(root -> root.get("id"), SearchValueConverter.longInteger());
 
         assertThat(id.convert("42", "filter.conditions[0].value")).isEqualTo(42L);
         assertThatExceptionOfType(InvalidSearchException.class)
@@ -53,16 +47,11 @@ class JpaSearchConfigurationTest {
 
     @Test
     void requiresConfiguredSortableDefaultField() {
-        JpaSearchField<FutureEntity, String> code = JpaSearchField
-                .<FutureEntity>text(root -> root.get("code"));
+        JpaSearchField<FutureEntity, String> code = JpaSearchField.<FutureEntity>text(root -> root.get("code"));
 
-        assertThatIllegalArgumentException().isThrownBy(() -> new JpaSearchDefinition<>(
-                FutureEntity.class,
-                Map.of("code", code),
-                "code"
-        ));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new JpaSearchDefinition<>(FutureEntity.class, Map.of("code", code), "code"));
     }
 
-    private static final class FutureEntity {
-    }
+    private static final class FutureEntity {}
 }

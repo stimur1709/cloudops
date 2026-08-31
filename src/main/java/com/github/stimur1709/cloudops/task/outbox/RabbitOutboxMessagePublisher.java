@@ -1,11 +1,10 @@
 package com.github.stimur1709.cloudops.task.outbox;
 
+import com.github.stimur1709.cloudops.task.messaging.TaskExecutionCommand;
+import com.github.stimur1709.cloudops.task.messaging.TaskMessagingProperties;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import com.github.stimur1709.cloudops.task.messaging.TaskExecutionCommand;
-import com.github.stimur1709.cloudops.task.messaging.TaskMessagingProperties;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -34,11 +33,10 @@ public class RabbitOutboxMessagePublisher implements TaskExecutionCommandPublish
                     message.getMessageProperties().setMessageId(outboxMessageId.toString());
                     return message;
                 },
-                correlation
-        );
+                correlation);
 
-        CorrelationData.Confirm confirm = correlation.getFuture()
-                .get(CONFIRM_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+        CorrelationData.Confirm confirm =
+                correlation.getFuture().get(CONFIRM_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         return confirm.ack() && correlation.getReturned() == null;
     }
 }

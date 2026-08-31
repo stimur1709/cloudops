@@ -6,7 +6,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
-import com.github.stimur1709.cloudops.task.TaskType;
 import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
 import com.github.stimur1709.cloudops.task.application.TaskService;
 import org.junit.jupiter.api.AfterEach;
@@ -38,7 +37,8 @@ class TaskOutboxCreationIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("TRUNCATE TABLE resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY");
+        jdbcTemplate.execute(
+                "TRUNCATE TABLE resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY");
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, 'outbox@example.com', 'Outbox User', '{noop}unused', now(), now())
@@ -67,28 +67,31 @@ class TaskOutboxCreationIntegrationTest {
 
     @Test
     void createsTaskAndExplicitCommandPayloadInOneTransaction() {
-        var task = taskPersistenceService.create(resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID);
+        var task = taskPersistenceService.create(
+                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID);
 
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Long.class)).isOne();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class)).isOne();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Long.class))
+                .isOne();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class))
+                .isOne();
         assertThat(jdbcTemplate.queryForObject("""
                 SELECT payload ->> 'taskId' FROM outbox_messages WHERE aggregate_id = ?
                 """, String.class, task.id())).isEqualTo(Long.toString(task.id()));
         assertThat(jdbcTemplate.queryForObject("SELECT message_type FROM outbox_messages", String.class))
                 .isEqualTo("TASK_EXECUTION_REQUESTED");
-        assertThat(jdbcTemplate.queryForObject("SELECT published_at FROM outbox_messages", java.time.OffsetDateTime.class))
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT published_at FROM outbox_messages", java.time.OffsetDateTime.class))
                 .isNull();
     }
 
     @Test
     void taskCreationDoesNotCallRabbitPublisherOnRequestThread() {
         var task = taskService.create(
-                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE,
-                TestAuthentication.USER_ID
-        );
+                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID);
 
         assertThat(task.id()).isPositive();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class)).isOne();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class))
+                .isOne();
         verifyNoInteractions(publisher);
     }
 
@@ -107,10 +110,12 @@ class TaskOutboxCreationIntegrationTest {
                 """);
 
         assertThatThrownBy(() -> taskPersistenceService.create(
-                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID
-        )).isInstanceOf(RuntimeException.class);
+                        resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID))
+                .isInstanceOf(RuntimeException.class);
 
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Long.class)).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Long.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class))
+                .isZero();
     }
 }

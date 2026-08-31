@@ -5,10 +5,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Base64;
-
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
-
 import org.springframework.stereotype.Component;
 
 @Component
@@ -31,8 +29,12 @@ public class SecretCryptoService {
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, properties.key(), new GCMParameterSpec(TAG_BITS, iv));
             byte[] ciphertext = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(ByteBuffer.allocate(1 + IV_LENGTH + ciphertext.length)
-                    .put(VERSION).put(iv).put(ciphertext).array());
+            return Base64.getEncoder()
+                    .encodeToString(ByteBuffer.allocate(1 + IV_LENGTH + ciphertext.length)
+                            .put(VERSION)
+                            .put(iv)
+                            .put(ciphertext)
+                            .array());
         } catch (GeneralSecurityException exception) {
             throw new IllegalStateException("Credential encryption failed", exception);
         }

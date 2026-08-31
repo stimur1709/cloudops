@@ -1,11 +1,10 @@
 package com.github.stimur1709.cloudops.task.execution;
 
+import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
+import com.github.stimur1709.cloudops.task.config.TaskLeaseProperties;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
-import com.github.stimur1709.cloudops.task.config.TaskLeaseProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -50,8 +49,7 @@ public class TaskLeaseManager {
                 log.warn("event=task_lease_lost taskId={} executionId={}", taskId, executionId);
             }
         } catch (RuntimeException exception) {
-            log.error("event=task_lease_renewal_failed taskId={} executionId={}",
-                    taskId, executionId, exception);
+            log.error("event=task_lease_renewal_failed taskId={} executionId={}", taskId, executionId, exception);
         }
     }
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketTimeoutException;
@@ -17,8 +18,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Date;
-import java.util.concurrent.Future;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
@@ -26,8 +27,6 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.TrustManagerFactory;
 import javax.security.auth.x500.X500Principal;
-
-import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -43,8 +42,9 @@ class TlsCheckClientTest {
         KeyStore keyStore = createKeyStore();
         SSLContext serverContext = serverContext(keyStore);
         SSLContext clientContext = clientContext(keyStore);
-        try (SSLServerSocket server = (SSLServerSocket) serverContext.getServerSocketFactory().createServerSocket(0);
-             var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        try (SSLServerSocket server =
+                        (SSLServerSocket) serverContext.getServerSocketFactory().createServerSocket(0);
+                var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             Future<?> handshake = executor.submit(() -> {
                 try (SSLSocket socket = (SSLSocket) server.accept()) {
                     socket.startHandshake();
@@ -54,8 +54,8 @@ class TlsCheckClientTest {
             });
 
             TlsCheckOutcome outcome = new TlsCheckClient(
-                    Duration.ofSeconds(2), Clock.systemUTC(), clientContext.getSocketFactory()
-            ).execute("localhost", server.getLocalPort());
+                            Duration.ofSeconds(2), Clock.systemUTC(), clientContext.getSocketFactory())
+                    .execute("localhost", server.getLocalPort());
 
             assertThat(outcome.completed()).isTrue();
             assertThat(outcome.result().subject()).contains("CN=localhost");
@@ -100,8 +100,9 @@ class TlsCheckClientTest {
 
     private void assertFailure(IOException exception, ProbeErrorCode code) {
         TlsCheckOutcome outcome = client((host, port, timeout) -> {
-            throw exception;
-        }).execute("host", 443);
+                    throw exception;
+                })
+                .execute("host", 443);
 
         assertThat(outcome.completed()).isFalse();
         assertThat(outcome.errorCode()).isEqualTo(code);
@@ -111,11 +112,29 @@ class TlsCheckClientTest {
         Path keyStorePath = temporaryDirectory.resolve("server.p12");
         Path keytool = Path.of(System.getProperty("java.home"), "bin", executable("keytool"));
         Process process = new ProcessBuilder(
-                keytool.toString(), "-genkeypair", "-alias", "server", "-storetype", "PKCS12",
-                "-keystore", keyStorePath.toString(), "-storepass", "changeit", "-keypass", "changeit",
-                "-dname", "CN=localhost", "-ext", "SAN=dns:localhost,ip:127.0.0.1",
-                "-keyalg", "RSA", "-validity", "3650", "-noprompt"
-        ).redirectErrorStream(true).start();
+                        keytool.toString(),
+                        "-genkeypair",
+                        "-alias",
+                        "server",
+                        "-storetype",
+                        "PKCS12",
+                        "-keystore",
+                        keyStorePath.toString(),
+                        "-storepass",
+                        "changeit",
+                        "-keypass",
+                        "changeit",
+                        "-dname",
+                        "CN=localhost",
+                        "-ext",
+                        "SAN=dns:localhost,ip:127.0.0.1",
+                        "-keyalg",
+                        "RSA",
+                        "-validity",
+                        "3650",
+                        "-noprompt")
+                .redirectErrorStream(true)
+                .start();
         String output = new String(process.getInputStream().readAllBytes());
         assertThat(process.waitFor()).as(output).isZero();
 

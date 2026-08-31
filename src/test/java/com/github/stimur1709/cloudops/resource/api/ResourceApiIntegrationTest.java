@@ -13,8 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.TestAuthentication;
+import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.common.api.error.ApiFieldError;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
@@ -146,9 +146,8 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.path").value("/api/resources"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
                 .andExpect(jsonPath("$.errors", hasSize(5)))
-                .andExpect(jsonPath("$.errors[*].field", containsInAnyOrder(
-                        "name", "type", "status", "organizationId", "config"
-                )))
+                .andExpect(jsonPath(
+                        "$.errors[*].field", containsInAnyOrder("name", "type", "status", "organizationId", "config")))
                 .andExpect(jsonPath("$.errors[?(@.field == 'name')].message").value("Name must not be blank"))
                 .andExpect(jsonPath("$.errors[?(@.field == 'type')].message").value("Type is required"))
                 .andExpect(jsonPath("$.errors[?(@.field == 'status')].message").value("Status is required"));
@@ -181,9 +180,8 @@ class ResourceApiIntegrationTest {
                 .andExpect(jsonPath("$.path").value("/api/resources"))
                 .andExpect(jsonPath("$.errors", hasSize(1)))
                 .andExpect(jsonPath("$.errors[0].field").value("type"))
-                .andExpect(jsonPath("$.errors[0].message").value(
-                        "Type must be one of: NETWORK_DEVICE, SERVER, DATABASE, SERVICE, OTHER"
-                ));
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("Type must be one of: NETWORK_DEVICE, SERVER, DATABASE, SERVICE, OTHER"));
     }
 
     @Test
@@ -251,9 +249,7 @@ class ResourceApiIntegrationTest {
 
     @Test
     void returnsUnsupportedMediaTypeForNonJsonRequest() throws Exception {
-        mockMvc.perform(post("/api/resources")
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .content("resource"))
+        mockMvc.perform(post("/api/resources").contentType(MediaType.TEXT_PLAIN).content("resource"))
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"))
                 .andExpect(jsonPath("$.message").value("Content-Type is not supported"))
@@ -277,9 +273,7 @@ class ResourceApiIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.errors[0].field").value("configuration.type"))
-                .andExpect(jsonPath("$.errors[0].message").value(
-                        "Configuration.type must be one of: FIRST, SECOND"
-                ));
+                .andExpect(jsonPath("$.errors[0].message").value("Configuration.type must be one of: FIRST, SECOND"));
     }
 
     @Test
@@ -313,14 +307,10 @@ class ResourceApiIntegrationTest {
                 .andExpect(content().string(not(containsString("sensitive internal detail"))));
     }
 
-    private org.springframework.test.web.servlet.ResultActions createResource(
-            String name,
-            String type,
-            String status
-    ) throws Exception {
-        return mockMvc.perform(post("/api/resources")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
+    private org.springframework.test.web.servlet.ResultActions createResource(String name, String type, String status)
+            throws Exception {
+        return mockMvc.perform(
+                post("/api/resources").contentType(MediaType.APPLICATION_JSON).content("""
                         {
                           "name": "%s",
                           "type": "%s",
@@ -328,7 +318,8 @@ class ResourceApiIntegrationTest {
                           "organizationId": %d,
                           "config": %s
                         }
-                        """.formatted(name, type, status, organizationId, configFor(type))));
+                        """.formatted(
+                                name, type, status, organizationId, configFor(type))));
     }
 
     private String configFor(String type) {
@@ -350,16 +341,13 @@ class ResourceApiIntegrationTest {
         }
 
         @GetMapping("/api/test/count/{count}")
-        void count(@PathVariable long count) {
-        }
+        void count(@PathVariable long count) {}
 
         @GetMapping("/api/test/modes/{mode}")
-        void mode(@PathVariable TestMode mode) {
-        }
+        void mode(@PathVariable TestMode mode) {}
 
         @PostMapping("/api/test/nested-enum")
-        void nestedEnum(@RequestBody NestedEnumRequest request) {
-        }
+        void nestedEnum(@RequestBody NestedEnumRequest request) {}
 
         @GetMapping("/api/test/global-field-error")
         ApiFieldError globalFieldError() {
@@ -367,11 +355,9 @@ class ResourceApiIntegrationTest {
         }
     }
 
-    record NestedEnumRequest(NestedConfiguration configuration) {
-    }
+    record NestedEnumRequest(NestedConfiguration configuration) {}
 
-    record NestedConfiguration(TestMode type) {
-    }
+    record NestedConfiguration(TestMode type) {}
 
     enum TestMode {
         FIRST,

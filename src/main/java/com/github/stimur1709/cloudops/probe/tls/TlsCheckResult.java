@@ -10,6 +10,4 @@ public record TlsCheckResult(
         String issuer,
         Instant notBefore,
         Instant notAfter,
-        long daysUntilExpiry
-) {
-}
+        long daysUntilExpiry) {}

@@ -31,5 +31,8 @@ jobs:
           java-version: '25'
           cache: maven
 
-      - name: Run tests
+      - name: Check formatting
+        run: bash ./mvnw --batch-mode --no-transfer-progress spotless:check
+
+      - name: Run verification
         run: bash ./mvnw --batch-mode --no-transfer-progress verify

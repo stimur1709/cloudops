@@ -1,18 +1,17 @@
 package com.github.stimur1709.cloudops.user.application;
 
-import java.time.Clock;
-
 import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.ForbiddenException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.common.persistence.search.JpaSearchService;
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
 import com.github.stimur1709.cloudops.common.search.SearchResult;
-import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipJpaRepository;
 import com.github.stimur1709.cloudops.membership.MembershipRole;
+import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipJpaRepository;
 import com.github.stimur1709.cloudops.user.persistence.UserEntity;
 import com.github.stimur1709.cloudops.user.persistence.UserJpaRepository;
 import com.github.stimur1709.cloudops.user.persistence.UserSearchDefinition;
+import java.time.Clock;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,8 +28,7 @@ public class UserService {
             UserJpaRepository userRepository,
             OrganizationMembershipJpaRepository membershipRepository,
             JpaSearchService searchService,
-            Clock clock
-    ) {
+            Clock clock) {
         this.userRepository = userRepository;
         this.membershipRepository = membershipRepository;
         this.searchService = searchService;
@@ -56,8 +54,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public SearchResult<UserEntity> search(SearchQuery search, long currentUserId) {
         if (!membershipRepository.existsByUserIdAndRoleIn(
-                currentUserId, java.util.List.of(MembershipRole.OWNER, MembershipRole.ADMIN)
-        )) {
+                currentUserId, java.util.List.of(MembershipRole.OWNER, MembershipRole.ADMIN))) {
             throw new ForbiddenException();
         }
         return searchService.search(search, UserSearchDefinition.DEFINITION);
@@ -90,18 +87,12 @@ public class UserService {
         try {
             return userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException exception) {
-            throw new ConflictException(
-                    "USER_EMAIL_CONFLICT",
-                    "Email is already used by another user"
-            );
+            throw new ConflictException("USER_EMAIL_CONFLICT", "Email is already used by another user");
         }
     }
 
     private ConflictException userInUse() {
-        return new ConflictException(
-                "USER_IN_USE",
-                "User cannot be deleted while they belong to an organization"
-        );
+        return new ConflictException("USER_IN_USE", "User cannot be deleted while they belong to an organization");
     }
 
     private void requireSelf(long id, long currentUserId) {

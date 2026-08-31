@@ -2,7 +2,6 @@ package com.github.stimur1709.cloudops.task.outbox.persistence;
 
 import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,10 +10,10 @@ import org.springframework.data.repository.query.Param;
 public interface OutboxMessageJpaRepository extends JpaRepository<OutboxMessageEntity, UUID> {
 
     @Query("""
-            select message.id
-              from OutboxMessageEntity message
-             where message.publishedAt is null
-             order by message.createdAt, message.id
+            SELECT message.id
+              FROM OutboxMessageEntity message
+             WHERE message.publishedAt IS NULL
+             ORDER BY message.createdAt, message.id
             """)
     java.util.List<UUID> findUnpublishedIds(Pageable pageable);
 

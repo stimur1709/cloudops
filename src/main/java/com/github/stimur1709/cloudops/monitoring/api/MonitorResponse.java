@@ -1,10 +1,9 @@
 package com.github.stimur1709.cloudops.monitoring.api;
 
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.monitoring.HealthStatus;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorEntity;
 import com.github.stimur1709.cloudops.probe.ProbeType;
+import java.time.Instant;
 import tools.jackson.databind.JsonNode;
 
 public record MonitorResponse(
@@ -14,8 +13,7 @@ public record MonitorResponse(
         Instant nextRunAt,
         Instant lastCheckedAt,
         JsonNode lastResult,
-        HealthStatus healthStatus
-) {
+        HealthStatus healthStatus) {
     public static MonitorResponse from(MonitorEntity monitor) {
         return new MonitorResponse(
                 monitor.id(),
@@ -24,7 +22,6 @@ public record MonitorResponse(
                 monitor.nextRunAt(),
                 monitor.lastCheckedAt(),
                 monitor.lastResult(),
-                monitor.healthStatus()
-        );
+                monitor.healthStatus());
     }
 }

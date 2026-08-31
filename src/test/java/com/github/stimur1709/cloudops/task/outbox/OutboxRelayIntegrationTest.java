@@ -7,6 +7,10 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.github.stimur1709.cloudops.TestcontainersConfiguration;
+import com.github.stimur1709.cloudops.task.messaging.TaskExecutionCommand;
+import com.github.stimur1709.cloudops.task.messaging.TaskMessagingProperties;
+import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageJpaRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -14,19 +18,14 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import com.github.stimur1709.cloudops.TestcontainersConfiguration;
-import com.github.stimur1709.cloudops.task.messaging.TaskExecutionCommand;
-import com.github.stimur1709.cloudops.task.messaging.TaskMessagingProperties;
-import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @Import(TestcontainersConfiguration.class)
@@ -55,7 +54,8 @@ class OutboxRelayIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        jdbcTemplate.execute("TRUNCATE TABLE resource_credentials, credentials, resource_probe_settings, organization_probe_settings, outbox_messages");
+        jdbcTemplate.execute(
+                "TRUNCATE TABLE resource_credentials, credentials, resource_probe_settings, organization_probe_settings, outbox_messages");
         reset(publisher);
         when(publisher.publish(any(), any())).thenReturn(true);
         relay = new OutboxRelay(repository, processor, new OutboxRelayProperties(false, Duration.ofSeconds(1), 2));
@@ -71,7 +71,9 @@ class OutboxRelayIntegrationTest {
 
         ArgumentCaptor<TaskExecutionCommand> commands = ArgumentCaptor.forClass(TaskExecutionCommand.class);
         verify(publisher, org.mockito.Mockito.times(2)).publish(any(), commands.capture());
-        assertThat(commands.getAllValues()).extracting(TaskExecutionCommand::taskId).containsExactly(101L, 102L);
+        assertThat(commands.getAllValues())
+                .extracting(TaskExecutionCommand::taskId)
+                .containsExactly(101L, 102L);
         assertThat(publishedAt(first)).isNotNull();
         assertThat(publishedAt(second)).isNotNull();
         assertThat(publishedAt(third)).isNull();
@@ -98,13 +100,14 @@ class OutboxRelayIntegrationTest {
         CountDownLatch publishing = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         doAnswer(invocation -> {
-            publishing.countDown();
-            assertThat(release.await(5, TimeUnit.SECONDS)).isTrue();
-            return true;
-        }).when(publisher).publish(any(), any());
-        OutboxRelay secondRelay = new OutboxRelay(
-                repository, processor, new OutboxRelayProperties(false, Duration.ofSeconds(1), 2)
-        );
+                    publishing.countDown();
+                    assertThat(release.await(5, TimeUnit.SECONDS)).isTrue();
+                    return true;
+                })
+                .when(publisher)
+                .publish(any(), any());
+        OutboxRelay secondRelay =
+                new OutboxRelay(repository, processor, new OutboxRelayProperties(false, Duration.ofSeconds(1), 2));
 
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var firstRun = executor.submit(relay::publishPending);
@@ -121,23 +124,26 @@ class OutboxRelayIntegrationTest {
     @Test
     void unroutableRabbitMessageIsNotConsideredPublished() throws Exception {
         var unroutableProperties = new TaskMessagingProperties(
-                messagingProperties.exchange(), messagingProperties.queue(), "missing." + UUID.randomUUID(),
-                messagingProperties.deadLetterExchange(), messagingProperties.deadLetterQueue(),
-                messagingProperties.deadLetterRoutingKey()
-        );
+                messagingProperties.exchange(),
+                messagingProperties.queue(),
+                "missing." + UUID.randomUUID(),
+                messagingProperties.deadLetterExchange(),
+                messagingProperties.deadLetterQueue(),
+                messagingProperties.deadLetterRoutingKey());
         var rabbitPublisher = new RabbitOutboxMessagePublisher(rabbitTemplate, unroutableProperties);
 
-        assertThat(rabbitPublisher.publish(UUID.randomUUID(), new TaskExecutionCommand(401))).isFalse();
+        assertThat(rabbitPublisher.publish(UUID.randomUUID(), new TaskExecutionCommand(401)))
+                .isFalse();
     }
 
     private UUID insertMessage(long taskId, Instant createdAt) {
         UUID id = UUID.randomUUID();
-        jdbcTemplate.update("""
+        jdbcTemplate.update(
+                """
                 INSERT INTO outbox_messages
                     (id, message_type, aggregate_type, aggregate_id, payload, created_at, deduplication_key)
                 VALUES (?, 'TASK_EXECUTION_REQUESTED', 'TASK', ?, CAST(? AS jsonb), ?, ?)
-                """, id, taskId, "{\"taskId\":" + taskId + "}", java.sql.Timestamp.from(createdAt),
-                "test:" + id);
+                """, id, taskId, "{\"taskId\":" + taskId + "}", java.sql.Timestamp.from(createdAt), "test:" + id);
         return id;
     }
 
@@ -147,8 +153,7 @@ class OutboxRelayIntegrationTest {
                 (resultSet, row) -> resultSet.getObject(1, java.time.OffsetDateTime.class) == null
                         ? null
                         : resultSet.getObject(1, java.time.OffsetDateTime.class).toInstant(),
-                id
-        );
+                id);
         return values.getFirst();
     }
 }

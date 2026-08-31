@@ -1,13 +1,12 @@
 package com.github.stimur1709.cloudops.organization.persistence;
 
-import java.time.Instant;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 
 @Entity
 @Table(name = "organizations")
@@ -26,8 +25,7 @@ public class OrganizationEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected OrganizationEntity() {
-    }
+    protected OrganizationEntity() {}
 
     private OrganizationEntity(String name, Instant createdAt) {
         this.name = name;
@@ -44,8 +42,19 @@ public class OrganizationEntity {
         this.updatedAt = updatedAt;
     }
 
-    public Long id() { return id; }
-    public String name() { return name; }
-    public Instant createdAt() { return createdAt; }
-    public Instant updatedAt() { return updatedAt; }
+    public Long id() {
+        return id;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    public Instant updatedAt() {
+        return updatedAt;
+    }
 }

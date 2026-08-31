@@ -16,11 +16,10 @@ import jakarta.persistence.UniqueConstraint;
 @Entity
 @Table(
         name = "organization_probe_settings",
-        uniqueConstraints = @UniqueConstraint(
-                name = "organization_probe_settings_key",
-                columnNames = {"organization_id", "probe_type"}
-        )
-)
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "organization_probe_settings_key",
+                        columnNames = {"organization_id", "probe_type"}))
 public class OrganizationProbeSettingsEntity implements ProbeSettings {
 
     @Id
@@ -56,14 +55,10 @@ public class OrganizationProbeSettingsEntity implements ProbeSettings {
     @Column(name = "timeout_ms")
     private Integer timeoutMs;
 
-    protected OrganizationProbeSettingsEntity() {
-    }
+    protected OrganizationProbeSettingsEntity() {}
 
     public static OrganizationProbeSettingsEntity create(
-            long organizationId,
-            ProbeType probeType,
-            ProbeSettings settings
-    ) {
+            long organizationId, ProbeType probeType, ProbeSettings settings) {
         var entity = new OrganizationProbeSettingsEntity();
         entity.organizationId = organizationId;
         entity.probeType = probeType;

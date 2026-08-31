@@ -1,12 +1,11 @@
 package com.github.stimur1709.cloudops.monitoring.execution;
 
-import java.time.Clock;
-import java.time.Instant;
-
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionContext;
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
 import com.github.stimur1709.cloudops.probe.execution.ProbeHandler;
 import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
+import java.time.Clock;
+import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -27,8 +26,7 @@ public class MonitorExecutionService {
             MonitorExecutionPersistenceService persistenceService,
             ProbeHandlerRegistry handlerRegistry,
             ObjectMapper objectMapper,
-            Clock clock
-    ) {
+            Clock clock) {
         this.persistenceService = persistenceService;
         this.handlerRegistry = handlerRegistry;
         this.objectMapper = objectMapper;
@@ -43,9 +41,12 @@ public class MonitorExecutionService {
             }
             ProbeHandler handler = handlerRegistry.get(monitor.type());
             ProbeExecutionResult executionResult = handler.execute(new ProbeExecutionContext(
-                    monitor.resourceId(), monitor.type(), monitor.resourceConfig(),
-                    monitor.settings().timeoutMs() == null ? 0 : monitor.settings().timeoutMs()
-            ));
+                    monitor.resourceId(),
+                    monitor.type(),
+                    monitor.resourceConfig(),
+                    monitor.settings().timeoutMs() == null
+                            ? 0
+                            : monitor.settings().timeoutMs()));
             Instant checkedAt = clock.instant();
             JsonNode result = objectMapper.valueToTree(executionResult);
             persistenceService.saveResult(monitorId, checkedAt, result, executionResult.success());

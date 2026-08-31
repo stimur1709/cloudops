@@ -2,8 +2,8 @@ package com.github.stimur1709.cloudops.task.execution;
 
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
-import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
 import com.github.stimur1709.cloudops.task.application.StaleTaskExecutionException;
+import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
 import com.github.stimur1709.cloudops.task.config.TaskRetryProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,8 +32,7 @@ public class TaskExecutionService {
             ObjectMapper objectMapper,
             RetryTemplate retryTemplate,
             TaskRetryProperties retryProperties,
-            TaskLeaseManager leaseManager
-    ) {
+            TaskLeaseManager leaseManager) {
         this.persistenceService = persistenceService;
         this.handlerRegistry = handlerRegistry;
         this.objectMapper = objectMapper;
@@ -70,46 +69,43 @@ public class TaskExecutionService {
             handler = handlerRegistry.get(claimed.type());
         } catch (TaskHandlerNotFoundException exception) {
             LOGGER.error("event=task_non_retryable_rejection taskId={} reason=handler_not_found", taskId, exception);
-            return outcomeAfterFailureSave(taskId, claimed.executionId(), TaskErrorCode.HANDLER_NOT_FOUND,
-                    "Task handler is not configured");
+            return outcomeAfterFailureSave(
+                    taskId, claimed.executionId(), TaskErrorCode.HANDLER_NOT_FOUND, "Task handler is not configured");
         }
 
-        TaskExecutionContext executionContext = new TaskExecutionContext(
-                claimed.resourceId(), claimed.type(), claimed.resourceConfig()
-        );
+        TaskExecutionContext executionContext =
+                new TaskExecutionContext(claimed.resourceId(), claimed.type(), claimed.resourceConfig());
         TaskExecutionResult result;
         try {
-            result = retryTemplate.execute(
-                    retryContext -> executeAttempt(
-                            handler, executionContext, taskId, claimed.executionId(), retryContext.getRetryCount()
-                    )
-            );
+            result = retryTemplate.execute(retryContext -> executeAttempt(
+                    handler, executionContext, taskId, claimed.executionId(), retryContext.getRetryCount()));
         } catch (RetryableTaskExecutionException exception) {
-            LOGGER.error("event=task_retry_exhausted taskId={} taskType={} attempts={}",
-                    taskId, claimed.type(), effectiveMaxAttempts(), exception);
+            LOGGER.error(
+                    "event=task_retry_exhausted taskId={} taskType={} attempts={}",
+                    taskId,
+                    claimed.type(),
+                    effectiveMaxAttempts(),
+                    exception);
             return outcomeAfterFailureSave(
-                    taskId, claimed.executionId(), TaskErrorCode.RETRY_EXHAUSTED, RETRY_EXHAUSTED_MESSAGE
-            );
+                    taskId, claimed.executionId(), TaskErrorCode.RETRY_EXHAUSTED, RETRY_EXHAUSTED_MESSAGE);
         } catch (StaleTaskExecutionException exception) {
             LOGGER.warn("event=task_lease_lost taskId={} executionId={}", taskId, claimed.executionId());
             return TaskExecutionOutcome.ACKNOWLEDGE;
         } catch (RuntimeException exception) {
-            LOGGER.error("event=task_non_retryable_rejection taskId={} taskType={}",
-                    taskId, claimed.type(), exception);
+            LOGGER.error("event=task_non_retryable_rejection taskId={} taskType={}", taskId, claimed.type(), exception);
             return outcomeAfterFailureSave(
-                    taskId, claimed.executionId(), TaskErrorCode.EXECUTION_ERROR, EXECUTION_FAILURE_MESSAGE
-            );
+                    taskId, claimed.executionId(), TaskErrorCode.EXECUTION_ERROR, EXECUTION_FAILURE_MESSAGE);
         }
 
         try {
             if (!save(taskId, claimed.executionId(), result)) {
-                LOGGER.warn("event=stale_execution_result_ignored taskId={} executionId={}",
-                        taskId, claimed.executionId());
+                LOGGER.warn(
+                        "event=stale_execution_result_ignored taskId={} executionId={}", taskId, claimed.executionId());
             }
             return TaskExecutionOutcome.ACKNOWLEDGE;
         } catch (RuntimeException exception) {
-            LOGGER.error("event=task_terminal_persistence_failure taskId={} taskType={}",
-                    taskId, claimed.type(), exception);
+            LOGGER.error(
+                    "event=task_terminal_persistence_failure taskId={} taskType={}", taskId, claimed.type(), exception);
             return TaskExecutionOutcome.DEAD_LETTER;
         }
     }
@@ -119,19 +115,24 @@ public class TaskExecutionService {
             TaskExecutionContext executionContext,
             long taskId,
             java.util.UUID executionId,
-            int priorFailureCount
-    ) {
+            int priorFailureCount) {
         int attempt = persistenceService.recordAttempt(taskId, executionId);
-        LOGGER.info("event=task_attempt_started taskId={} taskType={} attempt={}",
-                taskId, executionContext.type(), attempt);
+        LOGGER.info(
+                "event=task_attempt_started taskId={} taskType={} attempt={}",
+                taskId,
+                executionContext.type(),
+                attempt);
         try {
             return handler.execute(executionContext);
         } catch (RetryableTaskExecutionException exception) {
             int failureNumber = priorFailureCount + 1;
             if (failureNumber < effectiveMaxAttempts()) {
-                LOGGER.warn("event=task_retry_scheduled taskId={} attempt={} nextInterval={} exceptionType={}",
-                        taskId, attempt,
-                        retryProperties.intervalAfterFailure(failureNumber), exception.getClass().getSimpleName());
+                LOGGER.warn(
+                        "event=task_retry_scheduled taskId={} attempt={} nextInterval={} exceptionType={}",
+                        taskId,
+                        attempt,
+                        retryProperties.intervalAfterFailure(failureNumber),
+                        exception.getClass().getSimpleName());
             }
             throw exception;
         }
@@ -156,8 +157,7 @@ public class TaskExecutionService {
     }
 
     private TaskExecutionOutcome outcomeAfterFailureSave(
-            long taskId, java.util.UUID executionId, TaskErrorCode errorCode, String message
-    ) {
+            long taskId, java.util.UUID executionId, TaskErrorCode errorCode, String message) {
         try {
             if (!persistenceService.fail(taskId, executionId, errorCode, message)) {
                 LOGGER.warn("event=stale_execution_result_ignored taskId={} executionId={}", taskId, executionId);
@@ -165,8 +165,11 @@ public class TaskExecutionService {
             }
             return TaskExecutionOutcome.DEAD_LETTER;
         } catch (RuntimeException persistenceException) {
-            LOGGER.error("event=task_failure_persistence_error taskId={} errorCode={}",
-                    taskId, errorCode, persistenceException);
+            LOGGER.error(
+                    "event=task_failure_persistence_error taskId={} errorCode={}",
+                    taskId,
+                    errorCode,
+                    persistenceException);
             return TaskExecutionOutcome.DEAD_LETTER;
         }
     }

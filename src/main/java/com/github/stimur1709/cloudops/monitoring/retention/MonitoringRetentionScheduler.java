@@ -10,10 +10,7 @@ public class MonitoringRetentionScheduler {
     private final MonitoringRetentionService retentionService;
     private final MonitoringProperties properties;
 
-    public MonitoringRetentionScheduler(
-            MonitoringRetentionService retentionService,
-            MonitoringProperties properties
-    ) {
+    public MonitoringRetentionScheduler(MonitoringRetentionService retentionService, MonitoringProperties properties) {
         this.retentionService = retentionService;
         this.properties = properties;
     }

@@ -1,9 +1,8 @@
 package com.github.stimur1709.cloudops.monitoring.api;
 
+import com.github.stimur1709.cloudops.monitoring.application.ResourceAvailability;
 import java.math.BigDecimal;
 import java.time.Instant;
-
-import com.github.stimur1709.cloudops.monitoring.application.ResourceAvailability;
 
 public record ResourceAvailabilityResponse(
         Instant from,
@@ -16,8 +15,7 @@ public record ResourceAvailabilityResponse(
         long knownSeconds,
         BigDecimal uptimePercent,
         BigDecimal availabilityPercent,
-        BigDecimal coveragePercent
-) {
+        BigDecimal coveragePercent) {
 
     public static ResourceAvailabilityResponse from(ResourceAvailability availability) {
         return new ResourceAvailabilityResponse(
@@ -31,7 +29,6 @@ public record ResourceAvailabilityResponse(
                 availability.knownSeconds(),
                 availability.uptimePercent(),
                 availability.availabilityPercent(),
-                availability.coveragePercent()
-        );
+                availability.coveragePercent());
     }
 }

@@ -12,8 +12,7 @@ public final class TestAuthentication {
 
     public static final long USER_ID = 10_000L;
 
-    private TestAuthentication() {
-    }
+    private TestAuthentication() {}
 
     public static MockMvc authenticatedMockMvc(WebApplicationContext context) {
         return MockMvcBuilders.webAppContextSetup(context)

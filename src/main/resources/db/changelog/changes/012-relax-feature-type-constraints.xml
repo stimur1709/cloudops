@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet id="012-relax-feature-type-constraints" author="stimur1709">
+        <sql dbms="postgresql">
+            ALTER TABLE resources DROP CONSTRAINT resources_type_check;
+            ALTER TABLE tasks DROP CONSTRAINT tasks_type_check;
+            ALTER TABLE outbox_messages DROP CONSTRAINT outbox_messages_message_type_check;
+            ALTER TABLE outbox_messages DROP CONSTRAINT outbox_messages_aggregate_type_check;
+            ALTER TABLE monitors DROP CONSTRAINT monitors_type_check;
+            ALTER TABLE organization_probe_settings
+                DROP CONSTRAINT organization_probe_settings_probe_type_check;
+            ALTER TABLE resource_probe_settings
+                DROP CONSTRAINT resource_probe_settings_probe_type_check;
+            ALTER TABLE credentials DROP CONSTRAINT credentials_type_check;
+            ALTER TABLE resource_credentials DROP CONSTRAINT resource_credentials_purpose_check;
+
+            ALTER TABLE organization_probe_settings
+                DROP CONSTRAINT organization_probe_settings_values_check;
+            ALTER TABLE organization_probe_settings
+                ADD CONSTRAINT organization_probe_settings_values_check
+                    CHECK (
+                        interval_seconds &gt; 0
+                        AND failure_threshold BETWEEN 1 AND 10
+                        AND recovery_threshold BETWEEN 1 AND 10
+                        AND (retention_days IS NULL OR retention_days BETWEEN 1 AND 365)
+                        AND (timeout_ms IS NULL OR timeout_ms BETWEEN 1 AND 60000)
+                    );
+
+            ALTER TABLE resource_probe_settings
+                DROP CONSTRAINT resource_probe_settings_values_check;
+            ALTER TABLE resource_probe_settings
+                ADD CONSTRAINT resource_probe_settings_values_check
+                    CHECK (
+                        interval_seconds &gt; 0
+                        AND failure_threshold BETWEEN 1 AND 10
+                        AND recovery_threshold BETWEEN 1 AND 10
+                        AND (retention_days IS NULL OR retention_days BETWEEN 1 AND 365)
+                        AND (timeout_ms IS NULL OR timeout_ms BETWEEN 1 AND 60000)
+                    );
+        </sql>
+
+        <rollback>
+            <sql dbms="postgresql">
+                ALTER TABLE resources
+                    ADD CONSTRAINT resources_type_check
+                        CHECK (type IN ('NETWORK_DEVICE', 'SERVER', 'DATABASE', 'SERVICE', 'OTHER'));
+                ALTER TABLE tasks
+                    ADD CONSTRAINT tasks_type_check CHECK (type IN ('TEST_OPERATION'));
+                ALTER TABLE outbox_messages
+                    ADD CONSTRAINT outbox_messages_message_type_check
+                        CHECK (message_type IN ('TASK_EXECUTION_REQUESTED'));
+                ALTER TABLE outbox_messages
+                    ADD CONSTRAINT outbox_messages_aggregate_type_check
+                        CHECK (aggregate_type IN ('TASK'));
+                ALTER TABLE monitors
+                    ADD CONSTRAINT monitors_type_check
+                        CHECK (type IN ('HTTP_CHECK', 'PORT_CHECK', 'DNS_CHECK', 'PING', 'TLS_CHECK'));
+                ALTER TABLE organization_probe_settings
+                    ADD CONSTRAINT organization_probe_settings_probe_type_check
+                        CHECK (probe_type IN ('HTTP_CHECK', 'PORT_CHECK', 'DNS_CHECK', 'PING', 'TLS_CHECK'));
+                ALTER TABLE resource_probe_settings
+                    ADD CONSTRAINT resource_probe_settings_probe_type_check
+                        CHECK (probe_type IN ('HTTP_CHECK', 'PORT_CHECK', 'DNS_CHECK', 'PING', 'TLS_CHECK'));
+                ALTER TABLE credentials
+                    ADD CONSTRAINT credentials_type_check
+                        CHECK (type IN ('USERNAME_PASSWORD', 'SSH_PRIVATE_KEY'));
+                ALTER TABLE resource_credentials
+                    ADD CONSTRAINT resource_credentials_purpose_check
+                        CHECK (purpose IN ('SSH', 'DATABASE'));
+
+                ALTER TABLE organization_probe_settings
+                    DROP CONSTRAINT organization_probe_settings_values_check;
+                ALTER TABLE organization_probe_settings
+                    ADD CONSTRAINT organization_probe_settings_values_check
+                        CHECK (
+                            interval_seconds &gt; 0
+                            AND failure_threshold BETWEEN 1 AND 10
+                            AND recovery_threshold BETWEEN 1 AND 10
+                            AND storage_mode IN ('LATEST_ONLY', 'HISTORY')
+                            AND ((storage_mode = 'LATEST_ONLY' AND retention_days IS NULL)
+                                OR (storage_mode = 'HISTORY' AND retention_days BETWEEN 1 AND 365))
+                            AND ((probe_type = 'DNS_CHECK' AND timeout_ms IS NULL)
+                                OR (probe_type &lt;&gt; 'DNS_CHECK' AND timeout_ms BETWEEN 1 AND 60000))
+                        );
+
+                ALTER TABLE resource_probe_settings
+                    DROP CONSTRAINT resource_probe_settings_values_check;
+                ALTER TABLE resource_probe_settings
+                    ADD CONSTRAINT resource_probe_settings_values_check
+                        CHECK (
+                            interval_seconds &gt; 0
+                            AND failure_threshold BETWEEN 1 AND 10
+                            AND recovery_threshold BETWEEN 1 AND 10
+                            AND storage_mode IN ('LATEST_ONLY', 'HISTORY')
+                            AND ((storage_mode = 'LATEST_ONLY' AND retention_days IS NULL)
+                                OR (storage_mode = 'HISTORY' AND retention_days BETWEEN 1 AND 365))
+                            AND ((probe_type = 'DNS_CHECK' AND timeout_ms IS NULL)
+                                OR (probe_type &lt;&gt; 'DNS_CHECK' AND timeout_ms BETWEEN 1 AND 60000))
+                        );
+            </sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

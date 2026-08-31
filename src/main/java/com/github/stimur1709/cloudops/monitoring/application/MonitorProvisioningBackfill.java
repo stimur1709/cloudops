@@ -12,9 +12,7 @@ public class MonitorProvisioningBackfill implements ApplicationRunner {
     private final MonitorProvisioningService provisioningService;
 
     public MonitorProvisioningBackfill(
-            ResourceJpaRepository resourceRepository,
-            MonitorProvisioningService provisioningService
-    ) {
+            ResourceJpaRepository resourceRepository, MonitorProvisioningService provisioningService) {
         this.resourceRepository = resourceRepository;
         this.provisioningService = provisioningService;
     }

@@ -1,12 +1,11 @@
 package com.github.stimur1709.cloudops.organization.api;
 
-import java.net.URI;
-
 import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
 import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.organization.application.OrganizationService;
 import jakarta.validation.Valid;
+import java.net.URI;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -23,13 +22,11 @@ public class OrganizationController {
 
     @PostMapping
     public ResponseEntity<OrganizationResponse> create(
-            @Valid @RequestBody CreateOrganizationRequest request,
-            Authentication authentication
-    ) {
-        OrganizationResponse response = OrganizationResponse.from(
-                organizationService.create(request.name(), CurrentUser.id(authentication))
-        );
-        return ResponseEntity.created(URI.create("/api/organizations/" + response.id())).body(response);
+            @Valid @RequestBody CreateOrganizationRequest request, Authentication authentication) {
+        OrganizationResponse response =
+                OrganizationResponse.from(organizationService.create(request.name(), CurrentUser.id(authentication)));
+        return ResponseEntity.created(URI.create("/api/organizations/" + response.id()))
+                .body(response);
     }
 
     @GetMapping("/{id}")
@@ -39,24 +36,19 @@ public class OrganizationController {
 
     @PostMapping("/search")
     public SearchResponse<OrganizationResponse> search(
-            @Valid @RequestBody SearchRequest request,
-            Authentication authentication
-    ) {
+            @Valid @RequestBody SearchRequest request, Authentication authentication) {
         return SearchResponse.from(
                 organizationService.search(request.toQuery(), CurrentUser.id(authentication)),
-                OrganizationResponse::from
-        );
+                OrganizationResponse::from);
     }
 
     @PutMapping("/{id}")
     public OrganizationResponse update(
             @PathVariable long id,
             @Valid @RequestBody UpdateOrganizationRequest request,
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         return OrganizationResponse.from(
-                organizationService.update(id, request.name(), CurrentUser.id(authentication))
-        );
+                organizationService.update(id, request.name(), CurrentUser.id(authentication)));
     }
 
     @DeleteMapping("/{id}")

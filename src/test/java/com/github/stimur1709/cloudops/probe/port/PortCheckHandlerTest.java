@@ -6,8 +6,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
-
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionContext;
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
@@ -19,6 +17,7 @@ import com.github.stimur1709.cloudops.resource.config.NetworkDeviceResourceConfi
 import com.github.stimur1709.cloudops.resource.config.OtherResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ServerResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class PortCheckHandlerTest {
@@ -28,12 +27,18 @@ class PortCheckHandlerTest {
 
     @Test
     void supportsOnlyConfigsWithAHostAndPort() {
-        assertThat(handler.isCompatibleWith(new ServerResourceConfig("server", 22))).isTrue();
-        assertThat(handler.isCompatibleWith(new ServerResourceConfig("server", null))).isFalse();
-        assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", 161))).isTrue();
-        assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", null))).isFalse();
-        assertThat(handler.isCompatibleWith(new DatabaseResourceConfig("database", 5432, "cloudops"))).isTrue();
-        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("https://example.com", 200))).isFalse();
+        assertThat(handler.isCompatibleWith(new ServerResourceConfig("server", 22)))
+                .isTrue();
+        assertThat(handler.isCompatibleWith(new ServerResourceConfig("server", null)))
+                .isFalse();
+        assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", 161)))
+                .isTrue();
+        assertThat(handler.isCompatibleWith(new NetworkDeviceResourceConfig("switch", null)))
+                .isFalse();
+        assertThat(handler.isCompatibleWith(new DatabaseResourceConfig("database", 5432, "cloudops")))
+                .isTrue();
+        assertThat(handler.isCompatibleWith(new ServiceResourceConfig("https://example.com", 200)))
+                .isFalse();
         assertThat(handler.isCompatibleWith(new OtherResourceConfig())).isFalse();
     }
 
@@ -43,8 +48,7 @@ class PortCheckHandlerTest {
         when(client.execute("database", 5432, 5000)).thenReturn(PortCheckOutcome.completed(checkResult));
 
         ProbeExecutionResult result = handler.execute(new ProbeExecutionContext(
-                1, ProbeType.PORT_CHECK, new DatabaseResourceConfig("database", 5432, "cloudops")
-        ));
+                1, ProbeType.PORT_CHECK, new DatabaseResourceConfig("database", 5432, "cloudops")));
 
         assertThat(handler.type()).isEqualTo(ProbeType.PORT_CHECK);
         assertThat(result).isEqualTo(ProbeExecutionResult.completed(true, checkResult));
@@ -53,14 +57,14 @@ class PortCheckHandlerTest {
 
     @Test
     void registryProvidesTheSamePortHandlerToEveryCaller() {
-        ProbeHandlerRegistry registry = new ProbeHandlerRegistry(List.of(
-                new HttpCheckHandler(mock(HttpCheckClient.class)), handler
-        ));
+        ProbeHandlerRegistry registry =
+                new ProbeHandlerRegistry(List.of(new HttpCheckHandler(mock(HttpCheckClient.class)), handler));
 
         assertThat(registry.get(ProbeType.PORT_CHECK)).isSameAs(handler);
-        assertThat(registry.supports(ProbeType.PORT_CHECK, new ServerResourceConfig("server", 22))).isTrue();
-        assertThatThrownBy(() -> handler.execute(new ProbeExecutionContext(
-                1, ProbeType.PORT_CHECK, new OtherResourceConfig()
-        ))).isInstanceOf(IllegalArgumentException.class);
+        assertThat(registry.supports(ProbeType.PORT_CHECK, new ServerResourceConfig("server", 22)))
+                .isTrue();
+        assertThatThrownBy(() ->
+                        handler.execute(new ProbeExecutionContext(1, ProbeType.PORT_CHECK, new OtherResourceConfig())))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

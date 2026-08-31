@@ -2,10 +2,8 @@ package com.github.stimur1709.cloudops.common.config;
 
 import java.time.Duration;
 import java.util.Base64;
-
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("cloudops.security.jwt")

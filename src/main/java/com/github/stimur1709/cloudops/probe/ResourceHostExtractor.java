@@ -1,17 +1,15 @@
 package com.github.stimur1709.cloudops.probe;
 
-import java.net.URI;
-
 import com.github.stimur1709.cloudops.resource.config.DatabaseResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.NetworkDeviceResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ServerResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ServiceResourceConfig;
+import java.net.URI;
 
 public final class ResourceHostExtractor {
 
-    private ResourceHostExtractor() {
-    }
+    private ResourceHostExtractor() {}
 
     public static String extract(ResourceConfig resourceConfig) {
         return switch (resourceConfig) {

@@ -6,9 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
-
 import com.github.stimur1709.cloudops.probe.ProbeType;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ProbeHandlerRegistryTest {

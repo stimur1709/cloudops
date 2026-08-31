@@ -1,7 +1,7 @@
 package com.github.stimur1709.cloudops.task.messaging;
 
-import com.github.stimur1709.cloudops.task.execution.TaskExecutionService;
 import com.github.stimur1709.cloudops.task.execution.TaskExecutionOutcome;
+import com.github.stimur1709.cloudops.task.execution.TaskExecutionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;

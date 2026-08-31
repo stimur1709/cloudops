@@ -9,6 +9,5 @@ public record ProbeSettingsValues(
         int recoveryThreshold,
         StorageMode storageMode,
         Integer retentionDays,
-        Integer timeoutMs
-) implements ProbeSettings {
-}
+        Integer timeoutMs)
+        implements ProbeSettings {}

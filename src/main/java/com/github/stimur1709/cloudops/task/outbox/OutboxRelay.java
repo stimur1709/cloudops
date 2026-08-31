@@ -1,10 +1,9 @@
 package com.github.stimur1709.cloudops.task.outbox;
 
+import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageJpaRepository;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageJpaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -24,10 +23,7 @@ class OutboxRelay {
     private final Set<UUID> previouslyFailed = ConcurrentHashMap.newKeySet();
 
     OutboxRelay(
-            OutboxMessageJpaRepository repository,
-            OutboxMessageProcessor processor,
-            OutboxRelayProperties properties
-    ) {
+            OutboxMessageJpaRepository repository, OutboxMessageProcessor processor, OutboxRelayProperties properties) {
         this.repository = repository;
         this.processor = processor;
         this.properties = properties;
