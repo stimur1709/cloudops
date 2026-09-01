@@ -14,7 +14,6 @@ import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceEntity;
 import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository;
-import java.time.Clock;
 import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -30,7 +29,6 @@ public class MonitorExecutionPersistenceService {
     private final ResourceConfigMapper configMapper;
     private final ResourceHealthService resourceHealthService;
     private final MonitoringSettingsResolver settingsResolver;
-    private final Clock clock;
 
     public MonitorExecutionPersistenceService(
             MonitorJpaRepository monitorRepository,
@@ -38,15 +36,13 @@ public class MonitorExecutionPersistenceService {
             ResourceJpaRepository resourceRepository,
             ResourceConfigMapper configMapper,
             ResourceHealthService resourceHealthService,
-            MonitoringSettingsResolver settingsResolver,
-            Clock clock) {
+            MonitoringSettingsResolver settingsResolver) {
         this.monitorRepository = monitorRepository;
         this.resultRepository = resultRepository;
         this.resourceRepository = resourceRepository;
         this.configMapper = configMapper;
         this.resourceHealthService = resourceHealthService;
         this.settingsResolver = settingsResolver;
-        this.clock = clock;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -61,7 +57,6 @@ public class MonitorExecutionPersistenceService {
             return null;
         }
         EffectiveProbeSettings settings = settingsResolver.resolve(resource, monitor.type());
-        monitor.scheduleNext(clock.instant(), settings.intervalSeconds());
         if (!settings.enabled() || resource.status() != ResourceStatus.ACTIVE) {
             return null;
         }
@@ -72,7 +67,12 @@ public class MonitorExecutionPersistenceService {
     @Transactional
     public void saveResult(long monitorId, Instant checkedAt, JsonNode result, boolean success) {
         MonitorEntity monitor = monitorRepository.findByIdForUpdate(monitorId).orElseThrow(NotFoundException::new);
-        EffectiveProbeSettings settings = settingsResolver.resolve(monitor.resourceId(), monitor.type());
+        if (!monitor.compatible()) {
+            return;
+        }
+        ResourceEntity resource =
+                resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
+        EffectiveProbeSettings settings = settingsResolver.resolve(resource, monitor.type());
         if (!settings.enabled()) {
             return;
         }

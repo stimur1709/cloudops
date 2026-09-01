@@ -54,6 +54,9 @@ public class MonitorService {
         ResourceEntity resource =
                 resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
+        if (!monitor.compatible()) {
+            throw new ConflictException("MONITOR_INCOMPATIBLE", "An incompatible monitor cannot be scheduled");
+        }
         if (!settingsResolver.resolve(resource, monitor.type()).enabled()) {
             throw new ConflictException("MONITOR_DISABLED", "A disabled monitor cannot be scheduled");
         }
