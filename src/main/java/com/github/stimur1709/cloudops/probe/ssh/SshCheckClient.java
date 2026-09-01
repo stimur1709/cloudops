@@ -19,6 +19,7 @@ import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.transport.TransportException;
 import net.schmizz.sshj.transport.verification.HostKeyVerifier;
 import net.schmizz.sshj.transport.verification.OpenSSHKnownHosts;
+import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.userauth.UserAuthException;
 import net.schmizz.sshj.userauth.keyprovider.KeyProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SshCheckClient {
 
+    private final SshHostKeyVerification hostKeyVerification;
     private final Path knownHostsPath;
     private final Connector connector;
 
@@ -36,9 +38,7 @@ public class SshCheckClient {
     }
 
     SshCheckClient(SshHostKeyVerification hostKeyVerification, Path knownHostsPath, Connector connector) {
-        if (hostKeyVerification != SshHostKeyVerification.KNOWN_HOSTS) {
-            throw new IllegalArgumentException("Unsupported SSH host key verification policy");
-        }
+        this.hostKeyVerification = hostKeyVerification;
         this.knownHostsPath = knownHostsPath;
         this.connector = connector;
     }
@@ -46,7 +46,8 @@ public class SshCheckClient {
     SshCheckOutcome execute(String host, int port, ResolvedCredential credential, int timeoutMs) {
         long startedAt = System.nanoTime();
         try {
-            ConnectionResult connection = connector.connect(host, port, credential, timeoutMs, knownHostsPath);
+            ConnectionResult connection =
+                    connector.connect(host, port, credential, timeoutMs, hostKeyVerification, knownHostsPath);
             long responseTimeMs =
                     Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             return SshCheckOutcome.completed(new SshCheckResult(
@@ -76,13 +77,18 @@ public class SshCheckClient {
     }
 
     private static ConnectionResult connect(
-            String host, int port, ResolvedCredential credential, int timeoutMs, Path knownHostsPath)
+            String host,
+            int port,
+            ResolvedCredential credential,
+            int timeoutMs,
+            SshHostKeyVerification hostKeyVerification,
+            Path knownHostsPath)
             throws IOException {
         try (SSHClient client = new SSHClient()) {
             client.setConnectTimeout(timeoutMs);
             client.setTimeout(timeoutMs);
             AtomicBoolean hostKeyRejected = new AtomicBoolean();
-            client.addHostKeyVerifier(strictVerifier(knownHostsPath, hostKeyRejected));
+            client.addHostKeyVerifier(hostKeyVerifier(hostKeyVerification, knownHostsPath, hostKeyRejected));
             KeyProvider keyProvider = loadKey(client, credential);
             try {
                 client.connect(host, port);
@@ -101,6 +107,14 @@ public class SshCheckClient {
                 throw failure(ProbeErrorCode.SSH_HANDSHAKE_ERROR, "SSH session could not be opened", exception);
             }
         }
+    }
+
+    private static HostKeyVerifier hostKeyVerifier(
+            SshHostKeyVerification verification, Path knownHostsPath, AtomicBoolean rejected) throws SshCheckException {
+        return switch (verification) {
+            case ACCEPT_ALL -> new PromiscuousVerifier();
+            case KNOWN_HOSTS -> strictVerifier(knownHostsPath, rejected);
+        };
     }
 
     private static HostKeyVerifier strictVerifier(Path knownHostsPath, AtomicBoolean rejected)
@@ -179,7 +193,12 @@ public class SshCheckClient {
     @FunctionalInterface
     interface Connector {
         ConnectionResult connect(
-                String host, int port, ResolvedCredential credential, int timeoutMs, Path knownHostsPath)
+                String host,
+                int port,
+                ResolvedCredential credential,
+                int timeoutMs,
+                SshHostKeyVerification hostKeyVerification,
+                Path knownHostsPath)
                 throws IOException;
     }
 

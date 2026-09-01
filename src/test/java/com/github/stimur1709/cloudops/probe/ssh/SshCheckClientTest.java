@@ -26,12 +26,11 @@ class SshCheckClientTest {
     private Path temporaryDirectory;
 
     @Test
-    void authenticatesWithPasswordAndOpensSessionWithoutExecutingACommand() throws Exception {
+    void acceptsUnknownHostKeyAndAuthenticatesWithPasswordWithoutExecutingACommand() throws Exception {
         KeyPair hostKey = keyPair();
         try (LocalSshServer server = server(hostKey, null)) {
-            Path knownHosts = knownHosts(server.port(), hostKey);
-            SshCheckOutcome outcome = new SshCheckClient(
-                            new SshProperties(SshHostKeyVerification.KNOWN_HOSTS, knownHosts))
+            SshCheckOutcome outcome = new SshCheckClient(new SshProperties(
+                            SshHostKeyVerification.ACCEPT_ALL, temporaryDirectory.resolve("missing-known-hosts")))
                     .execute(
                             "127.0.0.1",
                             server.port(),
@@ -52,8 +51,8 @@ class SshCheckClientTest {
         KeyPair userKey = keyPair();
         String privateKey = pem(userKey);
         try (LocalSshServer server = server(hostKey, userKey)) {
-            SshCheckOutcome outcome = new SshCheckClient(
-                            new SshProperties(SshHostKeyVerification.KNOWN_HOSTS, knownHosts(server.port(), hostKey)))
+            SshCheckOutcome outcome = new SshCheckClient(new SshProperties(
+                            SshHostKeyVerification.ACCEPT_ALL, temporaryDirectory.resolve("missing-known-hosts")))
                     .execute("127.0.0.1", server.port(), new ResolvedSshPrivateKey("cloudops", privateKey), 3000);
 
             assertThat(outcome.completed()).as(outcome.toString()).isTrue();
@@ -103,7 +102,7 @@ class SshCheckClientTest {
         SshCheckClient client = new SshCheckClient(
                 SshHostKeyVerification.KNOWN_HOSTS,
                 temporaryDirectory.resolve("known-hosts"),
-                (host, port, credential, timeout, knownHosts) -> {
+                (host, port, credential, timeout, hostKeyVerification, knownHosts) -> {
                     if (failure instanceof java.io.IOException ioException) {
                         throw ioException;
                     }

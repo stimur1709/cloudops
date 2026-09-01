@@ -45,7 +45,7 @@ cloudops:
       SSH_CHECK:
         <<: *default-timeout-probe
   ssh:
-    host-key-verification: KNOWN_HOSTS
+    host-key-verification: ACCEPT_ALL
     known-hosts-path: ${java.io.tmpdir}/cloudops-test-known-hosts
   task:
     messaging:
