@@ -266,18 +266,16 @@ class MonitorApiIntegrationTest {
     }
 
     @Test
-    void requestedRunDoesNotMovePeriodicScheduleAndRejectsDisabledOrIncompatibleMonitor() throws Exception {
+    void requestedRunSchedulesNowAndRejectsDisabledOrIncompatibleMonitor() throws Exception {
         long resourceId = createService("https://example.com");
         long monitorId = jdbcTemplate.queryForObject(
                 "SELECT id FROM monitors WHERE resource_id = ? AND type = 'HTTP_CHECK'", Long.class, resourceId);
-        Instant scheduled = Instant.now().plusSeconds(600).truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
-        jdbcTemplate.update("UPDATE monitors SET next_run_at = ? WHERE id = ?", Timestamp.from(scheduled), monitorId);
+        jdbcTemplate.update("UPDATE monitors SET next_run_at = now() + interval '10 minutes' WHERE id = ?", monitorId);
 
+        Instant beforeRequest = Instant.now();
         mockMvc.perform(post("/api/monitors/{id}/run", monitorId)).andExpect(status().isAccepted());
-        assertThat(claimService.claimRequested()).containsExactly(monitorId);
-        assertThat(jdbcTemplate.queryForObject(
-                        "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
-                .isEqualTo(scheduled);
+        assertThat(nextRunAt(monitorId)).isBetween(beforeRequest, Instant.now());
+        assertThat(claimService.claimDue()).contains(monitorId);
 
         putResource(resourceId, "HTTP_CHECK", settings(false, 30, 3, 2, "LATEST_ONLY", null, 500))
                 .andExpect(status().isOk());

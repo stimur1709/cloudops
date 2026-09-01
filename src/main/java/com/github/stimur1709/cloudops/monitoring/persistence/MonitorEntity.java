@@ -41,9 +41,6 @@ public class MonitorEntity {
     @Column(name = "next_run_at")
     private Instant nextRunAt;
 
-    @Column(name = "requested_run_at")
-    private Instant requestedRunAt;
-
     @Column(name = "last_checked_at")
     private Instant lastCheckedAt;
 
@@ -82,14 +79,13 @@ public class MonitorEntity {
         updateHealth(success, failureThreshold, recoveryThreshold);
     }
 
-    public void requestRun(Instant now) {
-        requestedRunAt = now;
+    public void scheduleNow(Instant now) {
+        nextRunAt = now;
     }
 
     public void updateCompatibility(boolean compatible, boolean enabled, Instant now) {
         if (!compatible) {
             nextRunAt = null;
-            requestedRunAt = null;
         } else if (!this.compatible && enabled) {
             nextRunAt = now;
         }
@@ -98,9 +94,6 @@ public class MonitorEntity {
 
     public void synchronizeSchedule(boolean enabled, Instant now) {
         nextRunAt = compatible && enabled ? now : null;
-        if (!enabled || !compatible) {
-            requestedRunAt = null;
-        }
     }
 
     private void updateHealth(boolean success, int failureThreshold, int recoveryThreshold) {

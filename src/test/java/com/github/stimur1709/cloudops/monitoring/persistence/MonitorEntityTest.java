@@ -35,9 +35,8 @@ class MonitorEntityTest {
     }
 
     @Test
-    void incompatibleOrDisabledMonitorHasNoPeriodicOrRequestedSchedule() {
+    void incompatibleOrDisabledMonitorHasNoPeriodicSchedule() {
         MonitorEntity monitor = MonitorEntity.create(1, ProbeType.HTTP_CHECK, NOW);
-        monitor.requestRun(NOW);
 
         monitor.updateCompatibility(false, true, NOW);
 

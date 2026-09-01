@@ -38,9 +38,4 @@ public class MonitorClaimService {
                 .map(MonitorScheduleRepository.ClaimedMonitor::id)
                 .toList();
     }
-
-    @Transactional
-    public List<Long> claimRequested() {
-        return scheduleRepository.claimRequested(properties.batchSize());
-    }
 }
