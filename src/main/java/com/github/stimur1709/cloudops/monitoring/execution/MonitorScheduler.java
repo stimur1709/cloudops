@@ -26,5 +26,6 @@ public class MonitorScheduler {
             return;
         }
         claimService.claimDue().forEach(executionService::execute);
+        claimService.claimRequested().forEach(executionService::execute);
     }
 }

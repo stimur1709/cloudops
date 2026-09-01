@@ -30,11 +30,19 @@ public class MonitorEntity {
     @Column(nullable = false, length = 30)
     private ProbeType type;
 
+    /**
+     * Whether the current Resource configuration technically supports this probe type. Compatibility is independent
+     * from the monitoring policy's {@code enabled} setting: an incompatible monitor is retained with its history so
+     * the same monitor can be reactivated if the Resource configuration becomes compatible again.
+     */
     @Column(nullable = false)
     private boolean compatible;
 
-    @Column(name = "next_run_at", nullable = false)
+    @Column(name = "next_run_at")
     private Instant nextRunAt;
+
+    @Column(name = "requested_run_at")
+    private Instant requestedRunAt;
 
     @Column(name = "last_checked_at")
     private Instant lastCheckedAt;
@@ -74,19 +82,25 @@ public class MonitorEntity {
         updateHealth(success, failureThreshold, recoveryThreshold);
     }
 
-    public void scheduleNow(Instant now) {
-        nextRunAt = now;
+    public void requestRun(Instant now) {
+        requestedRunAt = now;
     }
 
-    public void scheduleNext(Instant now, int intervalSeconds) {
-        nextRunAt = now.plusSeconds(intervalSeconds);
-    }
-
-    public void updateCompatibility(boolean compatible, Instant now) {
-        if (compatible && !this.compatible) {
+    public void updateCompatibility(boolean compatible, boolean enabled, Instant now) {
+        if (!compatible) {
+            nextRunAt = null;
+            requestedRunAt = null;
+        } else if (!this.compatible && enabled) {
             nextRunAt = now;
         }
         this.compatible = compatible;
+    }
+
+    public void synchronizeSchedule(boolean enabled, Instant now) {
+        nextRunAt = compatible && enabled ? now : null;
+        if (!enabled || !compatible) {
+            requestedRunAt = null;
+        }
     }
 
     private void updateHealth(boolean success, int failureThreshold, int recoveryThreshold) {

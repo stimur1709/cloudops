@@ -11,18 +11,37 @@ import org.springframework.stereotype.Repository;
 public class MonitorScheduleRepository {
 
     private static final String CLAIM_DUE_SQL = """
-            SELECT id, resource_id, type
-            FROM monitors
-            WHERE next_run_at <= CAST(? AS TIMESTAMPTZ)
-              AND compatible
-            ORDER BY next_run_at, id
+            SELECT monitor.id, monitor.resource_id, resource.organization_id, monitor.type
+            FROM monitors AS monitor
+            JOIN resources AS resource ON resource.id = monitor.resource_id
+            WHERE monitor.next_run_at IS NOT NULL
+              AND monitor.next_run_at <= CAST(? AS TIMESTAMPTZ)
+              AND monitor.compatible
+            ORDER BY monitor.next_run_at, monitor.id
             LIMIT ?
-            FOR UPDATE SKIP LOCKED
+            FOR UPDATE OF monitor SKIP LOCKED
             """;
 
     private static final String SCHEDULE_NEXT_SQL = """
             UPDATE monitors
-            SET next_run_at = CAST(? AS TIMESTAMPTZ)
+            SET next_run_at = CAST(? AS TIMESTAMPTZ),
+                requested_run_at = NULL
+            WHERE id = ?
+            """;
+
+    private static final String CLAIM_REQUESTED_SQL = """
+            SELECT monitor.id
+            FROM monitors AS monitor
+            WHERE monitor.requested_run_at IS NOT NULL
+              AND monitor.compatible
+            ORDER BY monitor.requested_run_at, monitor.id
+            LIMIT ?
+            FOR UPDATE OF monitor SKIP LOCKED
+            """;
+
+    private static final String CLEAR_REQUEST_SQL = """
+            UPDATE monitors
+            SET requested_run_at = NULL
             WHERE id = ?
             """;
 
@@ -38,6 +57,7 @@ public class MonitorScheduleRepository {
                 (resultSet, _) -> new ClaimedMonitor(
                         resultSet.getLong("id"),
                         resultSet.getLong("resource_id"),
+                        resultSet.getLong("organization_id"),
                         ProbeType.valueOf(resultSet.getString("type"))),
                 Timestamp.from(now),
                 batchSize);
@@ -47,5 +67,12 @@ public class MonitorScheduleRepository {
         jdbcTemplate.update(SCHEDULE_NEXT_SQL, Timestamp.from(nextRunAt), monitorId);
     }
 
-    public record ClaimedMonitor(long id, long resourceId, ProbeType type) {}
+    public List<Long> claimRequested(int batchSize) {
+        List<Long> claimed =
+                jdbcTemplate.query(CLAIM_REQUESTED_SQL, (resultSet, _) -> resultSet.getLong("id"), batchSize);
+        claimed.forEach(id -> jdbcTemplate.update(CLEAR_REQUEST_SQL, id));
+        return claimed;
+    }
+
+    public record ClaimedMonitor(long id, long resourceId, long organizationId, ProbeType type) {}
 }

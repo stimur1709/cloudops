@@ -34,6 +34,23 @@ class MonitorEntityTest {
         assertThat(monitor.healthStatus()).isEqualTo(HealthStatus.DOWN);
     }
 
+    @Test
+    void incompatibleOrDisabledMonitorHasNoPeriodicOrRequestedSchedule() {
+        MonitorEntity monitor = MonitorEntity.create(1, ProbeType.HTTP_CHECK, NOW);
+        monitor.requestRun(NOW);
+
+        monitor.updateCompatibility(false, true, NOW);
+
+        assertThat(monitor.compatible()).isFalse();
+        assertThat(monitor.nextRunAt()).isNull();
+        monitor.updateCompatibility(true, false, NOW.plusSeconds(1));
+        assertThat(monitor.nextRunAt()).isNull();
+        monitor.synchronizeSchedule(true, NOW.plusSeconds(2));
+        assertThat(monitor.nextRunAt()).isEqualTo(NOW.plusSeconds(2));
+        monitor.synchronizeSchedule(false, NOW.plusSeconds(3));
+        assertThat(monitor.nextRunAt()).isNull();
+    }
+
     private void record(MonitorEntity monitor, boolean success, int failure, int recovery) {
         monitor.record(NOW, MAPPER.createObjectNode().put("success", success), success, failure, recovery);
     }

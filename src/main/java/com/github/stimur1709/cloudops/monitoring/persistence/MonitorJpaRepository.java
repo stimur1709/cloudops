@@ -1,5 +1,6 @@
 package com.github.stimur1709.cloudops.monitoring.persistence;
 
+import com.github.stimur1709.cloudops.probe.ProbeType;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
@@ -13,6 +14,8 @@ import org.springframework.data.repository.query.Param;
 public interface MonitorJpaRepository extends JpaRepository<MonitorEntity, Long> {
 
     List<MonitorEntity> findAllByResourceIdOrderById(long resourceId);
+
+    Optional<MonitorEntity> findByResourceIdAndType(long resourceId, ProbeType type);
 
     @Modifying
     @Query(value = """

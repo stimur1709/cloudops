@@ -10,4 +10,16 @@ public record ProbeSettingsValues(
         StorageMode storageMode,
         Integer retentionDays,
         Integer timeoutMs)
-        implements ProbeSettings {}
+        implements ProbeSettings {
+
+    public static ProbeSettingsValues from(ProbeSettings settings) {
+        return new ProbeSettingsValues(
+                settings.enabled(),
+                settings.intervalSeconds(),
+                settings.failureThreshold(),
+                settings.recoveryThreshold(),
+                settings.storageMode(),
+                settings.retentionDays(),
+                settings.timeoutMs());
+    }
+}

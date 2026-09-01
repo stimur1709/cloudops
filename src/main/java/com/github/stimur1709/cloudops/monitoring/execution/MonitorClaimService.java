@@ -31,11 +31,16 @@ public class MonitorClaimService {
         var now = clock.instant();
         var claimed = scheduleRepository.claimDue(now, properties.batchSize());
         for (var monitor : claimed) {
-            var settings = settingsResolver.resolve(monitor.resourceId(), monitor.type());
+            var settings = settingsResolver.resolve(monitor.resourceId(), monitor.organizationId(), monitor.type());
             scheduleRepository.scheduleNext(monitor.id(), now.plusSeconds(settings.intervalSeconds()));
         }
         return claimed.stream()
                 .map(MonitorScheduleRepository.ClaimedMonitor::id)
                 .toList();
+    }
+
+    @Transactional
+    public List<Long> claimRequested() {
+        return scheduleRepository.claimRequested(properties.batchSize());
     }
 }

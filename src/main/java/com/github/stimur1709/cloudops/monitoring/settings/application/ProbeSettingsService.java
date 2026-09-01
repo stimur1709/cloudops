@@ -2,7 +2,6 @@ package com.github.stimur1709.cloudops.monitoring.settings.application;
 
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
-import com.github.stimur1709.cloudops.monitoring.application.ResourceHealthService;
 import com.github.stimur1709.cloudops.monitoring.config.MonitoringProperties;
 import com.github.stimur1709.cloudops.monitoring.settings.EffectiveProbeSettings;
 import com.github.stimur1709.cloudops.monitoring.settings.MonitoringSettingsResolver;
@@ -29,6 +28,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class ProbeSettingsService {
@@ -42,7 +43,7 @@ public class ProbeSettingsService {
     private final MonitoringProperties properties;
     private final ProbeHandlerRegistry handlerRegistry;
     private final ResourceConfigMapper configMapper;
-    private final ResourceHealthService resourceHealthService;
+    private final MonitoringSettingsSynchronizer synchronizer;
 
     public ProbeSettingsService(
             OrganizationJpaRepository organizationRepository,
@@ -54,7 +55,7 @@ public class ProbeSettingsService {
             MonitoringProperties properties,
             ProbeHandlerRegistry handlerRegistry,
             ResourceConfigMapper configMapper,
-            ResourceHealthService resourceHealthService) {
+            MonitoringSettingsSynchronizer synchronizer) {
         this.organizationRepository = organizationRepository;
         this.resourceRepository = resourceRepository;
         this.organizationSettingsRepository = organizationSettingsRepository;
@@ -64,7 +65,7 @@ public class ProbeSettingsService {
         this.properties = properties;
         this.handlerRegistry = handlerRegistry;
         this.configMapper = configMapper;
-        this.resourceHealthService = resourceHealthService;
+        this.synchronizer = synchronizer;
     }
 
     @Transactional(readOnly = true)
@@ -95,8 +96,8 @@ public class ProbeSettingsService {
                 .findByOrganizationIdAndProbeType(organizationId, type)
                 .orElseGet(() -> OrganizationProbeSettingsEntity.create(organizationId, type, values));
         entity.update(values);
-        organizationSettingsRepository.save(entity);
-        recalculateOrganization(organizationId);
+        organizationSettingsRepository.saveAndFlush(entity);
+        afterCommit(() -> synchronizer.putOrganization(organizationId, type, values));
         EffectiveProbeSettings effective = effective(type, entity, SettingsSource.ORGANIZATION);
         return new ProbeSettingsResponse(type, true, effective.source(), effective, false);
     }
@@ -107,7 +108,7 @@ public class ProbeSettingsService {
         authorization.requireManager(organizationId, userId);
         organizationSettingsRepository.deleteByOrganizationIdAndProbeType(organizationId, type);
         organizationSettingsRepository.flush();
-        recalculateOrganization(organizationId);
+        afterCommit(() -> synchronizer.removeOrganization(organizationId, type));
     }
 
     @Transactional(readOnly = true)
@@ -137,7 +138,7 @@ public class ProbeSettingsService {
                 .orElseGet(() -> ResourceProbeSettingsEntity.create(resourceId, type, values));
         entity.update(values);
         resourceSettingsRepository.saveAndFlush(entity);
-        resourceHealthService.recalculate(resourceId);
+        afterCommit(() -> synchronizer.putResource(resourceId, type, values));
         EffectiveProbeSettings effective = effective(type, entity, SettingsSource.RESOURCE);
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
         return new ProbeSettingsResponse(
@@ -150,13 +151,7 @@ public class ProbeSettingsService {
         authorization.requireManager(resource.organizationId(), userId);
         resourceSettingsRepository.deleteByResourceIdAndProbeType(resourceId, type);
         resourceSettingsRepository.flush();
-        resourceHealthService.recalculate(resourceId);
-    }
-
-    private void recalculateOrganization(long organizationId) {
-        resourceRepository
-                .findAllByOrganizationId(organizationId)
-                .forEach(resource -> resourceHealthService.recalculate(resource.id()));
+        afterCommit(() -> synchronizer.removeResource(resourceId, type));
     }
 
     private ResourceEntity requireResource(long id) {
@@ -191,5 +186,14 @@ public class ProbeSettingsService {
                 settings.retentionDays(),
                 settings.timeoutMs(),
                 source);
+    }
+
+    private void afterCommit(Runnable action) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                action.run();
+            }
+        });
     }
 }

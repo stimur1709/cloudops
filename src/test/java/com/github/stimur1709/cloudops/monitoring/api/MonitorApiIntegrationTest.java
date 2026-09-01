@@ -9,7 +9,9 @@ import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.monitoring.execution.MonitorClaimService;
 import com.github.stimur1709.cloudops.monitoring.execution.MonitorExecutionPersistenceService;
 import com.github.stimur1709.cloudops.monitoring.retention.MonitoringRetentionService;
+import com.github.stimur1709.cloudops.monitoring.settings.MonitoringSettingsIndex;
 import com.jayway.jsonpath.JsonPath;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -43,6 +45,9 @@ class MonitorApiIntegrationTest {
     @Autowired
     private MonitoringRetentionService retentionService;
 
+    @Autowired
+    private MonitoringSettingsIndex settingsIndex;
+
     private MockMvc mockMvc;
     private long organizationId;
 
@@ -54,6 +59,7 @@ class MonitorApiIntegrationTest {
                     resource_health_events, resource_health, outbox_messages, tasks, organization_memberships,
                     resources, users, organizations RESTART IDENTITY
                 """);
+        settingsIndex.reload();
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, 'monitor@example.com', 'Monitor User', '{noop}unused', now(), now())
@@ -86,6 +92,17 @@ class MonitorApiIntegrationTest {
         long monitorId = jdbcTemplate.queryForObject(
                 "SELECT id FROM monitors WHERE resource_id = ? ORDER BY id LIMIT 1", Long.class, resourceId);
         assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNull();
+        assertThat(nextRunAt(monitorId)).isNull();
+
+        updateResource(resourceId, "SERVICE", "{\"url\":\"https://example.com\"}");
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT compatible FROM monitors WHERE id = ?", Boolean.class, monitorId))
+                .isTrue();
+        assertThat(nextRunAt(monitorId)).isNotNull();
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM monitors WHERE resource_id = ?", Integer.class, resourceId))
+                .isEqualTo(4);
+
         mockMvc.perform(post("/api/resources/{id}/monitors", resourceId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -148,19 +165,20 @@ class MonitorApiIntegrationTest {
     }
 
     @Test
-    void disabledProbeKeepsMonitorAndResourceOverrideEnablesSameInstance() throws Exception {
+    void disabledProbeHasNoScheduleAndResourceOverrideEnablesSameInstance() throws Exception {
         putOrganization("PING", settings(false, 30, 3, 2, "LATEST_ONLY", null, 500))
                 .andExpect(status().isOk());
         long resourceId = createService("http://example.com");
         long monitorId = jdbcTemplate.queryForObject(
                 "SELECT id FROM monitors WHERE resource_id = ? AND type = 'PING'", Long.class, resourceId);
-        jdbcTemplate.update("UPDATE monitors SET next_run_at = now() - interval '1 second'");
-        assertThat(claimService.claimDue()).contains(monitorId);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
+                .isNull();
+        assertThat(claimService.claimDue()).doesNotContain(monitorId);
         assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNull();
 
         putResource(resourceId, "PING", settings(true, 30, 3, 2, "LATEST_ONLY", null, 500))
                 .andExpect(status().isOk());
-        jdbcTemplate.update("UPDATE monitors SET next_run_at = now() - interval '1 second' WHERE id = ?", monitorId);
         assertThat(claimService.claimDue()).contains(monitorId);
         assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNotNull();
         assertThat(jdbcTemplate.queryForObject(
@@ -188,6 +206,29 @@ class MonitorApiIntegrationTest {
     }
 
     @Test
+    void settingsChangesAndFallbackReconcilePeriodicSchedule() throws Exception {
+        long resourceId = createService("https://example.com");
+        long monitorId = jdbcTemplate.queryForObject(
+                "SELECT id FROM monitors WHERE resource_id = ? AND type = 'HTTP_CHECK'", Long.class, resourceId);
+
+        putOrganization("HTTP_CHECK", settings(false, 41, 3, 2, "LATEST_ONLY", null, 500))
+                .andExpect(status().isOk());
+        assertThat(nextRunAt(monitorId)).isNull();
+
+        putResource(resourceId, "HTTP_CHECK", settings(true, 52, 3, 2, "LATEST_ONLY", null, 500))
+                .andExpect(status().isOk());
+        assertThat(nextRunAt(monitorId)).isNotNull();
+
+        mockMvc.perform(delete("/api/resources/{id}/monitoring-settings/HTTP_CHECK", resourceId))
+                .andExpect(status().isNoContent());
+        assertThat(nextRunAt(monitorId)).isNull();
+
+        mockMvc.perform(delete("/api/organizations/{id}/monitoring-settings/HTTP_CHECK", organizationId))
+                .andExpect(status().isNoContent());
+        assertThat(nextRunAt(monitorId)).isNotNull();
+    }
+
+    @Test
     void concurrentSchedulerClaimsReturnDueMonitorOnlyOnce() throws Exception {
         long resourceId = createService("https://example.com");
         long monitorId = jdbcTemplate.queryForObject(
@@ -207,6 +248,48 @@ class MonitorApiIntegrationTest {
                     .count();
             assertThat(claimCount).isEqualTo(1);
         }
+    }
+
+    @Test
+    void executionPrecheckDoesNotMovePeriodicSchedule() throws Exception {
+        long resourceId = createService("https://example.com");
+        long monitorId = jdbcTemplate.queryForObject(
+                "SELECT id FROM monitors WHERE resource_id = ? AND type = 'HTTP_CHECK'", Long.class, resourceId);
+        Instant scheduled = Instant.now().plusSeconds(600).truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+        jdbcTemplate.update("UPDATE monitors SET next_run_at = ? WHERE id = ?", Timestamp.from(scheduled), monitorId);
+
+        assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNotNull();
+
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
+                .isEqualTo(scheduled);
+    }
+
+    @Test
+    void requestedRunDoesNotMovePeriodicScheduleAndRejectsDisabledOrIncompatibleMonitor() throws Exception {
+        long resourceId = createService("https://example.com");
+        long monitorId = jdbcTemplate.queryForObject(
+                "SELECT id FROM monitors WHERE resource_id = ? AND type = 'HTTP_CHECK'", Long.class, resourceId);
+        Instant scheduled = Instant.now().plusSeconds(600).truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+        jdbcTemplate.update("UPDATE monitors SET next_run_at = ? WHERE id = ?", Timestamp.from(scheduled), monitorId);
+
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId)).andExpect(status().isAccepted());
+        assertThat(claimService.claimRequested()).containsExactly(monitorId);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
+                .isEqualTo(scheduled);
+
+        putResource(resourceId, "HTTP_CHECK", settings(false, 30, 3, 2, "LATEST_ONLY", null, 500))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId)).andExpect(status().isConflict());
+
+        putResource(resourceId, "HTTP_CHECK", settings(true, 30, 3, 2, "LATEST_ONLY", null, 500))
+                .andExpect(status().isOk());
+        updateResource(resourceId, "OTHER", "{}");
+        mockMvc.perform(post("/api/monitors/{id}/run", monitorId)).andExpect(status().isConflict());
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
+                .isNull();
     }
 
     @Test
@@ -292,6 +375,10 @@ class MonitorApiIntegrationTest {
 
     private List<String> types(long resourceId) {
         return jdbcTemplate.queryForList("SELECT type FROM monitors WHERE resource_id = ?", String.class, resourceId);
+    }
+
+    private Instant nextRunAt(long monitorId) {
+        return jdbcTemplate.queryForObject("SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId);
     }
 
     private long insertResult(long monitorId, String checkedAtExpression) {

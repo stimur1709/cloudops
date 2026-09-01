@@ -2,6 +2,7 @@ package com.github.stimur1709.cloudops.monitoring.application;
 
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorEntity;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorJpaRepository;
+import com.github.stimur1709.cloudops.monitoring.settings.MonitoringSettingsResolver;
 import com.github.stimur1709.cloudops.probe.ProbeType;
 import com.github.stimur1709.cloudops.probe.execution.ProbeHandlerRegistry;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
@@ -18,16 +19,19 @@ public class MonitorProvisioningService {
     private final MonitorJpaRepository monitorRepository;
     private final ResourceConfigMapper configMapper;
     private final ProbeHandlerRegistry handlerRegistry;
+    private final MonitoringSettingsResolver settingsResolver;
     private final Clock clock;
 
     public MonitorProvisioningService(
             MonitorJpaRepository monitorRepository,
             ResourceConfigMapper configMapper,
             ProbeHandlerRegistry handlerRegistry,
+            MonitoringSettingsResolver settingsResolver,
             Clock clock) {
         this.monitorRepository = monitorRepository;
         this.configMapper = configMapper;
         this.handlerRegistry = handlerRegistry;
+        this.settingsResolver = settingsResolver;
         this.clock = clock;
     }
 
@@ -41,17 +45,21 @@ public class MonitorProvisioningService {
         Instant now = clock.instant();
 
         for (ProbeType type : ProbeType.values()) {
-            reconcileMonitor(resource.id(), type, config, monitorsByType.get(type), now);
+            reconcileMonitor(resource, type, config, monitorsByType.get(type), now);
         }
     }
 
     private void reconcileMonitor(
-            long resourceId, ProbeType type, ResourceConfig config, MonitorEntity monitor, Instant now) {
+            ResourceEntity resource, ProbeType type, ResourceConfig config, MonitorEntity monitor, Instant now) {
         boolean compatible = handlerRegistry.supports(type, config);
+        boolean enabled = settingsResolver.resolve(resource, type).enabled();
         if (monitor != null) {
-            monitor.updateCompatibility(compatible, now);
+            monitor.updateCompatibility(compatible, enabled, now);
+            if (compatible) {
+                monitor.synchronizeSchedule(enabled, now);
+            }
         } else if (compatible) {
-            monitorRepository.insertIfAbsent(resourceId, type.name(), now);
+            monitorRepository.insertIfAbsent(resource.id(), type.name(), enabled ? now : null);
         }
     }
 }
