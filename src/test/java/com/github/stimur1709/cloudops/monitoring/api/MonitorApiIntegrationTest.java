@@ -19,6 +19,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -107,6 +109,29 @@ class MonitorApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isMethodNotAllowed());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"UP", "DOWN"})
+    void newUnknownMonitorKeepsKnownResourceHealthWithoutCreatingEvent(String knownStatus) throws Exception {
+        long resourceId = createService("http://example.com");
+        jdbcTemplate.update("UPDATE monitors SET health_status = ? WHERE resource_id = ?", knownStatus, resourceId);
+        jdbcTemplate.update(
+                "UPDATE resource_health SET health_status = ? WHERE resource_id = ?", knownStatus, resourceId);
+
+        updateResource(resourceId, "SERVICE", "{\"url\":\"https://example.com\"}");
+
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT health_status FROM resource_health WHERE resource_id = ?", String.class, resourceId))
+                .isEqualTo(knownStatus);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT health_status FROM monitors WHERE resource_id = ? AND type = 'TLS_CHECK'",
+                        String.class,
+                        resourceId))
+                .isEqualTo("UNKNOWN");
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM resource_health_events WHERE resource_id = ?", Integer.class, resourceId))
+                .isZero();
     }
 
     @Test

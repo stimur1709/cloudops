@@ -22,13 +22,16 @@ class ResourceHealthServiceTest {
         return Stream.of(
                 Arguments.of(List.of(), ResourceHealthStatus.UNKNOWN),
                 Arguments.of(List.of(HealthStatus.UNKNOWN), ResourceHealthStatus.UNKNOWN),
+                Arguments.of(List.of(HealthStatus.UNKNOWN, HealthStatus.UNKNOWN), ResourceHealthStatus.UNKNOWN),
                 Arguments.of(List.of(HealthStatus.UP), ResourceHealthStatus.UP),
+                Arguments.of(List.of(HealthStatus.UP, HealthStatus.UNKNOWN), ResourceHealthStatus.UP),
                 Arguments.of(List.of(HealthStatus.DOWN), ResourceHealthStatus.DOWN),
+                Arguments.of(List.of(HealthStatus.DOWN, HealthStatus.UNKNOWN), ResourceHealthStatus.DOWN),
                 Arguments.of(List.of(HealthStatus.UP, HealthStatus.UP), ResourceHealthStatus.UP),
                 Arguments.of(List.of(HealthStatus.DOWN, HealthStatus.DOWN), ResourceHealthStatus.DOWN),
                 Arguments.of(List.of(HealthStatus.UP, HealthStatus.DOWN), ResourceHealthStatus.DEGRADED),
                 Arguments.of(
                         List.of(HealthStatus.UP, HealthStatus.DOWN, HealthStatus.UNKNOWN),
-                        ResourceHealthStatus.UNKNOWN));
+                        ResourceHealthStatus.DEGRADED));
     }
 }
