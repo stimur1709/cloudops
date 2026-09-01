@@ -5,5 +5,6 @@ public enum ProbeType {
     PORT_CHECK,
     DNS_CHECK,
     PING,
-    TLS_CHECK
+    TLS_CHECK,
+    SSH_CHECK
 }

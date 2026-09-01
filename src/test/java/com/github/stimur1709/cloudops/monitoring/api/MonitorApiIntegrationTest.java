@@ -111,6 +111,44 @@ class MonitorApiIntegrationTest {
                 .andExpect(status().isMethodNotAllowed());
     }
 
+    @Test
+    void provisionsOneSshMonitorForCompatibleResourcesAndExposesEffectiveSettings() throws Exception {
+        String response = mockMvc.perform(post("/api/resources")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                {"name":"ssh-server","type":"SERVER","status":"ACTIVE","organizationId":%d,
+                 "config":{"host":"server.internal"}}
+                """.formatted(organizationId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.config.sshPort").value(22))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long resourceId = ((Number) JsonPath.read(response, "$.id")).longValue();
+
+        assertThat(types(resourceId)).contains("SSH_CHECK");
+        mockMvc.perform(get("/api/resources/{id}/monitoring-settings", resourceId))
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$[?(@.probeType == 'SSH_CHECK')].supported").value(true))
+                .andExpect(jsonPath("$[?(@.probeType == 'SSH_CHECK')].effective.timeoutMs")
+                        .value(500));
+
+        updateResource(resourceId, "SERVER", "{\"host\":\"updated.internal\",\"sshPort\":2222}");
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM monitors WHERE resource_id = ? AND type = 'SSH_CHECK'",
+                        Integer.class,
+                        resourceId))
+                .isEqualTo(1);
+
+        updateResource(resourceId, "OTHER", "{}");
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT compatible FROM monitors WHERE resource_id = ? AND type = 'SSH_CHECK'",
+                        Boolean.class,
+                        resourceId))
+                .isFalse();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"UP", "DOWN"})
     void newUnknownMonitorKeepsKnownResourceHealthWithoutCreatingEvent(String knownStatus) throws Exception {

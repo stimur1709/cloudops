@@ -28,6 +28,21 @@ class ResourceConfigJsonTest {
     }
 
     @Test
+    void appliesDefaultAndExplicitServerSshPorts() {
+        CreateResourceRequest defaultPort = jsonMapper.readValue("""
+                {"name":"server","type":"SERVER","status":"ACTIVE","organizationId":1,
+                 "config":{"host":"server.internal"}}
+                """, CreateResourceRequest.class);
+        CreateResourceRequest explicitPort = jsonMapper.readValue("""
+                {"name":"server","type":"SERVER","status":"ACTIVE","organizationId":1,
+                 "config":{"host":"server.internal","sshPort":2222}}
+                """, CreateResourceRequest.class);
+
+        assertThat(((ServerResourceConfig) defaultPort.config()).sshPort()).isEqualTo(22);
+        assertThat(((ServerResourceConfig) explicitPort.config()).sshPort()).isEqualTo(2222);
+    }
+
+    @Test
     void appliesServiceDefaultsDuringDeserialization() {
         CreateResourceRequest request = jsonMapper.readValue("""
                 {

@@ -29,7 +29,8 @@ Content-Type: application/json
   "status": "ACTIVE",
   "organizationId": 1,
   "config": {
-    "host": "localhost"
+    "host": "localhost",
+    "sshPort": 22
   }
 }
 

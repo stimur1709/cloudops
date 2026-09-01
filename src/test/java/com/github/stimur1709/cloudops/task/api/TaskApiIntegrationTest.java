@@ -56,7 +56,7 @@ class TaskApiIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"HTTP_CHECK", "PORT_CHECK", "DNS_CHECK", "PING", "TLS_CHECK"})
+    @ValueSource(strings = {"HTTP_CHECK", "PORT_CHECK", "DNS_CHECK", "PING", "TLS_CHECK", "SSH_CHECK"})
     void rejectsFormerProbeTaskTypesWithoutCreatingTaskOrOutbox(String type) throws Exception {
         mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
                         .contentType(MediaType.APPLICATION_JSON)

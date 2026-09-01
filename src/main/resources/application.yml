@@ -59,6 +59,12 @@ cloudops:
       TLS_CHECK:
         <<: *default-timeout-probe
         timeout-ms: 5000
+      SSH_CHECK:
+        <<: *default-timeout-probe
+        timeout-ms: 5000
+  ssh:
+    host-key-verification: KNOWN_HOSTS
+    known-hosts-path: ${SSH_KNOWN_HOSTS_PATH:${user.home}/.ssh/known_hosts}
   task:
     messaging:
       exchange: ${TASK_EXCHANGE:cloudops.tasks}
