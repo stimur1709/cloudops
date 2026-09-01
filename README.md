@@ -336,6 +336,18 @@ override и возвращает наследование с родительс�
 у `SERVICE`. `TLS_CHECK` использует настроенный порт host-ресурса либо HTTPS URL (`443` по
 умолчанию); HTTP URL не поддерживается.
 
+`PORT_CHECK` подтверждает доступность TCP endpoint. `SSH_CHECK` поддерживает `SERVER` и
+`NETWORK_DEVICE`, выполняет SSH handshake и authentication через credential с purpose `SSH`,
+открывает и закрывает session channel, но не запускает shell или произвольную команду. Для
+`SERVER` используется отдельный `config.sshPort` (по умолчанию `22`), для `NETWORK_DEVICE` —
+`managementPort` либо `22`, если он не задан. Password и private key никогда не сохраняются в
+monitoring result. `SSH_CHECK` является только Probe и не является Task operation.
+
+По умолчанию SSH host key принимается без проверки (`SSH_HOST_KEY_VERIFICATION=ACCEPT_ALL`),
+как в ECCM, поэтому предварительно добавлять ресурс в `known_hosts` не требуется. Для строгой
+проверки задайте `SSH_HOST_KEY_VERIFICATION=KNOWN_HOSTS`; путь к OpenSSH-файлу задаётся
+`SSH_KNOWN_HOSTS_PATH` (по умолчанию `${user.home}/.ssh/known_hosts`).
+
 Runtime/state и последний результат возвращает `GET /api/resources/{resourceId}/monitors`.
 История в effective режиме `HISTORY` доступна через `POST /api/monitors/{id}/results/search`.
 
@@ -363,6 +375,8 @@ RabbitMQ-команду и не добавляет в результат при�
 - `MONITORING_MINIMUM_INTERVAL_SECONDS` (`30`);
 - `MONITORING_RETENTION_POLL_INTERVAL` (`1h`);
 - `MONITORING_RETENTION_BATCH_SIZE` (`500`).
+- `SSH_HOST_KEY_VERIFICATION` (`ACCEPT_ALL`);
+- `SSH_KNOWN_HOSTS_PATH` (`${user.home}/.ssh/known_hosts`).
 
 ## Тесты
 

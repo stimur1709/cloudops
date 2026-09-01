@@ -42,6 +42,11 @@ cloudops:
         <<: *default-timeout-probe
       TLS_CHECK:
         <<: *default-timeout-probe
+      SSH_CHECK:
+        <<: *default-timeout-probe
+  ssh:
+    host-key-verification: ACCEPT_ALL
+    known-hosts-path: ${java.io.tmpdir}/cloudops-test-known-hosts
   task:
     messaging:
       exchange: cloudops.tasks.test

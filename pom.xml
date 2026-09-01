@@ -21,6 +21,8 @@
         <java.version>25</java.version>
         <spotless-maven-plugin.version>3.9.0</spotless-maven-plugin.version>
         <spring-retry.version>2.0.13</spring-retry.version>
+        <sshj.version>0.40.0</sshj.version>
+        <sshd.version>2.19.0</sshd.version>
     </properties>
 
     <dependencies>
@@ -56,6 +58,11 @@
             <groupId>org.springframework.retry</groupId>
             <artifactId>spring-retry</artifactId>
             <version>${spring-retry.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hierynomus</groupId>
+            <artifactId>sshj</artifactId>
+            <version>${sshj.version}</version>
         </dependency>
 
         <dependency>
@@ -112,6 +119,12 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+            <version>${sshd.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -78,3 +78,18 @@ Content-Type: application/json
   "retentionDays": 30,
   "timeoutMs": 5000
 }
+
+### Store TLS_CHECK history for the organization
+PUT {{baseUrl}}/api/organizations/{{organizationId}}/monitoring-settings/SSH_CHECK
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "intervalSeconds": 60,
+  "failureThreshold": 3,
+  "recoveryThreshold": 2,
+  "storageMode": "HISTORY",
+  "retentionDays": 30,
+  "timeoutMs": 5000
+}
