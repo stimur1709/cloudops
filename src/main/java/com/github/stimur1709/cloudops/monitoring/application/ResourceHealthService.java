@@ -65,11 +65,11 @@ public class ResourceHealthService {
     }
 
     static ResourceHealthStatus aggregate(List<HealthStatus> statuses) {
-        if (statuses.isEmpty() || statuses.contains(HealthStatus.UNKNOWN)) {
-            return ResourceHealthStatus.UNKNOWN;
-        }
         boolean hasUp = statuses.contains(HealthStatus.UP);
         boolean hasDown = statuses.contains(HealthStatus.DOWN);
+        if (!hasUp && !hasDown) {
+            return ResourceHealthStatus.UNKNOWN;
+        }
         if (hasUp && hasDown) {
             return ResourceHealthStatus.DEGRADED;
         }

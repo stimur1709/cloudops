@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.github.stimur1709.cloudops.monitoring.execution.MonitorExecutionPersistenceService;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -76,16 +77,11 @@ class ResourceHealthConcurrencyIntegrationTest {
                             String.class,
                             resourceId))
                     .isEqualTo("DEGRADED");
-            assertThat(jdbcTemplate.queryForObject(
-                            "SELECT count(*) FROM resource_health_events WHERE resource_id = ?",
-                            Integer.class,
-                            resourceId))
-                    .isEqualTo(1);
-            assertThat(jdbcTemplate.queryForObject("""
+            assertThat(jdbcTemplate.queryForList("""
                     SELECT from_status || '->' || to_status FROM resource_health_events
-                    WHERE resource_id = ?
+                    WHERE resource_id = ? ORDER BY id
                     """, String.class, resourceId))
-                    .isEqualTo("UNKNOWN->DEGRADED");
+                    .isIn(List.of("UNKNOWN->UP", "UP->DEGRADED"), List.of("UNKNOWN->DOWN", "DOWN->DEGRADED"));
         } finally {
             jdbcTemplate.update("DELETE FROM monitors WHERE resource_id = ?", resourceId);
             jdbcTemplate.execute("""
