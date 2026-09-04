@@ -28,7 +28,8 @@ public class ResourceTaskController {
             @PathVariable long resourceId,
             @Valid @RequestBody CreateTaskRequest request,
             Authentication authentication) {
-        TaskEntity task = taskService.create(resourceId, request.type(), CurrentUser.id(authentication));
+        TaskEntity task =
+                taskService.create(resourceId, request.type(), request.parameters(), CurrentUser.id(authentication));
         return ResponseEntity.accepted()
                 .location(URI.create("/api/tasks/" + task.id()))
                 .body(TaskResponse.from(task));

@@ -6,7 +6,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
-import com.github.stimur1709.cloudops.task.application.TaskPersistenceService;
 import com.github.stimur1709.cloudops.task.application.TaskService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,13 +15,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import tools.jackson.databind.ObjectMapper;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = "cloudops.task.outbox.enabled=false")
 class TaskOutboxCreationIntegrationTest {
-
-    @Autowired
-    private TaskPersistenceService taskPersistenceService;
 
     @Autowired
     private TaskService taskService;
@@ -32,6 +29,9 @@ class TaskOutboxCreationIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private long resourceId;
 
@@ -53,10 +53,18 @@ class TaskOutboxCreationIntegrationTest {
                 """, organizationId, TestAuthentication.USER_ID);
         resourceId = jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
-                VALUES ('service', 'SERVICE', 'ACTIVE', ?,
-                        CAST('{"url":"http://localhost/","expectedStatus":200}' AS jsonb),
+                VALUES ('server', 'SERVER', 'ACTIVE', ?,
+                        CAST('{"host":"127.0.0.1","sshPort":22}' AS jsonb),
                         now(), now()) RETURNING id
                 """, Long.class, organizationId);
+        long credentialId = jdbcTemplate.queryForObject("""
+                INSERT INTO credentials
+                    (organization_id, name, type, username, secret_encrypted, created_at, updated_at)
+                VALUES (?, 'SSH', 'USERNAME_PASSWORD', 'cloudops', 'unused', now(), now()) RETURNING id
+                """, Long.class, organizationId);
+        jdbcTemplate.update("""
+                INSERT INTO resource_credentials (resource_id, credential_id, purpose) VALUES (?, ?, 'SSH')
+                """, resourceId, credentialId);
     }
 
     @AfterEach
@@ -67,8 +75,11 @@ class TaskOutboxCreationIntegrationTest {
 
     @Test
     void createsTaskAndExplicitCommandPayloadInOneTransaction() {
-        var task = taskPersistenceService.create(
-                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID);
+        var task = taskService.create(
+                resourceId,
+                com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE,
+                parameters(),
+                TestAuthentication.USER_ID);
 
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Long.class))
                 .isOne();
@@ -87,7 +98,10 @@ class TaskOutboxCreationIntegrationTest {
     @Test
     void taskCreationDoesNotCallRabbitPublisherOnRequestThread() {
         var task = taskService.create(
-                resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID);
+                resourceId,
+                com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE,
+                parameters(),
+                TestAuthentication.USER_ID);
 
         assertThat(task.id()).isPositive();
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class))
@@ -109,13 +123,20 @@ class TaskOutboxCreationIntegrationTest {
                 FOR EACH ROW EXECUTE FUNCTION reject_outbox_insert()
                 """);
 
-        assertThatThrownBy(() -> taskPersistenceService.create(
-                        resourceId, com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE, TestAuthentication.USER_ID))
+        assertThatThrownBy(() -> taskService.create(
+                        resourceId,
+                        com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE,
+                        parameters(),
+                        TestAuthentication.USER_ID))
                 .isInstanceOf(RuntimeException.class);
 
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Long.class))
                 .isZero();
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Long.class))
                 .isZero();
+    }
+
+    private tools.jackson.databind.JsonNode parameters() {
+        return objectMapper.createObjectNode().put("command", "true");
     }
 }

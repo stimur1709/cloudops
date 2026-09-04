@@ -1,7 +1,6 @@
 package com.github.stimur1709.cloudops.task.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -12,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.github.stimur1709.cloudops.TestAuthentication;
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
-import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,7 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest
+@SpringBootTest(properties = "cloudops.task.outbox.enabled=false")
 class TaskApiIntegrationTest {
 
     private static final long OTHER_USER_ID = 20_000L;
@@ -45,79 +43,149 @@ class TaskApiIntegrationTest {
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
         jdbcTemplate.execute("""
-                TRUNCATE TABLE resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health,
-                outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE resource_credentials, credentials, resource_probe_settings, organization_probe_settings,
+                    monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
+                    organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
         insertUser(TestAuthentication.USER_ID, "current@example.com");
         insertUser(OTHER_USER_ID, "other@example.com");
         organizationId = insertOrganization("Current organization");
         addMember(organizationId, TestAuthentication.USER_ID, "OWNER");
-        resourceId = insertResource(organizationId, "ACTIVE");
+        resourceId = insertResource(organizationId, "SERVER", "ACTIVE", "{\"host\":\"127.0.0.1\"}");
+        bindSshCredential(organizationId, resourceId);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"HTTP_CHECK", "PORT_CHECK", "DNS_CHECK", "PING", "TLS_CHECK", "SSH_CHECK"})
-    void rejectsFormerProbeTaskTypesWithoutCreatingTaskOrOutbox(String type) throws Exception {
+    void rejectsProbeTypesWithoutCreatingTaskOrOutbox(String type) throws Exception {
         mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":\"%s\"}".formatted(type)))
+                        .content("{\"type\":\"%s\",\"parameters\":{}}".formatted(type)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.errors[0].field").value("type"));
 
-        assertThat(count("tasks")).isZero();
-        assertThat(count("outbox_messages")).isZero();
+        assertNothingCreated();
     }
 
     @Test
-    void testOnlyOperationExercisesGenericTaskPipeline() throws Exception {
-        String response = mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":\"TEST_OPERATION\"}"))
+    void ownerCreatesRunCommandAndGetAndSearchReturnParameters() throws Exception {
+        String response = createTask("{\"type\":\"RUN_COMMAND\",\"parameters\":{\"command\":\"uname -a\"}}")
                 .andExpect(status().isAccepted())
                 .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/api/tasks/\\d+")))
-                .andExpect(jsonPath("$.type").value("TEST_OPERATION"))
+                .andExpect(jsonPath("$.type").value("RUN_COMMAND"))
+                .andExpect(jsonPath("$.parameters.command").value("uname -a"))
                 .andExpect(jsonPath("$.status").value("PENDING"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         long taskId = ((Number) JsonPath.read(response, "$.id")).longValue();
 
-        await().atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> mockMvc.perform(get("/api/tasks/{id}", taskId))
-                        .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.status").value("COMPLETED"))
-                        .andExpect(jsonPath("$.result.operation").value("test"))
-                        .andExpect(jsonPath("$.attemptCount").value(1)));
-    }
-
-    @Test
-    void missingTypeIsValidationError() throws Exception {
-        mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT parameters ->> 'command' FROM tasks WHERE id = ?", String.class, taskId))
+                .isEqualTo("uname -a");
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Integer.class))
+                .isOne();
+        mockMvc.perform(get("/api/tasks/{id}", taskId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.parameters.command").value("uname -a"));
+        mockMvc.perform(post("/api/tasks/search")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors[0].field").value("type"));
+                        .content("{\"start\":0,\"size\":10,\"getTotal\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].parameters.command").value("uname -a"));
     }
 
     @Test
-    void foreignUserCannotCreateOrReadTask() throws Exception {
-        long taskId =
-                jdbcTemplate.queryForObject("""
-                INSERT INTO tasks (organization_id, resource_id, type, status, created_by, created_at)
-                VALUES (?, ?, 'TEST_OPERATION', 'PENDING', ?, now()) RETURNING id
-                """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID);
+    void adminCanCreateButMemberCannot() throws Exception {
+        jdbcTemplate.update(
+                "UPDATE organization_memberships SET role = 'ADMIN' WHERE organization_id = ? AND user_id = ?",
+                organizationId,
+                TestAuthentication.USER_ID);
+        createTask(validRequest()).andExpect(status().isAccepted());
+
+        jdbcTemplate.update(
+                "UPDATE organization_memberships SET role = 'MEMBER' WHERE organization_id = ? AND user_id = ?",
+                organizationId,
+                TestAuthentication.USER_ID);
+        createTask(validRequest()).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void foreignResourceIsNotFound() throws Exception {
         long otherOrganization = insertOrganization("Other organization");
         addMember(otherOrganization, OTHER_USER_ID, "OWNER");
 
-        mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
-                        .with(jwt().jwt(token -> token.subject(Long.toString(OTHER_USER_ID))))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":\"TEST_OPERATION\"}"))
-                .andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/tasks/{id}", taskId)
-                        .with(jwt().jwt(token -> token.subject(Long.toString(OTHER_USER_ID)))))
-                .andExpect(status().isNotFound());
+        createTask(validRequest(), OTHER_USER_ID).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void unavailableResourceConfigurationsAreControlledConflicts() throws Exception {
+        jdbcTemplate.update("UPDATE resources SET status = 'INACTIVE' WHERE id = ?", resourceId);
+        createTask(validRequest())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("RESOURCE_INACTIVE"));
+
+        jdbcTemplate.update(
+                "UPDATE resources SET status = 'ACTIVE', type = 'OTHER', config = '{}'::jsonb WHERE id = ?",
+                resourceId);
+        createTask(validRequest())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("RESOURCE_UNSUPPORTED"));
+    }
+
+    @Test
+    void missingSshCredentialIsControlledConflict() throws Exception {
+        jdbcTemplate.update("DELETE FROM resource_credentials WHERE resource_id = ?", resourceId);
+
+        createTask(validRequest())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SSH_CREDENTIAL_NOT_CONFIGURED"));
+        assertNothingCreated();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "{\"type\":\"RUN_COMMAND\"}",
+                "{\"type\":\"RUN_COMMAND\",\"parameters\":{}}",
+                "{\"type\":\"RUN_COMMAND\",\"parameters\":{\"command\":\"   \"}}",
+                "{\"type\":\"RUN_COMMAND\",\"parameters\":{\"command\":\"true\",\"unknown\":1}}"
+            })
+    void invalidParametersDoNotCreateTaskOrOutbox(String request) throws Exception {
+        createTask(request).andExpect(status().isBadRequest());
+        assertNothingCreated();
+    }
+
+    @Test
+    void tooLongCommandDoesNotCreateTaskOrOutbox() throws Exception {
+        createTask("{\"type\":\"RUN_COMMAND\",\"parameters\":{\"command\":\"%s\"}}".formatted("x".repeat(4097)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("parameters.command"));
+        assertNothingCreated();
+    }
+
+    private org.springframework.test.web.servlet.ResultActions createTask(String request) throws Exception {
+        return createTask(request, TestAuthentication.USER_ID);
+    }
+
+    private org.springframework.test.web.servlet.ResultActions createTask(String request, long userId)
+            throws Exception {
+        return mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
+                .with(jwt().jwt(token -> token.subject(Long.toString(userId))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request));
+    }
+
+    private String validRequest() {
+        return "{\"type\":\"RUN_COMMAND\",\"parameters\":{\"command\":\"true\"}}";
+    }
+
+    private void assertNothingCreated() {
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Integer.class))
+                .isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Integer.class))
+                .isZero();
     }
 
     private void insertUser(long id, String email) {
@@ -140,14 +208,21 @@ class TaskApiIntegrationTest {
                 """, organization, user, role);
     }
 
-    private long insertResource(long organization, String resourceStatus) {
+    private long insertResource(long organization, String type, String statusValue, String config) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
-                VALUES ('resource', 'OTHER', ?, ?, '{}'::jsonb, now(), now()) RETURNING id
-                """, Long.class, resourceStatus, organization);
+                VALUES ('resource', ?, ?, ?, CAST(? AS jsonb), now(), now()) RETURNING id
+                """, Long.class, type, statusValue, organization, config);
     }
 
-    private int count(String table) {
-        return jdbcTemplate.queryForObject("SELECT count(*) FROM " + table, Integer.class);
+    private void bindSshCredential(long organization, long resource) {
+        long credentialId = jdbcTemplate.queryForObject("""
+                INSERT INTO credentials
+                    (organization_id, name, type, username, secret_encrypted, created_at, updated_at)
+                VALUES (?, 'SSH', 'USERNAME_PASSWORD', 'cloudops', 'unused', now(), now()) RETURNING id
+                """, Long.class, organization);
+        jdbcTemplate.update("""
+                INSERT INTO resource_credentials (resource_id, credential_id, purpose) VALUES (?, ?, 'SSH')
+                """, resource, credentialId);
     }
 }

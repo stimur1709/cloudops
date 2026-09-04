@@ -22,6 +22,8 @@ public interface ResourceCredentialJpaRepository extends JpaRepository<ResourceC
 
     Optional<ResourceCredentialEntity> findByResourceIdAndPurpose(long resourceId, CredentialPurpose purpose);
 
+    boolean existsByResourceIdAndPurpose(long resourceId, CredentialPurpose purpose);
+
     List<ResourceCredentialEntity> findAllByCredentialId(long credentialId);
 
     boolean existsByCredentialId(long credentialId);

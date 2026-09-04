@@ -8,12 +8,14 @@ import com.github.stimur1709.cloudops.membership.application.OrganizationAuthori
 import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembershipScopes;
 import com.github.stimur1709.cloudops.task.TaskType;
 import com.github.stimur1709.cloudops.task.execution.TaskHandlerRegistry;
+import com.github.stimur1709.cloudops.task.parameters.TaskParameterCodecRegistry;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity_;
 import com.github.stimur1709.cloudops.task.persistence.TaskJpaRepository;
 import com.github.stimur1709.cloudops.task.persistence.TaskSearchDefinition;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
 
 @Service
 public class TaskService {
@@ -23,23 +25,28 @@ public class TaskService {
     private final OrganizationAuthorization authorization;
     private final JpaSearchService searchService;
     private final TaskHandlerRegistry handlerRegistry;
+    private final TaskParameterCodecRegistry parameterCodecRegistry;
 
     public TaskService(
             TaskPersistenceService persistenceService,
             TaskJpaRepository taskRepository,
             OrganizationAuthorization authorization,
             JpaSearchService searchService,
-            TaskHandlerRegistry handlerRegistry) {
+            TaskHandlerRegistry handlerRegistry,
+            TaskParameterCodecRegistry parameterCodecRegistry) {
         this.persistenceService = persistenceService;
         this.taskRepository = taskRepository;
         this.authorization = authorization;
         this.searchService = searchService;
         this.handlerRegistry = handlerRegistry;
+        this.parameterCodecRegistry = parameterCodecRegistry;
     }
 
-    public TaskEntity create(long resourceId, TaskType type, long currentUserId) {
-        handlerRegistry.requireSupported(type);
-        return persistenceService.create(resourceId, type, currentUserId);
+    public TaskEntity create(long resourceId, TaskType type, JsonNode parameters, long currentUserId) {
+        var handler = handlerRegistry.get(type);
+        var typedParameters = parameterCodecRegistry.decode(type, parameters);
+        return persistenceService.create(
+                resourceId, type, parameterCodecRegistry.encode(typedParameters), currentUserId, handler);
     }
 
     @Transactional(readOnly = true)

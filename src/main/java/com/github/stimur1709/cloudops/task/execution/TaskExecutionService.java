@@ -73,8 +73,12 @@ public class TaskExecutionService {
                     taskId, claimed.executionId(), TaskErrorCode.HANDLER_NOT_FOUND, "Task handler is not configured");
         }
 
-        TaskExecutionContext executionContext =
-                new TaskExecutionContext(claimed.resourceId(), claimed.type(), claimed.resourceConfig());
+        TaskExecutionContext executionContext = new TaskExecutionContext(
+                claimed.resourceId(),
+                claimed.type(),
+                claimed.parameters(),
+                claimed.resourceStatus(),
+                claimed.resourceConfig());
         TaskExecutionResult result;
         try {
             result = retryTemplate.execute(retryContext -> executeAttempt(
@@ -87,7 +91,12 @@ public class TaskExecutionService {
                     effectiveMaxAttempts(),
                     exception);
             return outcomeAfterFailureSave(
-                    taskId, claimed.executionId(), TaskErrorCode.RETRY_EXHAUSTED, RETRY_EXHAUSTED_MESSAGE);
+                    taskId,
+                    claimed.executionId(),
+                    exception.errorCode(),
+                    exception.errorCode() == TaskErrorCode.RETRY_EXHAUSTED
+                            ? RETRY_EXHAUSTED_MESSAGE
+                            : exception.safeMessage());
         } catch (StaleTaskExecutionException exception) {
             LOGGER.warn("event=task_lease_lost taskId={} executionId={}", taskId, claimed.executionId());
             return TaskExecutionOutcome.ACKNOWLEDGE;
