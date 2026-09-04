@@ -10,15 +10,12 @@ import com.github.stimur1709.cloudops.probe.ProbeType;
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionContext;
 import com.github.stimur1709.cloudops.probe.execution.ProbeExecutionResult;
 import com.github.stimur1709.cloudops.probe.execution.ProbeHandler;
-import com.github.stimur1709.cloudops.resource.config.NetworkDeviceResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
-import com.github.stimur1709.cloudops.resource.config.ServerResourceConfig;
+import com.github.stimur1709.cloudops.ssh.SshEndpointResolver;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SshCheckHandler implements ProbeHandler {
-
-    private static final int DEFAULT_SSH_PORT = 22;
 
     private final CredentialResolver credentialResolver;
     private final SshCheckClient client;
@@ -35,12 +32,12 @@ public class SshCheckHandler implements ProbeHandler {
 
     @Override
     public boolean isCompatibleWith(ResourceConfig resourceConfig) {
-        return resourceConfig instanceof ServerResourceConfig || resourceConfig instanceof NetworkDeviceResourceConfig;
+        return SshEndpointResolver.supports(resourceConfig);
     }
 
     @Override
     public ProbeExecutionResult execute(ProbeExecutionContext context) {
-        Endpoint endpoint = endpoint(context.resourceConfig());
+        var endpoint = SshEndpointResolver.resolve(context.resourceConfig());
         final ResolvedCredential credential;
         try {
             credential = credentialResolver.resolve(context.resourceId(), CredentialPurpose.SSH);
@@ -56,16 +53,4 @@ public class SshCheckHandler implements ProbeHandler {
         }
         return ProbeExecutionResult.failed(outcome.errorCode(), outcome.errorMessage());
     }
-
-    private Endpoint endpoint(ResourceConfig resourceConfig) {
-        return switch (resourceConfig) {
-            case ServerResourceConfig server -> new Endpoint(server.host(), server.sshPort());
-            case NetworkDeviceResourceConfig device ->
-                new Endpoint(
-                        device.host(), device.managementPort() == null ? DEFAULT_SSH_PORT : device.managementPort());
-            default -> throw new IllegalArgumentException("SSH_CHECK requires a server or network device");
-        };
-    }
-
-    private record Endpoint(String host, int port) {}
 }

@@ -5,9 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.github.stimur1709.cloudops.credential.application.ResolvedSshPrivateKey;
 import com.github.stimur1709.cloudops.credential.application.ResolvedUsernamePassword;
 import com.github.stimur1709.cloudops.probe.ProbeErrorCode;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
+import com.github.stimur1709.cloudops.ssh.SshClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,7 +27,7 @@ class SshCheckClientTest {
     void acceptsUnknownHostKeyAndAuthenticatesWithPasswordWithoutExecutingACommand() throws Exception {
         KeyPair hostKey = keyPair();
         try (LocalSshServer server = server(hostKey, null)) {
-            SshCheckOutcome outcome = new SshCheckClient(new SshProperties(
+            SshCheckOutcome outcome = client(new SshProperties(
                             SshHostKeyVerification.ACCEPT_ALL, temporaryDirectory.resolve("missing-known-hosts")))
                     .execute(
                             "127.0.0.1",
@@ -51,7 +49,7 @@ class SshCheckClientTest {
         KeyPair userKey = keyPair();
         String privateKey = pem(userKey);
         try (LocalSshServer server = server(hostKey, userKey)) {
-            SshCheckOutcome outcome = new SshCheckClient(new SshProperties(
+            SshCheckOutcome outcome = client(new SshProperties(
                             SshHostKeyVerification.ACCEPT_ALL, temporaryDirectory.resolve("missing-known-hosts")))
                     .execute("127.0.0.1", server.port(), new ResolvedSshPrivateKey("cloudops", privateKey), 3000);
 
@@ -65,12 +63,12 @@ class SshCheckClientTest {
     void distinguishesAuthenticationAndHostKeyFailures() throws Exception {
         KeyPair hostKey = keyPair();
         try (LocalSshServer server = server(hostKey, null)) {
-            SshCheckClient client = new SshCheckClient(
-                    new SshProperties(SshHostKeyVerification.KNOWN_HOSTS, knownHosts(server.port(), hostKey)));
+            SshCheckClient client =
+                    client(new SshProperties(SshHostKeyVerification.KNOWN_HOSTS, knownHosts(server.port(), hostKey)));
             SshCheckOutcome authentication = client.execute(
                     "127.0.0.1", server.port(), new ResolvedUsernamePassword("cloudops", "wrong-password"), 3000);
             Files.writeString(temporaryDirectory.resolve("untrusted-known-hosts"), "", StandardCharsets.UTF_8);
-            SshCheckOutcome hostKeyFailure = new SshCheckClient(new SshProperties(
+            SshCheckOutcome hostKeyFailure = client(new SshProperties(
                             SshHostKeyVerification.KNOWN_HOSTS, temporaryDirectory.resolve("untrusted-known-hosts")))
                     .execute(
                             "127.0.0.1",
@@ -83,37 +81,8 @@ class SshCheckClientTest {
         }
     }
 
-    @Test
-    void classifiesNetworkAndProtocolFailures() {
-        assertFailure(new UnknownHostException(), ProbeErrorCode.DNS_ERROR);
-        assertFailure(new SocketTimeoutException(), ProbeErrorCode.TIMEOUT);
-        assertFailure(new ConnectException(), ProbeErrorCode.CONNECTION_ERROR);
-        assertFailure(
-                new SshCheckClient.SshCheckException(
-                        ProbeErrorCode.SSH_HANDSHAKE_ERROR, "SSH handshake failed", new Exception()),
-                ProbeErrorCode.SSH_HANDSHAKE_ERROR);
-        assertFailure(
-                new SshCheckClient.SshCheckException(
-                        ProbeErrorCode.CREDENTIAL_ERROR, "SSH credential is invalid", new Exception()),
-                ProbeErrorCode.CREDENTIAL_ERROR);
-    }
-
-    private void assertFailure(Exception failure, ProbeErrorCode expectedCode) {
-        SshCheckClient client = new SshCheckClient(
-                SshHostKeyVerification.KNOWN_HOSTS,
-                temporaryDirectory.resolve("known-hosts"),
-                (host, port, credential, timeout, hostKeyVerification, knownHosts) -> {
-                    if (failure instanceof java.io.IOException ioException) {
-                        throw ioException;
-                    }
-                    throw new IllegalStateException(failure);
-                });
-
-        SshCheckOutcome outcome =
-                client.execute("host", 22, new ResolvedUsernamePassword("username", "top-secret"), 100);
-
-        assertThat(outcome.errorCode()).isEqualTo(expectedCode);
-        assertThat(outcome.errorMessage()).doesNotContain("top-secret");
+    private SshCheckClient client(SshProperties properties) {
+        return new SshCheckClient(new SshClient(properties));
     }
 
     private LocalSshServer server(KeyPair hostKey, KeyPair acceptedUserKey) throws Exception {

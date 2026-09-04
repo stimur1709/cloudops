@@ -66,6 +66,9 @@ cloudops:
     host-key-verification: ${SSH_HOST_KEY_VERIFICATION:ACCEPT_ALL}
     known-hosts-path: ${SSH_KNOWN_HOSTS_PATH:${user.home}/.ssh/known_hosts}
   task:
+    run-command:
+      timeout: ${TASK_RUN_COMMAND_TIMEOUT:30s}
+      max-output-bytes: ${TASK_RUN_COMMAND_MAX_OUTPUT_BYTES:1048576}
     messaging:
       exchange: ${TASK_EXCHANGE:cloudops.tasks}
       queue: ${TASK_QUEUE:cloudops.task.execute}

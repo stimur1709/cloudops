@@ -48,6 +48,9 @@ cloudops:
     host-key-verification: ACCEPT_ALL
     known-hosts-path: ${java.io.tmpdir}/cloudops-test-known-hosts
   task:
+    run-command:
+      timeout: 3s
+      max-output-bytes: 65536
     messaging:
       exchange: cloudops.tasks.test
       queue: cloudops.task.execute.test

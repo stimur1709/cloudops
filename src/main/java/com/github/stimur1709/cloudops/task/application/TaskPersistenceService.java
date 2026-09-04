@@ -12,6 +12,7 @@ import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.TaskType;
 import com.github.stimur1709.cloudops.task.config.TaskLeaseProperties;
+import com.github.stimur1709.cloudops.task.execution.TaskHandler;
 import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageEntity;
 import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageJpaRepository;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
@@ -60,14 +61,16 @@ public class TaskPersistenceService {
     }
 
     @Transactional
-    public TaskEntity create(long resourceId, TaskType type, long currentUserId) {
+    public TaskEntity create(
+            long resourceId, TaskType type, JsonNode parameters, long currentUserId, TaskHandler handler) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
-        authorization.requireMember(resource.organizationId(), currentUserId);
+        authorization.requireManager(resource.organizationId(), currentUserId);
         if (resource.status() != ResourceStatus.ACTIVE) {
             throw new ConflictException("RESOURCE_INACTIVE", "Task requires an active resource");
         }
-        TaskEntity task =
-                TaskEntity.create(resource.organizationId(), resource.id(), type, currentUserId, clock.instant());
+        handler.validateCreation(resource.id(), configMapper.fromJson(resource.type(), resource.config()));
+        TaskEntity task = TaskEntity.create(
+                resource.organizationId(), resource.id(), type, parameters, currentUserId, clock.instant());
         taskRepository.saveAndFlush(task);
         var payload = objectMapper.createObjectNode().put("taskId", task.id());
         OutboxMessageEntity message =
@@ -98,7 +101,8 @@ public class TaskPersistenceService {
                 taskId,
                 executionId,
                 task.leaseExpiresAt());
-        return new ClaimedTask(task.id(), task.resourceId(), task.type(), config, executionId);
+        return new ClaimedTask(
+                task.id(), task.resourceId(), task.type(), task.parameters(), resource.status(), config, executionId);
     }
 
     @Transactional
@@ -146,5 +150,11 @@ public class TaskPersistenceService {
     }
 
     public record ClaimedTask(
-            long taskId, long resourceId, TaskType type, ResourceConfig resourceConfig, UUID executionId) {}
+            long taskId,
+            long resourceId,
+            TaskType type,
+            JsonNode parameters,
+            ResourceStatus resourceStatus,
+            ResourceConfig resourceConfig,
+            UUID executionId) {}
 }

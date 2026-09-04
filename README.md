@@ -198,11 +198,27 @@ curl -i -X DELETE http://localhost:8080/api/resources/1 \
 
 Task — самостоятельная конечная операция над Resource, потенциально долгая, асинхронная или
 имеющая side effects. `TaskType` не равен `ProbeType`: диагностические `HTTP_CHECK`,
-`PORT_CHECK`, `DNS_CHECK`, `PING` и `TLS_CHECK` принадлежат только Monitoring и не принимаются
-через `POST /api/resources/{resourceId}/tasks`. До появления первой реальной операции enum
-содержит временный `TEST_OPERATION`; production handler для него отсутствует, поэтому через API
-он недоступен. Placeholder и TODO нужно удалить при добавлении первого настоящего `TaskType`.
-API чтения `GET /api/tasks/{id}` и `POST /api/tasks/search` сохранены.
+`PORT_CHECK`, `DNS_CHECK`, `PING`, `TLS_CHECK` и `SSH_CHECK` принадлежат только Monitoring и не
+принимаются через `POST /api/resources/{resourceId}/tasks`. `RUN_COMMAND` — асинхронная Task
+operation, которая выполняет одну команду по SSH на активном `SERVER` или `NETWORK_DEVICE` с
+привязанным SSH credential. Запуск разрешён `OWNER` и `ADMIN`; `MEMBER` получает `403`.
+
+```shell
+curl -i -X POST http://localhost:8080/api/resources/1/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"RUN_COMMAND","parameters":{"command":"uname -a"}}'
+```
+
+Task хранит immutable snapshot параметров. Результат `RUN_COMMAND` содержит `exitCode`,
+`stdout`, `stderr`, `durationMs` и `outputTruncated`. Ненулевой exit code является нормальным
+завершением operation и даёт статус `COMPLETED`. Timeout и максимальный суммарный размер
+сохранённого stdout/stderr задаются через `TASK_RUN_COMMAND_TIMEOUT` и
+`TASK_RUN_COMMAND_MAX_OUTPUT_BYTES`.
+
+`SSH_CHECK` только диагностирует SSH handshake/authentication в Monitoring. `RUN_COMMAND`
+использует тот же низкоуровневый SSH connection/authentication код, но остаётся независимым
+Task flow и может иметь внешний side effect.
 
 API атомарно сохраняет Task и команду в PostgreSQL Transactional Outbox, после чего сразу
 возвращает `202 Accepted`, `Location: /api/tasks/{id}` и Task в статусе `PENDING`.
@@ -233,6 +249,10 @@ unroutable message оставляют её неопубликованной дл
 - до publish транзакция освобождает блокировку, и relay повторяет попытку;
 - после publish, но до сохранения `published_at`, команда может быть доставлена повторно;
 - после commit `published_at` relay больше не выбирает запись.
+
+Для `RUN_COMMAND` at-least-once означает, что после crash/recovery внешняя команда теоретически
+может выполниться повторно. CloudOps не может автоматически сделать произвольный side effect
+идемпотентным; при необходимости идемпотентность должна обеспечиваться самой командой.
 
 Повторная доставка безопасна для текущего consumer-а: атомарный переход Task из `PENDING`
 в `RUNNING` не позволяет повторно запустить handler для `RUNNING`, `COMPLETED` или `FAILED`.

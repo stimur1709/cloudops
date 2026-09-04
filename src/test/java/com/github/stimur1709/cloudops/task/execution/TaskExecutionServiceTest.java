@@ -191,6 +191,10 @@ class TaskExecutionServiceTest {
                         7,
                         8,
                         com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE,
+                        new tools.jackson.databind.ObjectMapper()
+                                .createObjectNode()
+                                .put("command", "true"),
+                        com.github.stimur1709.cloudops.resource.ResourceStatus.ACTIVE,
                         new OtherResourceConfig(),
                         EXECUTION_ID));
         when(persistence.fail(eq(7L), eq(EXECUTION_ID), any(), any())).thenReturn(true);

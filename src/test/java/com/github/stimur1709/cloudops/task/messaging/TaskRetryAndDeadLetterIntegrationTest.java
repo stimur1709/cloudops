@@ -201,7 +201,7 @@ class TaskRetryAndDeadLetterIntegrationTest {
     private long insertPendingTask() {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO tasks (organization_id, resource_id, type, status, created_by, created_at)
-                VALUES (?, ?, 'TEST_OPERATION', 'PENDING', ?, now()) RETURNING id
+                VALUES (?, ?, 'RUN_COMMAND', 'PENDING', ?, now()) RETURNING id
                 """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID);
     }
 
@@ -209,7 +209,7 @@ class TaskRetryAndDeadLetterIntegrationTest {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO tasks
                     (organization_id, resource_id, type, status, created_by, created_at, started_at, completed_at)
-                VALUES (?, ?, 'TEST_OPERATION', 'COMPLETED', ?, now(), now(), now()) RETURNING id
+                VALUES (?, ?, 'RUN_COMMAND', 'COMPLETED', ?, now(), now(), now()) RETURNING id
                 """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID);
     }
 

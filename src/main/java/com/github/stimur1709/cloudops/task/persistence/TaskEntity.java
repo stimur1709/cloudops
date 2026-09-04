@@ -35,6 +35,10 @@ public class TaskEntity {
     @Column(nullable = false, length = 30)
     private TaskType type;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private JsonNode parameters;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TaskStatus status;
@@ -79,17 +83,25 @@ public class TaskEntity {
 
     protected TaskEntity() {}
 
-    private TaskEntity(long organizationId, long resourceId, TaskType type, long createdBy, Instant createdAt) {
+    private TaskEntity(
+            long organizationId,
+            long resourceId,
+            TaskType type,
+            JsonNode parameters,
+            long createdBy,
+            Instant createdAt) {
         this.organizationId = organizationId;
         this.resourceId = resourceId;
         this.type = type;
+        this.parameters = parameters;
         this.status = TaskStatus.PENDING;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
     }
 
-    public static TaskEntity create(long organizationId, long resourceId, TaskType type, long createdBy, Instant now) {
-        return new TaskEntity(organizationId, resourceId, type, createdBy, now);
+    public static TaskEntity create(
+            long organizationId, long resourceId, TaskType type, JsonNode parameters, long createdBy, Instant now) {
+        return new TaskEntity(organizationId, resourceId, type, parameters, createdBy, now);
     }
 
     public void start(Instant now) {
@@ -156,6 +168,10 @@ public class TaskEntity {
 
     public TaskType type() {
         return type;
+    }
+
+    public JsonNode parameters() {
+        return parameters;
     }
 
     public TaskStatus status() {
