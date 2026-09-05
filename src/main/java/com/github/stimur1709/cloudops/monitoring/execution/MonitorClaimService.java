@@ -3,6 +3,8 @@ package com.github.stimur1709.cloudops.monitoring.execution;
 import com.github.stimur1709.cloudops.monitoring.config.MonitoringProperties;
 import com.github.stimur1709.cloudops.monitoring.settings.MonitoringSettingsResolver;
 import java.time.Clock;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,13 +31,25 @@ public class MonitorClaimService {
     @Transactional
     public List<Long> claimDue() {
         var now = clock.instant();
-        var claimed = scheduleRepository.claimDue(now, properties.batchSize());
+        var claimed = new ArrayList<>(scheduleRepository.claimRequested(properties.batchSize()));
         for (var monitor : claimed) {
-            var settings = settingsResolver.resolve(monitor.resourceId(), monitor.organizationId(), monitor.type());
-            scheduleRepository.scheduleNext(monitor.id(), now.plusSeconds(settings.intervalSeconds()));
+            reserve(monitor, now);
         }
-        return claimed.stream()
-                .map(MonitorScheduleRepository.ClaimedMonitor::id)
-                .toList();
+        int remaining = properties.batchSize() - claimed.size();
+        if (remaining > 0) {
+            var periodic = scheduleRepository.claimDue(now, remaining);
+            periodic.forEach(monitor -> reserve(monitor, now));
+            claimed.addAll(periodic);
+        }
+        return claimed.stream().map(ClaimedMonitor::id).toList();
+    }
+
+    private void reserve(ClaimedMonitor monitor, Instant now) {
+        Instant nextRunAt = monitor.nextRunAt();
+        if (!nextRunAt.isAfter(now)) {
+            var settings = settingsResolver.resolve(monitor.resourceId(), monitor.organizationId(), monitor.type());
+            nextRunAt = now.plusSeconds(settings.intervalSeconds());
+        }
+        scheduleRepository.scheduleNext(monitor.id(), nextRunAt);
     }
 }

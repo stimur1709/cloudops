@@ -60,7 +60,7 @@ public class MonitorService {
         if (!settingsResolver.resolve(resource, monitor.type()).enabled()) {
             throw new ConflictException("MONITOR_DISABLED", "A disabled monitor cannot be scheduled");
         }
-        monitor.scheduleNow(clock.instant());
+        monitor.requestRun(clock.instant());
     }
 
     @Transactional(readOnly = true)
