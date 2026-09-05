@@ -32,7 +32,6 @@ cloudops:
   monitoring:
     scheduler-enabled: ${MONITORING_SCHEDULER_ENABLED:true}
     poll-interval: ${MONITORING_POLL_INTERVAL:5s}
-    settings-recovery-interval: ${MONITORING_SETTINGS_RECOVERY_INTERVAL:30s}
     batch-size: ${MONITORING_BATCH_SIZE:50}
     minimum-interval-seconds: ${MONITORING_MINIMUM_INTERVAL_SECONDS:30}
     retention-poll-interval: ${MONITORING_RETENTION_POLL_INTERVAL:1h}

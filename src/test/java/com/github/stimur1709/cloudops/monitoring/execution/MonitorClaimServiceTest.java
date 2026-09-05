@@ -24,31 +24,12 @@ class MonitorClaimServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-01T00:00:00Z");
 
     @Test
-    void requestedRunsUseBatchCapacityAndPreserveFuturePeriodicDeadline() {
-        MonitorScheduleRepository repository = mock(MonitorScheduleRepository.class);
-        MonitoringSettingsResolver resolver = mock(MonitoringSettingsResolver.class);
-        MonitoringProperties properties =
-                new MonitoringProperties(true, Duration.ofSeconds(5), 1, 30, Duration.ofHours(1), 100, null);
-        Instant scheduled = NOW.plusSeconds(1200);
-        when(repository.claimRequested(1))
-                .thenReturn(List.of(new ClaimedMonitor(7, 8, 9, ProbeType.HTTP_CHECK, scheduled)));
-        MonitorClaimService service =
-                new MonitorClaimService(repository, resolver, properties, Clock.fixed(NOW, ZoneOffset.UTC));
-
-        assertThat(service.claimDue()).containsExactly(7L);
-
-        verify(repository).claimRequested(1);
-        verify(repository).scheduleNext(7, scheduled);
-        verifyNoMoreInteractions(repository, resolver);
-    }
-
-    @Test
     void periodicClaimResolvesSettingsOnceAndReservesScheduleOnce() {
         MonitorScheduleRepository repository = mock(MonitorScheduleRepository.class);
         MonitoringSettingsResolver resolver = mock(MonitoringSettingsResolver.class);
         MonitoringProperties properties =
                 new MonitoringProperties(true, Duration.ofSeconds(5), 20, 30, Duration.ofHours(1), 100, null);
-        var claimed = new ClaimedMonitor(7, 8, 9, ProbeType.HTTP_CHECK, NOW);
+        var claimed = new MonitorScheduleRepository.ClaimedMonitor(7, 8, 9, ProbeType.HTTP_CHECK);
         when(repository.claimDue(NOW, 20)).thenReturn(List.of(claimed));
         when(resolver.resolve(8, 9, ProbeType.HTTP_CHECK))
                 .thenReturn(new EffectiveProbeSettings(
@@ -68,7 +49,6 @@ class MonitorClaimServiceTest {
 
         verify(resolver).resolve(8, 9, ProbeType.HTTP_CHECK);
         verify(repository).claimDue(NOW, 20);
-        verify(repository).claimRequested(20);
         verify(repository).scheduleNext(7, NOW.plusSeconds(41));
         verifyNoMoreInteractions(repository, resolver);
     }

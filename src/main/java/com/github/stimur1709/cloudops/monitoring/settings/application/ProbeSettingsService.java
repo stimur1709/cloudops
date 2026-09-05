@@ -43,7 +43,7 @@ public class ProbeSettingsService {
     private final MonitoringProperties properties;
     private final ProbeHandlerRegistry handlerRegistry;
     private final ResourceConfigMapper configMapper;
-    private final MonitoringSettingsRecovery synchronizer;
+    private final MonitoringSettingsSynchronizer synchronizer;
 
     public ProbeSettingsService(
             OrganizationJpaRepository organizationRepository,
@@ -55,7 +55,7 @@ public class ProbeSettingsService {
             MonitoringProperties properties,
             ProbeHandlerRegistry handlerRegistry,
             ResourceConfigMapper configMapper,
-            MonitoringSettingsRecovery synchronizer) {
+            MonitoringSettingsSynchronizer synchronizer) {
         this.organizationRepository = organizationRepository;
         this.resourceRepository = resourceRepository;
         this.organizationSettingsRepository = organizationSettingsRepository;
@@ -97,7 +97,7 @@ public class ProbeSettingsService {
                 .orElseGet(() -> OrganizationProbeSettingsEntity.create(organizationId, type, values));
         entity.update(values);
         organizationSettingsRepository.saveAndFlush(entity);
-        afterCommit(() -> synchronizer.organizationCommitted(organizationId, type));
+        afterCommit(() -> synchronizer.putOrganization(organizationId, type, values));
         EffectiveProbeSettings effective = effective(type, entity, SettingsSource.ORGANIZATION);
         return new ProbeSettingsResponse(type, true, effective.source(), effective, false);
     }
@@ -108,7 +108,7 @@ public class ProbeSettingsService {
         authorization.requireManager(organizationId, userId);
         organizationSettingsRepository.deleteByOrganizationIdAndProbeType(organizationId, type);
         organizationSettingsRepository.flush();
-        afterCommit(() -> synchronizer.organizationCommitted(organizationId, type));
+        afterCommit(() -> synchronizer.removeOrganization(organizationId, type));
     }
 
     @Transactional(readOnly = true)
@@ -138,7 +138,7 @@ public class ProbeSettingsService {
                 .orElseGet(() -> ResourceProbeSettingsEntity.create(resourceId, type, values));
         entity.update(values);
         resourceSettingsRepository.saveAndFlush(entity);
-        afterCommit(() -> synchronizer.resourceCommitted(resourceId, type));
+        afterCommit(() -> synchronizer.putResource(resourceId, type, values));
         EffectiveProbeSettings effective = effective(type, entity, SettingsSource.RESOURCE);
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
         return new ProbeSettingsResponse(
@@ -151,7 +151,7 @@ public class ProbeSettingsService {
         authorization.requireManager(resource.organizationId(), userId);
         resourceSettingsRepository.deleteByResourceIdAndProbeType(resourceId, type);
         resourceSettingsRepository.flush();
-        afterCommit(() -> synchronizer.resourceCommitted(resourceId, type));
+        afterCommit(() -> synchronizer.removeResource(resourceId, type));
     }
 
     private ResourceEntity requireResource(long id) {

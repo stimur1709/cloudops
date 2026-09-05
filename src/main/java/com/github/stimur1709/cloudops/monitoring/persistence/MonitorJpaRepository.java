@@ -15,15 +15,7 @@ public interface MonitorJpaRepository extends JpaRepository<MonitorEntity, Long>
 
     List<MonitorEntity> findAllByResourceIdOrderById(long resourceId);
 
-    @Query("""
-            SELECT monitor.type AS type, monitor.compatible AS compatible, monitor.healthStatus AS healthStatus
-            FROM MonitorEntity monitor WHERE monitor.resourceId = :resourceId
-            """)
-    List<MonitorHealth> findHealthByResourceId(@Param("resourceId") long resourceId);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT monitor FROM MonitorEntity monitor WHERE monitor.resourceId = :resourceId AND monitor.type = :type")
-    Optional<MonitorEntity> findByResourceIdAndTypeForUpdate(long resourceId, ProbeType type);
+    Optional<MonitorEntity> findByResourceIdAndType(long resourceId, ProbeType type);
 
     @Modifying
     @Query(value = """
