@@ -3,7 +3,7 @@ package com.github.stimur1709.cloudops.monitoring.application;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.monitoring.HealthStatus;
 import com.github.stimur1709.cloudops.monitoring.ResourceHealthStatus;
-import com.github.stimur1709.cloudops.monitoring.persistence.MonitorEntity;
+import com.github.stimur1709.cloudops.monitoring.persistence.MonitorHealth;
 import com.github.stimur1709.cloudops.monitoring.persistence.MonitorJpaRepository;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEntity;
 import com.github.stimur1709.cloudops.monitoring.persistence.ResourceHealthEventEntity;
@@ -49,10 +49,10 @@ public class ResourceHealthService {
                 resourceHealthRepository.findByResourceIdForUpdate(resourceId).orElseThrow(NotFoundException::new);
         ResourceEntity resource = resourceHealth.resource();
         var effectiveSettings = settingsResolver.resolveAll(resource);
-        List<HealthStatus> statuses = monitorRepository.findAllByResourceIdOrderById(resourceId).stream()
-                .filter(MonitorEntity::compatible)
-                .filter(monitor -> effectiveSettings.get(monitor.type()).enabled())
-                .map(MonitorEntity::healthStatus)
+        List<HealthStatus> statuses = monitorRepository.findHealthByResourceId(resourceId).stream()
+                .filter(MonitorHealth::isCompatible)
+                .filter(monitor -> effectiveSettings.get(monitor.getType()).enabled())
+                .map(MonitorHealth::getHealthStatus)
                 .toList();
         ResourceHealthStatus status = aggregate(statuses);
         ResourceHealthStatus previousStatus = resourceHealth.healthStatus();
