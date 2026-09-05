@@ -43,10 +43,10 @@ public class TaskService {
     }
 
     public TaskEntity create(long resourceId, TaskType type, JsonNode parameters, long currentUserId) {
-        var handler = handlerRegistry.get(type);
+        handlerRegistry.requireSupported(type);
         var typedParameters = parameterCodecRegistry.decode(type, parameters);
         return persistenceService.create(
-                resourceId, type, parameterCodecRegistry.encode(typedParameters), currentUserId, handler);
+                resourceId, type, parameterCodecRegistry.encode(typedParameters), currentUserId);
     }
 
     @Transactional(readOnly = true)

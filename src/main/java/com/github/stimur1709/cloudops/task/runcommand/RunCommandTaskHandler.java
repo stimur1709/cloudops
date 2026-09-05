@@ -1,14 +1,11 @@
 package com.github.stimur1709.cloudops.task.runcommand;
 
-import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
 import com.github.stimur1709.cloudops.credential.CredentialPurpose;
 import com.github.stimur1709.cloudops.credential.application.CredentialResolver;
 import com.github.stimur1709.cloudops.credential.application.ResolvedCredential;
-import com.github.stimur1709.cloudops.credential.binding.ResourceCredentialJpaRepository;
 import com.github.stimur1709.cloudops.credential.crypto.SecretDecryptionException;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
-import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.ssh.SshClient;
 import com.github.stimur1709.cloudops.ssh.SshClientException;
 import com.github.stimur1709.cloudops.ssh.SshEndpointResolver;
@@ -25,19 +22,16 @@ import org.springframework.stereotype.Component;
 public class RunCommandTaskHandler implements TaskHandler {
 
     private final TaskParameterCodecRegistry parameterCodecRegistry;
-    private final ResourceCredentialJpaRepository credentialBindingRepository;
     private final CredentialResolver credentialResolver;
     private final SshClient sshClient;
     private final RunCommandProperties properties;
 
     public RunCommandTaskHandler(
             TaskParameterCodecRegistry parameterCodecRegistry,
-            ResourceCredentialJpaRepository credentialBindingRepository,
             CredentialResolver credentialResolver,
             SshClient sshClient,
             RunCommandProperties properties) {
         this.parameterCodecRegistry = parameterCodecRegistry;
-        this.credentialBindingRepository = credentialBindingRepository;
         this.credentialResolver = credentialResolver;
         this.sshClient = sshClient;
         this.properties = properties;
@@ -46,17 +40,6 @@ public class RunCommandTaskHandler implements TaskHandler {
     @Override
     public TaskType type() {
         return TaskType.RUN_COMMAND;
-    }
-
-    @Override
-    public void validateCreation(long resourceId, ResourceConfig resourceConfig) {
-        if (!SshEndpointResolver.supports(resourceConfig)) {
-            throw new ConflictException("RESOURCE_UNSUPPORTED", "RUN_COMMAND requires a server or network device");
-        }
-        if (!credentialBindingRepository.existsByResourceIdAndPurpose(resourceId, CredentialPurpose.SSH)) {
-            throw new ConflictException(
-                    "SSH_CREDENTIAL_NOT_CONFIGURED", "SSH credential is not configured for the resource");
-        }
     }
 
     @Override

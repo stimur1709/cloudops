@@ -8,13 +8,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.credential.CredentialPurpose;
 import com.github.stimur1709.cloudops.credential.application.CredentialResolver;
 import com.github.stimur1709.cloudops.credential.application.ResolvedUsernamePassword;
-import com.github.stimur1709.cloudops.credential.binding.ResourceCredentialJpaRepository;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
-import com.github.stimur1709.cloudops.resource.config.OtherResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ServerResourceConfig;
 import com.github.stimur1709.cloudops.ssh.SshClient;
 import com.github.stimur1709.cloudops.ssh.SshClientException;
@@ -36,7 +33,6 @@ import tools.jackson.databind.ObjectMapper;
 class RunCommandTaskHandlerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final ResourceCredentialJpaRepository bindingRepository = mock(ResourceCredentialJpaRepository.class);
     private final CredentialResolver credentialResolver = mock(CredentialResolver.class);
     private final SshClient sshClient = mock(SshClient.class);
     private RunCommandTaskHandler handler;
@@ -48,11 +44,7 @@ class RunCommandTaskHandlerTest {
                 Validation.buildDefaultValidatorFactory().getValidator(),
                 List.of(new RunCommandTaskDefinition()));
         handler = new RunCommandTaskHandler(
-                codec,
-                bindingRepository,
-                credentialResolver,
-                sshClient,
-                new RunCommandProperties(Duration.ofSeconds(2), 1024));
+                codec, credentialResolver, sshClient, new RunCommandProperties(Duration.ofSeconds(2), 1024));
     }
 
     @Test
@@ -97,18 +89,6 @@ class RunCommandTaskHandlerTest {
                         TaskErrorCode.SSH_AUTHENTICATION_ERROR, "SSH authentication failed"));
         assertThat(handler.execute(context()))
                 .isEqualTo(TaskExecutionResult.failed(TaskErrorCode.COMMAND_TIMEOUT, "SSH command timed out"));
-    }
-
-    @Test
-    void validatesCompatibilityAndCredentialBindingBeforeCreation() {
-        assertThatThrownBy(() -> handler.validateCreation(9, new OtherResourceConfig()))
-                .isInstanceOf(ConflictException.class);
-        when(bindingRepository.existsByResourceIdAndPurpose(9, CredentialPurpose.SSH))
-                .thenReturn(false);
-        assertThatThrownBy(() -> handler.validateCreation(9, new ServerResourceConfig("host", null)))
-                .isInstanceOfSatisfying(
-                        ConflictException.class,
-                        exception -> assertThat(exception.code()).isEqualTo("SSH_CREDENTIAL_NOT_CONFIGURED"));
     }
 
     private TaskExecutionContext context() {

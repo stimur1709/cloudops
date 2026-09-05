@@ -97,6 +97,107 @@ class TaskApiIntegrationTest {
     }
 
     @Test
+    void ownerReadsConfiguredRunCommandCapabilityWithoutExposingCredentials() throws Exception {
+        String response = capabilities(TestAuthentication.USER_ID)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].type").value("RUN_COMMAND"))
+                .andExpect(jsonPath("$[0].supported").value(true))
+                .andExpect(jsonPath("$[0].available").value(true))
+                .andExpect(jsonPath("$[0].allowed").value(true))
+                .andExpect(jsonPath("$[0].reasons").isEmpty())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(response).doesNotContain("credential", "secret", "cloudops", "unused");
+    }
+
+    @Test
+    void memberReadsAvailabilityButIsNotAllowed() throws Exception {
+        jdbcTemplate.update(
+                "UPDATE organization_memberships SET role = 'MEMBER' WHERE organization_id = ? AND user_id = ?",
+                organizationId,
+                TestAuthentication.USER_ID);
+
+        capabilities(TestAuthentication.USER_ID)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].supported").value(true))
+                .andExpect(jsonPath("$[0].available").value(true))
+                .andExpect(jsonPath("$[0].allowed").value(false))
+                .andExpect(jsonPath("$[0].reasons[0]").value("NOT_AUTHORIZED"));
+    }
+
+    @Test
+    void capabilityReflectsCurrentResourceAndCredentialStateWithoutCache() throws Exception {
+        jdbcTemplate.update("DELETE FROM resource_credentials WHERE resource_id = ?", resourceId);
+        capabilities(TestAuthentication.USER_ID)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].supported").value(true))
+                .andExpect(jsonPath("$[0].available").value(false))
+                .andExpect(jsonPath("$[0].reasons[0]").value("SSH_CREDENTIAL_NOT_CONFIGURED"));
+
+        long credentialId = jdbcTemplate.queryForObject(
+                "SELECT id FROM credentials WHERE organization_id = ? AND name = 'SSH'", Long.class, organizationId);
+        jdbcTemplate.update(
+                "INSERT INTO resource_credentials (resource_id, credential_id, purpose) VALUES (?, ?, 'SSH')",
+                resourceId,
+                credentialId);
+        capabilities(TestAuthentication.USER_ID)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].available").value(true))
+                .andExpect(jsonPath("$[0].reasons").isEmpty());
+
+        jdbcTemplate.update("UPDATE resources SET status = 'INACTIVE' WHERE id = ?", resourceId);
+        capabilities(TestAuthentication.USER_ID)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].supported").value(true))
+                .andExpect(jsonPath("$[0].available").value(false))
+                .andExpect(jsonPath("$[0].reasons[0]").value("RESOURCE_INACTIVE"));
+    }
+
+    @Test
+    void capabilityReturnsMultipleReasonsInStableOrder() throws Exception {
+        jdbcTemplate.update("DELETE FROM resource_credentials WHERE resource_id = ?", resourceId);
+        jdbcTemplate.update(
+                "UPDATE resources SET status = 'INACTIVE', config = '{\"host\":\"\"}'::jsonb WHERE id = ?", resourceId);
+        jdbcTemplate.update(
+                "UPDATE organization_memberships SET role = 'MEMBER' WHERE organization_id = ? AND user_id = ?",
+                organizationId,
+                TestAuthentication.USER_ID);
+
+        capabilities(TestAuthentication.USER_ID)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].supported").value(true))
+                .andExpect(jsonPath("$[0].available").value(false))
+                .andExpect(jsonPath("$[0].allowed").value(false))
+                .andExpect(jsonPath("$[0].reasons[0]").value("RESOURCE_INACTIVE"))
+                .andExpect(jsonPath("$[0].reasons[1]").value("SSH_ENDPOINT_NOT_CONFIGURED"))
+                .andExpect(jsonPath("$[0].reasons[2]").value("SSH_CREDENTIAL_NOT_CONFIGURED"))
+                .andExpect(jsonPath("$[0].reasons[3]").value("NOT_AUTHORIZED"));
+    }
+
+    @Test
+    void unsupportedResourceIsUnavailableWhilePermissionRemainsIndependent() throws Exception {
+        jdbcTemplate.update("UPDATE resources SET type = 'OTHER', config = '{}'::jsonb WHERE id = ?", resourceId);
+
+        capabilities(TestAuthentication.USER_ID)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].supported").value(false))
+                .andExpect(jsonPath("$[0].available").value(false))
+                .andExpect(jsonPath("$[0].allowed").value(true))
+                .andExpect(jsonPath("$[0].reasons[0]").value("UNSUPPORTED_RESOURCE_TYPE"));
+    }
+
+    @Test
+    void foreignResourceCapabilitiesAreNotFound() throws Exception {
+        long otherOrganization = insertOrganization("Other organization");
+        addMember(otherOrganization, OTHER_USER_ID, "OWNER");
+
+        capabilities(OTHER_USER_ID).andExpect(status().isNotFound());
+    }
+
+    @Test
     void adminCanCreateButMemberCannot() throws Exception {
         jdbcTemplate.update(
                 "UPDATE organization_memberships SET role = 'ADMIN' WHERE organization_id = ? AND user_id = ?",
@@ -144,6 +245,21 @@ class TaskApiIntegrationTest {
         assertNothingCreated();
     }
 
+    @Test
+    void capabilityAndTaskCreationShareEndpointPreflight() throws Exception {
+        jdbcTemplate.update("UPDATE resources SET config = '{\"host\":\"\"}'::jsonb WHERE id = ?", resourceId);
+
+        capabilities(TestAuthentication.USER_ID)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].supported").value(true))
+                .andExpect(jsonPath("$[0].available").value(false))
+                .andExpect(jsonPath("$[0].reasons[0]").value("SSH_ENDPOINT_NOT_CONFIGURED"));
+        createTask(validRequest())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SSH_ENDPOINT_NOT_CONFIGURED"));
+        assertNothingCreated();
+    }
+
     @ParameterizedTest
     @ValueSource(
             strings = {
@@ -167,6 +283,11 @@ class TaskApiIntegrationTest {
 
     private org.springframework.test.web.servlet.ResultActions createTask(String request) throws Exception {
         return createTask(request, TestAuthentication.USER_ID);
+    }
+
+    private org.springframework.test.web.servlet.ResultActions capabilities(long userId) throws Exception {
+        return mockMvc.perform(get("/api/resources/{id}/task-capabilities", resourceId)
+                .with(jwt().jwt(token -> token.subject(Long.toString(userId)))));
     }
 
     private org.springframework.test.web.servlet.ResultActions createTask(String request, long userId)
