@@ -373,16 +373,34 @@ Runtime/state и последний результат возвращает `GET
 
 Probe — способ диагностической проверки Resource, а Monitor хранит runtime/state периодического
 Probe. `POST /api/monitors/{id}/run` асинхронно ставит включённый Monitor на ближайший запуск:
-атомарно выставляет `nextRunAt` в текущее время и возвращает `202 Accepted` без тела. Probe
+атомарно выставляет отдельный `run_requested_at` и возвращает `202 Accepted` без тела. Будущий
+периодический `nextRunAt` сохраняется. Повторные запросы до захвата объединяются в один;
+при совпадении с наступившим периодическим запуском выполняется одна проверка. Probe
 выполняется обычным scheduler через `MonitorExecutionService`, поэтому используются тот же
 handler, настройки и правила хранения результата. Endpoint не создаёт Task, outbox-запись или
 RabbitMQ-команду и не добавляет в результат признаки manual/source.
 
 Несовпадение HTTP status сохраняется как завершённый probe с
 `success=false`; timeout, DNS, connection и TLS ошибки сохраняются как failed probe result.
-Планировщик заранее сдвигает `nextRunAt` и координирует экземпляры приложения через PostgreSQL
+Планировщик сначала забирает ручные запросы, затем заполняет оставшуюся часть batch периодическими.
+Захват атомарно очищает ручной маркер и сдвигает `nextRunAt` только для наступившего периодического
+запуска. Отключение или потеря совместимости отменяет ожидающий ручной запрос.
+Планировщик координирует экземпляры приложения через PostgreSQL
 `FOR UPDATE SKIP LOCKED`. `enabled`, interval, thresholds, storage, retention и timeout на каждом
 запуске берутся из effective settings; пропущенные во время downtime интервалы не воспроизводятся.
+
+Settings сохраняются в PostgreSQL; runtime index обновляется после commit. При ошибке синхронизации
+приложение логирует `monitoring_settings_synchronization_failed` и сохраняет затронутый ключ для
+повторной попытки каждые `MONITORING_SETTINGS_RECOVERY_INTERVAL` (по умолчанию `30s`). Retry читает
+актуальные settings из БД, восстанавливает индекс, расписание и health; уже существующее активное
+расписание сохраняется. Повторный сбой оставляет ключ для следующей попытки. После restart settings
+загружаются из БД, а monitors проходят startup reconciliation. Синхронизация и recovery сериализованы
+в пределах одного процесса; invalidation между несколькими экземплярами приложения не реализован.
+
+Scheduler использует partial indexes для совместимых monitors с `next_run_at IS NOT NULL`,
+а для ручных запросов — дополнительно с `run_requested_at IS NOT NULL`. Интеграционный тест
+`MonitorScheduleIndexIntegrationTest` проверяет `EXPLAIN` фактических claim-запросов на PostgreSQL
+с 20 000 monitors, из которых только 10 доступны для запуска, без принудительного отключения sequential scan.
 
 Обязательные Application defaults для всех `ProbeType` находятся в
 `cloudops.monitoring.defaults` файла `application.yml` и валидируются при старте.
