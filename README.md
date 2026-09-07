@@ -203,6 +203,23 @@ Task — самостоятельная конечная операция над
 operation, которая выполняет одну команду по SSH на активном `SERVER` или `NETWORK_DEVICE` с
 привязанным SSH credential. Запуск разрешён `OWNER` и `ADMIN`; `MEMBER` получает `403`.
 
+Task capability — вычисляемая доступность operation для Resource и текущего пользователя.
+Frontend получает её через `GET /api/resources/{resourceId}/task-capabilities` и не воспроизводит
+backend rules самостоятельно. `supported` означает применимость operation к типу и config Resource,
+`available` — выполнение текущих prerequisites, а `allowed` — permission пользователя. `reasons`
+содержит все причины недоступности в стабильном порядке. Capability вычисляется по актуальным
+Resource, credential binding и membership без сохранения в БД и без сетевого подключения.
+
+```shell
+curl -i http://localhost:8080/api/resources/1/task-capabilities \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Каждый production `TaskType` имеет отдельный capability provider. Тот же provider используется
+как pre-flight перед созданием Task, поэтому GET и POST применяют одинаковые operation rules.
+Проверка в runtime handler сохраняется, поскольку Resource и credentials могут измениться между
+созданием `PENDING` Task и фактическим выполнением.
+
 ```shell
 curl -i -X POST http://localhost:8080/api/resources/1/tasks \
   -H "Authorization: Bearer $TOKEN" \

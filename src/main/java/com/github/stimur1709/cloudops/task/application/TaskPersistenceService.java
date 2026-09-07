@@ -1,8 +1,6 @@
 package com.github.stimur1709.cloudops.task.application;
 
-import com.github.stimur1709.cloudops.common.application.ConflictException;
 import com.github.stimur1709.cloudops.common.application.NotFoundException;
-import com.github.stimur1709.cloudops.membership.application.OrganizationAuthorization;
 import com.github.stimur1709.cloudops.resource.ResourceStatus;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfig;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
@@ -11,8 +9,8 @@ import com.github.stimur1709.cloudops.resource.persistence.ResourceJpaRepository
 import com.github.stimur1709.cloudops.task.TaskErrorCode;
 import com.github.stimur1709.cloudops.task.TaskStatus;
 import com.github.stimur1709.cloudops.task.TaskType;
+import com.github.stimur1709.cloudops.task.capability.TaskCapabilityResolver;
 import com.github.stimur1709.cloudops.task.config.TaskLeaseProperties;
-import com.github.stimur1709.cloudops.task.execution.TaskHandler;
 import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageEntity;
 import com.github.stimur1709.cloudops.task.outbox.persistence.OutboxMessageJpaRepository;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
@@ -34,41 +32,36 @@ public class TaskPersistenceService {
 
     private final TaskJpaRepository taskRepository;
     private final ResourceJpaRepository resourceRepository;
-    private final OrganizationAuthorization authorization;
     private final ResourceConfigMapper configMapper;
     private final Clock clock;
     private final OutboxMessageJpaRepository outboxRepository;
     private final ObjectMapper objectMapper;
     private final TaskLeaseProperties leaseProperties;
+    private final TaskCapabilityResolver capabilityResolver;
 
     public TaskPersistenceService(
             TaskJpaRepository taskRepository,
             ResourceJpaRepository resourceRepository,
-            OrganizationAuthorization authorization,
             ResourceConfigMapper configMapper,
             Clock clock,
             OutboxMessageJpaRepository outboxRepository,
             ObjectMapper objectMapper,
-            TaskLeaseProperties leaseProperties) {
+            TaskLeaseProperties leaseProperties,
+            TaskCapabilityResolver capabilityResolver) {
         this.taskRepository = taskRepository;
         this.resourceRepository = resourceRepository;
-        this.authorization = authorization;
         this.configMapper = configMapper;
         this.clock = clock;
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
         this.leaseProperties = leaseProperties;
+        this.capabilityResolver = capabilityResolver;
     }
 
     @Transactional
-    public TaskEntity create(
-            long resourceId, TaskType type, JsonNode parameters, long currentUserId, TaskHandler handler) {
+    public TaskEntity create(long resourceId, TaskType type, JsonNode parameters, long currentUserId) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
-        authorization.requireManager(resource.organizationId(), currentUserId);
-        if (resource.status() != ResourceStatus.ACTIVE) {
-            throw new ConflictException("RESOURCE_INACTIVE", "Task requires an active resource");
-        }
-        handler.validateCreation(resource.id(), configMapper.fromJson(resource.type(), resource.config()));
+        capabilityResolver.requireAvailable(resource, type, currentUserId);
         TaskEntity task = TaskEntity.create(
                 resource.organizationId(), resource.id(), type, parameters, currentUserId, clock.instant());
         taskRepository.saveAndFlush(task);
