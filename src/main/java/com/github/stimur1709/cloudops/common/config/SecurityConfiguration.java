@@ -4,6 +4,7 @@ import com.github.stimur1709.cloudops.auth.config.RefreshTokenProperties;
 import com.github.stimur1709.cloudops.common.api.error.ApiAccessDeniedHandler;
 import com.github.stimur1709.cloudops.common.api.error.ApiAuthenticationEntryPoint;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import java.security.SecureRandom;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,11 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({JwtProperties.class, RefreshTokenProperties.class})
 public class SecurityConfiguration {
+
+    @Bean
+    SecureRandom secureRandom() {
+        return new SecureRandom();
+    }
 
     @Bean
     PasswordEncoder passwordEncoder() {

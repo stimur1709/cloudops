@@ -114,15 +114,14 @@ public class AuthService {
                 .id(UUID.randomUUID().toString())
                 .build();
         JwsHeader headers = JwsHeader.with(MacAlgorithm.HS256).build();
-        String token =
+        String accessToken =
                 jwtEncoder.encode(JwtEncoderParameters.from(headers, claims)).getTokenValue();
-        String refreshToken = refreshTokenCodec.generate();
+        String rawRefreshToken = refreshTokenCodec.generate();
         RefreshTokenEntity entity = refreshTokenRepository.saveAndFlush(
-                RefreshTokenEntity.create(userId, refreshTokenCodec.hash(refreshToken), refreshExpiresAt, issuedAt));
-        AuthSession session = new AuthSession(
-                new TokenResponse(
-                        token, "Bearer", jwtProperties.accessTokenTtl().toSeconds(), accessExpiresAt, refreshExpiresAt),
-                refreshToken);
+                RefreshTokenEntity.create(userId, refreshTokenCodec.hash(rawRefreshToken), refreshExpiresAt, issuedAt));
+        TokenResponse response = new TokenResponse(
+                accessToken, "Bearer", jwtProperties.accessTokenTtl().toSeconds(), accessExpiresAt, refreshExpiresAt);
+        AuthSession session = new AuthSession(response, rawRefreshToken);
         return new CreatedSession(session, entity.id());
     }
 

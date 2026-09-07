@@ -6,23 +6,23 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
 @Component
-class RefreshCookieFactory {
+public class RefreshCookieFactory {
 
     private final RefreshTokenProperties properties;
 
-    RefreshCookieFactory(RefreshTokenProperties properties) {
+    public RefreshCookieFactory(RefreshTokenProperties properties) {
         this.properties = properties;
     }
 
-    String name() {
+    public String name() {
         return properties.cookie().name();
     }
 
-    ResponseCookie create(String token, Duration maxAge) {
+    public ResponseCookie create(String token, Duration maxAge) {
         return cookie(token).maxAge(maxAge).build();
     }
 
-    ResponseCookie clear() {
+    public ResponseCookie clear() {
         return cookie("").maxAge(Duration.ZERO).build();
     }
 

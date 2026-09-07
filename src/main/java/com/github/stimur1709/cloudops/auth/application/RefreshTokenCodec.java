@@ -12,7 +12,11 @@ public class RefreshTokenCodec {
 
     private static final int TOKEN_BYTES = 32;
 
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final SecureRandom secureRandom;
+
+    public RefreshTokenCodec(SecureRandom secureRandom) {
+        this.secureRandom = secureRandom;
+    }
 
     public String generate() {
         byte[] bytes = new byte[TOKEN_BYTES];

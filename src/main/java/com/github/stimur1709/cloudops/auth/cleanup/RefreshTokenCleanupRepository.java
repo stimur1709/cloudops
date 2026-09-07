@@ -1,12 +1,13 @@
 package com.github.stimur1709.cloudops.auth.cleanup;
 
+import com.github.stimur1709.cloudops.auth.persistence.RefreshTokenEntity_;
 import java.sql.Timestamp;
 import java.time.Instant;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-class RefreshTokenCleanupRepository {
+public class RefreshTokenCleanupRepository {
 
     private static final String DELETE_SQL = """
             WITH removable AS (
@@ -26,15 +27,15 @@ class RefreshTokenCleanupRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    RefreshTokenCleanupRepository(JdbcTemplate jdbcTemplate) {
+    public RefreshTokenCleanupRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    int deleteBatch(Instant expiredCutoff, Instant revokedCutoff, int batchSize) {
+    public int deleteBatch(Instant expiredCutoff, Instant revokedCutoff, int batchSize) {
         return jdbcTemplate
                 .query(
                         DELETE_SQL,
-                        (resultSet, _) -> resultSet.getLong("id"),
+                        (resultSet, _) -> resultSet.getLong(RefreshTokenEntity_.ID),
                         Timestamp.from(expiredCutoff),
                         Timestamp.from(revokedCutoff),
                         batchSize)

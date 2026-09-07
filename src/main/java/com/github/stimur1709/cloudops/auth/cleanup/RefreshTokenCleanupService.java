@@ -7,13 +7,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-class RefreshTokenCleanupService {
+public class RefreshTokenCleanupService {
 
     private final RefreshTokenCleanupRepository repository;
     private final RefreshTokenProperties properties;
     private final Clock clock;
 
-    RefreshTokenCleanupService(
+    public RefreshTokenCleanupService(
             RefreshTokenCleanupRepository repository, RefreshTokenProperties properties, Clock clock) {
         this.repository = repository;
         this.properties = properties;
@@ -21,7 +21,7 @@ class RefreshTokenCleanupService {
     }
 
     @Transactional
-    int deleteBatch() {
+    public int deleteBatch() {
         Instant now = clock.instant();
         return repository.deleteBatch(now, now.minus(properties.revokedRetention()), properties.cleanupBatchSize());
     }

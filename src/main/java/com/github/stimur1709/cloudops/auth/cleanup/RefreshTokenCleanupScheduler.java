@@ -10,16 +10,16 @@ import org.springframework.stereotype.Component;
         name = "cleanup-enabled",
         havingValue = "true",
         matchIfMissing = true)
-class RefreshTokenCleanupScheduler {
+public class RefreshTokenCleanupScheduler {
 
     private final RefreshTokenCleanupService service;
 
-    RefreshTokenCleanupScheduler(RefreshTokenCleanupService service) {
+    public RefreshTokenCleanupScheduler(RefreshTokenCleanupService service) {
         this.service = service;
     }
 
     @Scheduled(fixedDelayString = "${cloudops.security.refresh.cleanup-interval:1h}")
-    void clean() {
+    public void clean() {
         service.deleteBatch();
     }
 }
