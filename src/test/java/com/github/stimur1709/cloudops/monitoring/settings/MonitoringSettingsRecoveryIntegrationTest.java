@@ -65,7 +65,7 @@ class MonitoringSettingsRecoveryIntegrationTest {
     void setUp() {
         recovery.retryPending();
         jdbc.execute("""
-                TRUNCATE TABLE resource_credentials, credentials, resource_probe_settings, organization_probe_settings,
+                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings,
                     monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
                     organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);

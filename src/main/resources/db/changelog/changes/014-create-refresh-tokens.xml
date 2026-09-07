@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="014-create-refresh-tokens" author="stimur1709">
+        <createTable tableName="refresh_tokens">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="refresh_tokens_pkey"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token_hash" type="VARCHAR(43)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revoked_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="replaced_by" type="BIGINT"/>
+        </createTable>
+
+        <addUniqueConstraint tableName="refresh_tokens" columnNames="token_hash"
+                             constraintName="refresh_tokens_token_hash_key"/>
+        <addForeignKeyConstraint baseTableName="refresh_tokens" baseColumnNames="user_id"
+                                 constraintName="refresh_tokens_user_fk" referencedTableName="users"
+                                 referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="refresh_tokens" baseColumnNames="replaced_by"
+                                 constraintName="refresh_tokens_replacement_fk" referencedTableName="refresh_tokens"
+                                 referencedColumnNames="id" onDelete="SET NULL"/>
+        <createIndex tableName="refresh_tokens" indexName="refresh_tokens_user_idx">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="refresh_tokens" indexName="refresh_tokens_expires_idx">
+            <column name="expires_at"/>
+        </createIndex>
+        <sql dbms="postgresql">
+            CREATE INDEX refresh_tokens_revoked_idx
+                ON refresh_tokens (revoked_at)
+                WHERE revoked_at IS NOT NULL;
+        </sql>
+
+        <rollback>
+            <dropTable tableName="refresh_tokens"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

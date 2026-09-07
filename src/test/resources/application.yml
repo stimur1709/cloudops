@@ -83,3 +83,14 @@ cloudops:
       secret: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
       issuer: cloudops-test
       access-token-ttl: 15m
+      refresh-token-ttl: 30d
+    refresh:
+      cleanup-enabled: false
+      cleanup-interval: 1h
+      cleanup-batch-size: 50
+      revoked-retention: 7d
+      cookie:
+        name: cloudops_refresh
+        path: /api/auth
+        secure: false
+        same-site: STRICT

@@ -18,4 +18,5 @@
     <include file="db/changelog/changes/011-create-credentials.xml"/>
     <include file="db/changelog/changes/012-relax-feature-type-constraints.xml"/>
     <include file="db/changelog/changes/013-add-run-command.xml"/>
+    <include file="db/changelog/changes/014-create-refresh-tokens.xml"/>
 </databaseChangeLog>

@@ -101,3 +101,14 @@ cloudops:
       secret: ${JWT_SECRET}
       issuer: ${JWT_ISSUER:cloudops}
       access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:15m}
+      refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:30d}
+    refresh:
+      cleanup-enabled: ${REFRESH_CLEANUP_ENABLED:true}
+      cleanup-interval: ${REFRESH_CLEANUP_INTERVAL:1h}
+      cleanup-batch-size: ${REFRESH_CLEANUP_BATCH_SIZE:500}
+      revoked-retention: ${REFRESH_REVOKED_RETENTION:7d}
+      cookie:
+        name: ${REFRESH_COOKIE_NAME:cloudops_refresh}
+        path: ${REFRESH_COOKIE_PATH:/api/auth}
+        secure: ${REFRESH_COOKIE_SECURE:true}
+        same-site: ${REFRESH_COOKIE_SAME_SITE:STRICT}

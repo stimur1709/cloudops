@@ -42,7 +42,13 @@ $env:CREDENTIALS_MASTER_KEY = [Convert]::ToBase64String($credentialKey)
 
 `JWT_SECRET` обязателен, должен быть Base64-представлением ключа длиной не менее 32 байт
 и не имеет значения по умолчанию. `JWT_ISSUER` по умолчанию равен `cloudops`,
-`JWT_ACCESS_TOKEN_TTL` — `15m`.
+`JWT_ACCESS_TOKEN_TTL` — `15m`, `JWT_REFRESH_TOKEN_TTL` — `30d`.
+
+Refresh token хранится только в `HttpOnly` cookie и в БД представлен SHA-256 hash. Production
+defaults: `Secure`, `SameSite=Strict`, path `/api/auth`. Для локального HTTP-запуска явно задайте
+`REFRESH_COOKIE_SECURE=false`; production default при этом остаётся безопасным. Имя, path и
+SameSite настраиваются через `REFRESH_COOKIE_NAME`, `REFRESH_COOKIE_PATH` и
+`REFRESH_COOKIE_SAME_SITE` (`STRICT` или `LAX`).
 
 `CREDENTIALS_MASTER_KEY` также обязателен и должен быть Base64-представлением ровно 32 случайных
 байт. Это master key для AES-GCM шифрования credentials; его нельзя хранить в БД или коммитить.
@@ -82,7 +88,7 @@ curl -i -X POST http://localhost:8080/api/auth/register \
   -d '{"email":"user@example.com","displayName":"Example User","password":"correct-horse-battery-staple"}'
 ```
 
-Получить access token:
+Открыть frontend session и получить access token:
 
 ```shell
 curl -i -X POST http://localhost:8080/api/auth/login \
@@ -93,6 +99,23 @@ curl -i -X POST http://localhost:8080/api/auth/login \
 Кроме регистрации и входа, API требует заголовок `Authorization: Bearer <token>`.
 Роли `OWNER`, `ADMIN` и `MEMBER` проверяются по актуальным membership в PostgreSQL
 и не сохраняются в JWT.
+
+Frontend хранит access token только в memory и отправляет его как Bearer token. Когда access token
+истекает, `POST /api/auth/refresh` использует HttpOnly cookie, возвращает новый access token и
+атомарно ротирует cookie. Использованный, отозванный или истёкший refresh token повторно не
+принимается. `POST /api/auth/logout` отзывает только текущую session и очищает cookie; повторный
+logout безопасен. Уже выданный access token остаётся рабочим до своего короткого TTL.
+
+```text
+login -> access token + refresh cookie
+API requests -> Authorization: Bearer <access token>
+access expired -> refresh -> new access token + rotated refresh cookie
+logout -> revoke current refresh session
+```
+
+Истёкшие и давно отозванные записи удаляются небольшими batch. Период и размер настраиваются
+через `REFRESH_CLEANUP_INTERVAL`, `REFRESH_CLEANUP_BATCH_SIZE` и
+`REFRESH_REVOKED_RETENTION`.
 
 ## API организаций
 
