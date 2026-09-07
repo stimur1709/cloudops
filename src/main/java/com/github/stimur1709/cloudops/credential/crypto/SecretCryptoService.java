@@ -16,10 +16,11 @@ public class SecretCryptoService {
     private static final int TAG_BITS = 128;
 
     private final CredentialCryptoProperties properties;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final SecureRandom secureRandom;
 
-    public SecretCryptoService(CredentialCryptoProperties properties) {
+    public SecretCryptoService(CredentialCryptoProperties properties, SecureRandom secureRandom) {
         this.properties = properties;
+        this.secureRandom = secureRandom;
     }
 
     public String encrypt(String plaintext) {

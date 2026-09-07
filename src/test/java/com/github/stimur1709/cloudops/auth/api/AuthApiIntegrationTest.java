@@ -11,7 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.github.stimur1709.cloudops.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
+import jakarta.servlet.http.Cookie;
 import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +63,7 @@ class AuthApiIntegrationTest {
                 .apply(springSecurity())
                 .build();
         jdbcTemplate.execute("""
-                TRUNCATE TABLE resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
                 """);
     }
 
@@ -109,6 +113,122 @@ class AuthApiIntegrationTest {
         assertThat(jwt.getExpiresAt()).isAfter(jwt.getIssuedAt());
         assertThat(jwt.getId()).isNotBlank();
         assertThat(jwt.getClaims()).doesNotContainKeys("role", "roles", "memberships", "passwordHash");
+    }
+
+    @Test
+    void loginCreatesFrontendSessionWithoutPersistingRawRefreshToken() throws Exception {
+        registerAndGetId("user@example.com", "User");
+        MvcResult login = login("user@example.com", PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessTokenExpiresAt").isNotEmpty())
+                .andExpect(jsonPath("$.refreshTokenExpiresAt").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andReturn();
+
+        Cookie refreshCookie = requireRefreshCookie(login);
+        assertThat(refreshCookie.isHttpOnly()).isTrue();
+        assertThat(refreshCookie.getSecure()).isFalse();
+        assertThat(refreshCookie.getPath()).isEqualTo("/api/auth");
+        assertThat(login.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains("SameSite=Strict");
+
+        String storedHash = jdbcTemplate.queryForObject("SELECT token_hash FROM refresh_tokens", String.class);
+        assertThat(storedHash).hasSize(43).isNotEqualTo(refreshCookie.getValue());
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(refreshCookie.getValue())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void refreshRotatesCookieAndRejectsPreviousToken() throws Exception {
+        registerAndGetId("user@example.com", "User");
+        Cookie original =
+                requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
+
+        MvcResult refreshed = refresh(original)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andReturn();
+        Cookie replacement = requireRefreshCookie(refreshed);
+        assertThat(replacement.getValue()).isNotEqualTo(original.getValue());
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM refresh_tokens WHERE revoked_at IS NOT NULL AND replaced_by IS NOT NULL",
+                        Integer.class))
+                .isEqualTo(1);
+
+        refresh(original)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_REVOKED"));
+        String accessToken = JsonPath.read(refreshed.getResponse().getContentAsString(), "$.accessToken");
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void invalidAndExpiredRefreshTokensHaveControlledErrors() throws Exception {
+        registerAndGetId("user@example.com", "User");
+        Cookie refresh =
+                requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
+        jdbcTemplate.update("UPDATE refresh_tokens SET expires_at = NOW() - INTERVAL '1 second'");
+
+        refresh(refresh)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_EXPIRED"))
+                .andExpect(jsonPath("$.errors").isEmpty());
+        refresh(new Cookie("cloudops_refresh", "not-a-real-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_INVALID"));
+        mockMvc.perform(post("/api/auth/refresh"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_INVALID"));
+    }
+
+    @Test
+    void logoutIsIdempotentAndDoesNotRevokeAnotherSession() throws Exception {
+        registerAndGetId("user@example.com", "User");
+        Cookie first = requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
+        Cookie second = requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
+
+        logout(first)
+                .andExpect(status().isNoContent())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("Max-Age=0")));
+        logout(first).andExpect(status().isNoContent());
+        refresh(first)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_REVOKED"));
+        refresh(second).andExpect(status().isOk());
+    }
+
+    @Test
+    void concurrentRefreshAllowsOnlyOneRotation() throws Exception {
+        registerAndGetId("user@example.com", "User");
+        Cookie original =
+                requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
+        Callable<MvcResult> request = () ->
+                refresh(new Cookie(original.getName(), original.getValue())).andReturn();
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var futures = executor.invokeAll(List.of(request, request));
+            List<MvcResult> results = futures.stream()
+                    .map(future -> {
+                        try {
+                            return future.get();
+                        } catch (Exception exception) {
+                            throw new AssertionError(exception);
+                        }
+                    })
+                    .toList();
+            assertThat(results)
+                    .extracting(result -> result.getResponse().getStatus())
+                    .containsExactlyInAnyOrder(200, 401);
+            MvcResult rejected = results.stream()
+                    .filter(result -> result.getResponse().getStatus() == 401)
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(JsonPath.read(rejected.getResponse().getContentAsString(), "$.code")
+                            .toString())
+                    .isEqualTo("REFRESH_TOKEN_REVOKED");
+        }
     }
 
     @Test
@@ -266,6 +386,18 @@ class AuthApiIntegrationTest {
                 .getResponse()
                 .getContentAsString();
         return JsonPath.read(body, "$.accessToken");
+    }
+
+    private ResultActions refresh(Cookie cookie) throws Exception {
+        return mockMvc.perform(post("/api/auth/refresh").cookie(cookie));
+    }
+
+    private ResultActions logout(Cookie cookie) throws Exception {
+        return mockMvc.perform(post("/api/auth/logout").cookie(cookie));
+    }
+
+    private Cookie requireRefreshCookie(MvcResult result) {
+        return java.util.Objects.requireNonNull(result.getResponse().getCookie("cloudops_refresh"));
     }
 
     private String token(String issuer, Instant issuedAt, Instant expiresAt) {

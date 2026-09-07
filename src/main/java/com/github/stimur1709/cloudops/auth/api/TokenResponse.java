@@ -1,3 +1,10 @@
 package com.github.stimur1709.cloudops.auth.api;
 
-public record TokenResponse(String accessToken, String tokenType, long expiresIn) {}
+import java.time.Instant;
+
+public record TokenResponse(
+        String accessToken,
+        String tokenType,
+        long expiresIn,
+        Instant accessTokenExpiresAt,
+        Instant refreshTokenExpiresAt) {}

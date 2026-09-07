@@ -7,7 +7,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("cloudops.security.jwt")
-public record JwtProperties(String secret, String issuer, Duration accessTokenTtl) {
+public record JwtProperties(String secret, String issuer, Duration accessTokenTtl, Duration refreshTokenTtl) {
 
     public JwtProperties {
         if (secret == null || secret.isBlank()) {
@@ -18,6 +18,9 @@ public record JwtProperties(String secret, String issuer, Duration accessTokenTt
         }
         if (accessTokenTtl == null || accessTokenTtl.isZero() || accessTokenTtl.isNegative()) {
             throw new IllegalArgumentException("JWT access token TTL must be positive");
+        }
+        if (refreshTokenTtl == null || refreshTokenTtl.isZero() || refreshTokenTtl.isNegative()) {
+            throw new IllegalArgumentException("Refresh token TTL must be positive");
         }
         byte[] key;
         try {
