@@ -15,6 +15,14 @@ spring:
         default-requeue-rejected: false
 
 cloudops:
+  web:
+    cors:
+      allowed-origins: []
+      allowed-methods: [GET, POST, PUT, DELETE, OPTIONS]
+      allowed-headers: [Authorization, Content-Type]
+      exposed-headers: []
+      allow-credentials: true
+      max-age: 30m
   monitoring:
     scheduler-enabled: false
     poll-interval: 100ms
