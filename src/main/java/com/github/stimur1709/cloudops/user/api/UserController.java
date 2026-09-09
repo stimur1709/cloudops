@@ -4,6 +4,7 @@ import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
 import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.user.application.UserService;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -46,6 +47,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
+    @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
         userService.delete(id, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();

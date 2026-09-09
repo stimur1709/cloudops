@@ -6,6 +6,7 @@ import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.resource.application.ResourceDetails;
 import com.github.stimur1709.cloudops.resource.application.ResourceService;
 import com.github.stimur1709.cloudops.resource.config.ResourceConfigMapper;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,7 @@ public class ResourceController {
     }
 
     @PostMapping
+    @ApiResponse(responseCode = "201", description = "Created", useReturnTypeSchema = true)
     public ResponseEntity<ResourceResponse> create(
             @Valid @RequestBody CreateResourceRequest request, Authentication authentication) {
         ResourceDetails resource = resourceService.create(
@@ -74,6 +76,7 @@ public class ResourceController {
     }
 
     @DeleteMapping("/{id}")
+    @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
         resourceService.delete(id, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();

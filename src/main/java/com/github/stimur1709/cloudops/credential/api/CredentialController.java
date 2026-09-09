@@ -4,6 +4,7 @@ import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
 import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.credential.application.CredentialService;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ public class CredentialController {
     }
 
     @PostMapping("/organizations/{organizationId}/credentials")
+    @ApiResponse(responseCode = "201", description = "Created", useReturnTypeSchema = true)
     public ResponseEntity<CredentialResponse> create(
             @PathVariable long organizationId,
             @Valid @RequestBody CredentialRequest request,
@@ -67,6 +69,7 @@ public class CredentialController {
     }
 
     @DeleteMapping("/credentials/{id}")
+    @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
         service.delete(id, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();
