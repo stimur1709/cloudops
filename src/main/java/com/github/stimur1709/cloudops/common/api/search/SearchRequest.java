@@ -1,6 +1,7 @@
 package com.github.stimur1709.cloudops.common.api.search;
 
 import com.github.stimur1709.cloudops.common.search.SearchQuery;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -9,13 +10,21 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
+@Schema(
+        description =
+                "Offset-based search. Conditions use a single AND/OR group. Field names are endpoint-specific public allow-listed names; unsupported fields/operations or unconvertible values return 400. Missing sort uses the endpoint default; explicit sorting appends that field as a stable tie-breaker.")
 public record SearchRequest(
-        @NotNull(message = "Start is required") @Min(value = 0, message = "Start must not be less than 0") Integer start,
+        @NotNull(message = "Start is required") @Min(value = 0, message = "Start must not be less than 0") @Schema(description = "Zero-based row offset, not a page number", example = "0")
+        Integer start,
 
         @NotNull(message = "Size is required") @Min(value = 1, message = "Size must be greater than 0") @Max(value = 100, message = "Size must not be greater than 100") Integer size,
 
         @Valid Filter filter,
         List<@NotNull(message = "Sort item must not be null") @Valid Sort> sort,
+
+        @Schema(
+                description = "Include total matching count when true; total is omitted otherwise",
+                defaultValue = "false")
         boolean getTotal) {
 
     public SearchQuery toQuery() {
@@ -41,7 +50,10 @@ public record SearchRequest(
 
             @NotNull(message = "Filter operation is required") SearchQuery.Operation operation,
 
-            @NotNull(message = "Filter value is required") String value) {
+            @NotNull(message = "Filter value is required") @Schema(
+                    description =
+                            "String representation of the field value: text, numeric id, exact enum name or ISO-8601 timestamp")
+            String value) {
 
         SearchQuery.Condition toQuery() {
             return new SearchQuery.Condition(field, operation, value);

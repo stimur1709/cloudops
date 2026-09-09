@@ -3,6 +3,7 @@ package com.github.stimur1709.cloudops.credential.api;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.credential.CredentialPurpose;
 import com.github.stimur1709.cloudops.credential.application.ResourceCredentialService;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +41,7 @@ public class ResourceCredentialController {
     }
 
     @DeleteMapping("/{purpose}")
+    @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> unbind(
             @PathVariable long resourceId, @PathVariable CredentialPurpose purpose, Authentication authentication) {
         service.unbind(resourceId, purpose, CurrentUser.id(authentication));

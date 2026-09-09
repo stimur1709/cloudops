@@ -3,7 +3,19 @@ package com.github.stimur1709.cloudops.credential.api;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.github.stimur1709.cloudops.credential.CredentialType;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(
+        oneOf = {UsernamePasswordCredentialRequest.class, SshPrivateKeyCredentialRequest.class},
+        discriminatorProperty = "type",
+        discriminatorMapping = {
+            @io.swagger.v3.oas.annotations.media.DiscriminatorMapping(
+                    value = "USERNAME_PASSWORD",
+                    schema = UsernamePasswordCredentialRequest.class),
+            @io.swagger.v3.oas.annotations.media.DiscriminatorMapping(
+                    value = "SSH_PRIVATE_KEY",
+                    schema = SshPrivateKeyCredentialRequest.class)
+        })
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.EXISTING_PROPERTY,

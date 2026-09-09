@@ -3,6 +3,7 @@ package com.github.stimur1709.cloudops.monitoring.settings.api;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.monitoring.settings.application.ProbeSettingsService;
 import com.github.stimur1709.cloudops.probe.ProbeType;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +41,7 @@ public class ResourceProbeSettingsController {
     }
 
     @DeleteMapping("/{probeType}")
+    @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> delete(
             @PathVariable long resourceId, @PathVariable ProbeType probeType, Authentication auth) {
         service.deleteResource(resourceId, probeType, CurrentUser.id(auth));

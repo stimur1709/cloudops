@@ -82,6 +82,24 @@ SameSite настраиваются через `REFRESH_COOKIE_NAME`, `REFRESH_C
 
 При старте Liquibase автоматически создаёт схему, а Hibernate только проверяет её.
 
+## OpenAPI
+
+Документация API выключена по умолчанию, поэтому production deployment не публикует её без явной
+настройки. Для local/dev запуска включите её переменной окружения:
+
+```powershell
+$env:CLOUDOPS_API_DOCS_ENABLED = "true"
+./mvnw.cmd spring-boot:run
+```
+
+После запуска доступны:
+
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`;
+- Swagger UI: `http://localhost:8080/swagger-ui.html`.
+
+Чтобы снова отключить оба endpoint, задайте `CLOUDOPS_API_DOCS_ENABLED=false`. Сгенерированная
+спецификация отражает текущие controller и DTO и служит справочником backend-контракта для frontend.
+
 Остановить локальную инфраструктуру:
 
 ```shell

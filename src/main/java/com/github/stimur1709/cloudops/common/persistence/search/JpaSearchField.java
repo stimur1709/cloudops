@@ -8,6 +8,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 public final class JpaSearchField<E, V> {
@@ -99,7 +100,11 @@ public final class JpaSearchField<E, V> {
         return operations.contains(operation);
     }
 
-    boolean isSortable() {
+    public Set<SearchQuery.Operation> supportedOperations() {
+        return Set.copyOf(operations);
+    }
+
+    public boolean isSortable() {
         return sortable;
     }
 

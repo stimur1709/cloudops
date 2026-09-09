@@ -4,6 +4,7 @@ import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
 import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.monitoring.application.MonitorService;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -24,6 +25,7 @@ public class MonitorController {
     }
 
     @PostMapping("/{id}/run")
+    @ApiResponse(responseCode = "202", description = "Accepted for asynchronous execution", useReturnTypeSchema = true)
     public ResponseEntity<Void> run(@PathVariable long id, Authentication authentication) {
         monitorService.scheduleRun(id, CurrentUser.id(authentication));
         return ResponseEntity.accepted().build();

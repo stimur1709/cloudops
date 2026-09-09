@@ -1,0 +1,8 @@
+springdoc:
+  api-docs:
+    enabled: ${CLOUDOPS_API_DOCS_ENABLED:false}
+    version: OPENAPI_3_0
+  swagger-ui:
+    enabled: ${springdoc.api-docs.enabled}
+  paths-to-match: /api/**
+  override-with-generic-response: false

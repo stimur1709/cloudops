@@ -3,6 +3,7 @@ package com.github.stimur1709.cloudops.task.api;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.task.application.TaskService;
 import com.github.stimur1709.cloudops.task.persistence.TaskEntity;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class ResourceTaskController {
     }
 
     @PostMapping
+    @ApiResponse(responseCode = "202", description = "Accepted for asynchronous execution", useReturnTypeSchema = true)
     public ResponseEntity<TaskResponse> run(
             @PathVariable long resourceId,
             @Valid @RequestBody CreateTaskRequest request,
