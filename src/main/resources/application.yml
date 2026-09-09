@@ -29,6 +29,14 @@ spring:
         default-requeue-rejected: false
 
 cloudops:
+  web:
+    cors:
+      allowed-origins: ${CLOUDOPS_WEB_CORS_ALLOWED_ORIGINS:}
+      allowed-methods: ${CLOUDOPS_WEB_CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+      allowed-headers: ${CLOUDOPS_WEB_CORS_ALLOWED_HEADERS:Authorization,Content-Type}
+      exposed-headers: ${CLOUDOPS_WEB_CORS_EXPOSED_HEADERS:}
+      allow-credentials: ${CLOUDOPS_WEB_CORS_ALLOW_CREDENTIALS:true}
+      max-age: ${CLOUDOPS_WEB_CORS_MAX_AGE:30m}
   monitoring:
     scheduler-enabled: ${MONITORING_SCHEDULER_ENABLED:true}
     poll-interval: ${MONITORING_POLL_INTERVAL:5s}

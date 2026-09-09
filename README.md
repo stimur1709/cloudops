@@ -44,6 +44,18 @@ $env:CREDENTIALS_MASTER_KEY = [Convert]::ToBase64String($credentialKey)
 и не имеет значения по умолчанию. `JWT_ISSUER` по умолчанию равен `cloudops`,
 `JWT_ACCESS_TOKEN_TTL` — `15m`, `JWT_REFRESH_TOKEN_TTL` — `30d`.
 
+Для обращения frontend dev server `http://localhost:5173` к backend
+`http://localhost:8080` явно разрешите origin перед запуском приложения:
+
+```shell
+export CLOUDOPS_WEB_CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
+
+В PowerShell используйте `$env:CLOUDOPS_WEB_CORS_ALLOWED_ORIGINS = "http://localhost:5173"`.
+Несколько origins задаются через запятую. По умолчанию список пуст, поэтому cross-origin доступ
+закрыт; production frontend origin также должен задаваться явно. CORS разрешает credentials только
+для точных origins из этого списка и не заменяет JWT authentication или проверку ролей.
+
 Refresh token хранится только в `HttpOnly` cookie и в БД представлен SHA-256 hash. Production
 defaults: `Secure`, `SameSite=Strict`, path `/api/auth`. Для локального HTTP-запуска явно задайте
 `REFRESH_COOKIE_SECURE=false`; production default при этом остаётся безопасным. Имя, path и
