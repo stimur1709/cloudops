@@ -20,6 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -30,6 +34,7 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
+          cache-dependency-path: backend/pom.xml
 
       - name: Check formatting
         run: bash ./mvnw --batch-mode --no-transfer-progress spotless:check

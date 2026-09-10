@@ -3,8 +3,17 @@
 ## Project
 
 - Work on one GitHub issue at a time and stay within its scope.
+- Treat `backend/` as the Spring Boot API module and `frontend/` as the Web UI module.
+- Change backend and frontend independently unless an issue requires changes to both modules.
 - Keep CloudOps a simple modular monolith on Java 25 and Spring Boot.
 - Do not add distributed infrastructure unless the issue requires it.
+
+## Frontend
+
+- Before changing anything in `frontend/**`, read `frontend/DESIGN.md`.
+- Treat `frontend/DESIGN.md` as the source of truth for visual design, layout, UI states, shared components, and accessibility.
+- Add shared visual and component patterns to the design system and shared frontend implementation before using them in feature screens.
+- Do not create local UI conventions that bypass the design system.
 
 ## Architecture
 
@@ -48,8 +57,9 @@
 
 ## Formatting and verification
 
+- Run backend commands from `backend/`.
 - Format Java through Spotless with `./mvnw spotless:apply`; do not maintain an individual manual style.
-- Run `./mvnw.cmd verify` on Windows or `./mvnw verify` on macOS and Linux before completion.
+- Run `./mvnw.cmd verify` on Windows or `./mvnw verify` on macOS and Linux from `backend/` before completion.
 - For version-sensitive third-party behavior, check current official documentation.
 - Update README when developer setup or commands change.
 

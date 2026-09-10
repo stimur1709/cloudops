@@ -2,13 +2,30 @@
 
 Версия: 1.0 · Дата: 2026-09-09 · Статус: нормативная спецификация frontend.
 
+## How to use this specification
+
+Приоритет правил:
+
+1. GitHub issue определяет scope конкретной задачи.
+2. Корневой `AGENTS.md` определяет engineering rules репозитория.
+3. `frontend/DESIGN.md` определяет visual, interaction, layout, component и accessibility rules frontend.
+
+Для любых изменений в `frontend/**` этот документ обязателен. Новый общий visual/component pattern сначала добавляется в `frontend/DESIGN.md` и shared frontend implementation, а затем используется в feature screens.
+
 ## Purpose & Design principles
 
 Цель документа — сделать CloudOps последовательной, доступной и информационно-плотной консолью управления инфраструктурой. Это source of truth для дизайнера, frontend-разработчика и AI-агента: токены определяют внешний вид, компоненты — повторяемое поведение, backend-контракт — смысл данных.
 
 Направление: **precision infrastructure console / современный developer tool**. Пользователь должен быстро понять, что работает, где проблема, насколько свежи данные и какое действие доступно.
 
-Обязательный стек: React + TypeScript + Vite + Tailwind CSS v4 + shadcn/ui на Radix UI + Lucide + TanStack Query/Table + React Hook Form + Zod + Recharts. Конкретные версии закрепляются в frontend lockfile при создании приложения; этот документ не предписывает неподтверждённые версии библиотек.
+Core frontend stack: React, TypeScript, Vite, Tailwind CSS v4, shadcn/ui на Radix UI, Lucide, TanStack Query, React Hook Form и Zod. Конкретные версии закрепляются в frontend lockfile при создании приложения; этот документ не предписывает неподтверждённые версии библиотек.
+
+Feature libraries подключаются вместе с первым реальным use case:
+
+- TanStack Table — с первой data table;
+- Recharts — с первой chart/monitoring visualization.
+
+Правила таблиц и charts ниже остаются нормативными независимо от того, установлены ли эти библиотеки.
 
 ### Принципы
 
@@ -39,20 +56,20 @@
 
 ### Контекст репозитория
 
-Спецификация размещается в корневом `DESIGN.md` репозитория `stimur1709/cloudops`. На проверенной базе `main` (`eb4cda4`) есть Java/Spring backend в `src/main/java`, Maven и документация API; frontend и `package.json` отсутствуют. Целевое расположение нового приложения — `frontend/`. Указанные далее frontend-пути описывают будущую структуру, а не уже реализованные файлы.
+Спецификация находится в `frontend/DESIGN.md`. Java/Spring backend расположен в `backend/`, а Web UI — в `frontend/`.
 
-Документ задаёт дизайн, но не меняет backend и не добавляет отсутствующие endpoint. При расхождении UI-модели и API исправлять адаптер или согласовывать отдельную продуктовую задачу. Не подменять данные вымышленными значениями.
+Frontend использует существующий backend и его OpenAPI-контракт и не выдумывает отсутствующие поля или endpoint. При расхождении UI-модели и API исправлять адаптер или согласовывать отдельную продуктовую задачу. Не подменять данные вымышленными значениями.
 
 Проверенные источники доменных контрактов относительно корня репозитория:
 
-- `src/main/java/com/github/stimur1709/cloudops/resource/api/ResourceResponse.java` — lifecycle `status` отдельно от `healthStatus`.
-- `src/main/java/com/github/stimur1709/cloudops/monitoring/ResourceHealthStatus.java` — здоровье ресурса.
-- `src/main/java/com/github/stimur1709/cloudops/monitoring/HealthStatus.java` — здоровье отдельного монитора.
-- `src/main/java/com/github/stimur1709/cloudops/monitoring/application/ResourceHealthService.java` — серверная агрегация здоровья.
-- `src/main/java/com/github/stimur1709/cloudops/monitoring/api/MonitorResponse.java` и `MonitoringResultResponse.java` — последние и исторические результаты.
-- `src/main/java/com/github/stimur1709/cloudops/probe/execution/ProbeExecutionResult.java` — успешный/неуспешный результат проверки и ошибка выполнения.
-- `src/main/java/com/github/stimur1709/cloudops/task/TaskStatus.java` и `task/api/TaskResponse.java` — жизненный цикл выполнения задач.
-- `src/main/java/com/github/stimur1709/cloudops/monitoring/application/ResourceAvailabilityService.java` — формулы availability, uptime и coverage.
+- `backend/src/main/java/com/github/stimur1709/cloudops/resource/api/ResourceResponse.java` — lifecycle `status` отдельно от `healthStatus`.
+- `backend/src/main/java/com/github/stimur1709/cloudops/monitoring/ResourceHealthStatus.java` — здоровье ресурса.
+- `backend/src/main/java/com/github/stimur1709/cloudops/monitoring/HealthStatus.java` — здоровье отдельного монитора.
+- `backend/src/main/java/com/github/stimur1709/cloudops/monitoring/application/ResourceHealthService.java` — серверная агрегация здоровья.
+- `backend/src/main/java/com/github/stimur1709/cloudops/monitoring/api/MonitorResponse.java` и `MonitoringResultResponse.java` — последние и исторические результаты.
+- `backend/src/main/java/com/github/stimur1709/cloudops/probe/execution/ProbeExecutionResult.java` — успешный/неуспешный результат проверки и ошибка выполнения.
+- `backend/src/main/java/com/github/stimur1709/cloudops/task/TaskStatus.java` и `backend/src/main/java/com/github/stimur1709/cloudops/task/api/TaskResponse.java` — жизненный цикл выполнения задач.
+- `backend/src/main/java/com/github/stimur1709/cloudops/monitoring/application/ResourceAvailabilityService.java` — формулы availability, uptime и coverage.
 
 ## Design Tokens
 
@@ -592,8 +609,8 @@ Freshness описывать отдельно: `fetchedAt` — когда отв
 При создании frontend использовать следующую структуру, адаптируя имена к уже принятой архитектуре, если приложение появилось после этой спецификации:
 
 ```text
-DESIGN.md                         # единственная нормативная спецификация
 frontend/
+  DESIGN.md                       # единственная нормативная спецификация
   components.json                 # shadcn, cssVariables: true, Radix-варианты
   vite.config.ts                  # React и Tailwind v4 Vite plugins
   src/
@@ -615,7 +632,7 @@ frontend/
       format.ts                   # единицы, точность, даты/timezone
 ```
 
-Не создавать вторую копию DESIGN.md в frontend. При необходимости README приложения ссылается на `../DESIGN.md`. Токены в CSS — исполняемое представление спецификации; изменение одного требует синхронного изменения другого. UI primitives не импортируют feature logic; feature containers не копируют markup бизнес-компонентов ради иного цвета.
+Не создавать вторую копию `DESIGN.md`. При необходимости README приложения ссылается на `DESIGN.md`. Токены в CSS — исполняемое представление спецификации; изменение одного требует синхронного изменения другого. UI primitives не импортируют feature logic; feature containers не копируют markup бизнес-компонентов ради иного цвета.
 
 React Query хранит server state; RHF — ввод формы; TanStack Table — состояние представления таблицы; URL — разделяемый navigation/filter state. Локальный React state — открытый dialog, активная панель и прочие временные UI-состояния. Не добавлять глобальный store для дублирования query cache.
 
