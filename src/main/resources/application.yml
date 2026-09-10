@@ -1,4 +1,8 @@
 spring:
+  config:
+    import:
+      - classpath:openapi.yml
+      - classpath:persistence.yml
   application:
     name: cloudops
   datasource:

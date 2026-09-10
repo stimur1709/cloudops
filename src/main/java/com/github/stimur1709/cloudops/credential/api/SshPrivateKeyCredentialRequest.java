@@ -1,6 +1,7 @@
 package com.github.stimur1709.cloudops.credential.api;
 
 import com.github.stimur1709.cloudops.credential.CredentialType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,10 +14,12 @@ public record SshPrivateKeyCredentialRequest(
 
         @NotBlank(message = "Username must not be blank") @Size(max = 255) String username,
 
-        @NotBlank(message = "Private key must not be blank") String privateKey)
+        @NotBlank(message = "Private key must not be blank") @Schema(accessMode = Schema.AccessMode.WRITE_ONLY)
+        String privateKey)
         implements CredentialRequest {
 
-    @AssertTrue(message = "Type must be SSH_PRIVATE_KEY") public boolean isTypeValid() {
+    @AssertTrue(message = "Type must be SSH_PRIVATE_KEY") @Schema(hidden = true)
+    public boolean isTypeValid() {
         return type == CredentialType.SSH_PRIVATE_KEY;
     }
 

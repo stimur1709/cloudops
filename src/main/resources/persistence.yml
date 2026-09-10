@@ -1,0 +1,8 @@
+# Swagger Core uses Jackson 2 while application DTOs use Jackson 3. Select the mapper explicitly so
+# Hibernate does not switch JSONB persistence to Jackson 2 when OpenAPI is present on the classpath.
+spring:
+  jpa:
+    properties:
+      hibernate:
+        type:
+          json_format_mapper: jackson3

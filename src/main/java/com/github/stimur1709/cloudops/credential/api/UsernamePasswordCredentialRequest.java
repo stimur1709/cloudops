@@ -1,6 +1,7 @@
 package com.github.stimur1709.cloudops.credential.api;
 
 import com.github.stimur1709.cloudops.credential.CredentialType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,10 +14,12 @@ public record UsernamePasswordCredentialRequest(
 
         @NotBlank(message = "Username must not be blank") @Size(max = 255) String username,
 
-        @NotBlank(message = "Password must not be blank") String password)
+        @NotBlank(message = "Password must not be blank") @Schema(accessMode = Schema.AccessMode.WRITE_ONLY)
+        String password)
         implements CredentialRequest {
 
-    @AssertTrue(message = "Type must be USERNAME_PASSWORD") public boolean isTypeValid() {
+    @AssertTrue(message = "Type must be USERNAME_PASSWORD") @Schema(hidden = true)
+    public boolean isTypeValid() {
         return type == CredentialType.USERNAME_PASSWORD;
     }
 

@@ -4,6 +4,7 @@ import com.github.stimur1709.cloudops.common.api.search.SearchRequest;
 import com.github.stimur1709.cloudops.common.api.search.SearchResponse;
 import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.membership.application.OrganizationMembershipService;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +30,7 @@ public class OrganizationMembershipController {
     }
 
     @PostMapping
+    @ApiResponse(responseCode = "201", description = "Created", useReturnTypeSchema = true)
     public ResponseEntity<OrganizationMemberResponse> add(
             @PathVariable long organizationId,
             @Valid @RequestBody AddOrganizationMemberRequest request,
@@ -60,6 +62,7 @@ public class OrganizationMembershipController {
     }
 
     @DeleteMapping("/{userId}")
+    @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> remove(
             @PathVariable long organizationId, @PathVariable long userId, Authentication authentication) {
         membershipService.remove(organizationId, userId, CurrentUser.id(authentication));

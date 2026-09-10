@@ -6,6 +6,7 @@ import com.github.stimur1709.cloudops.common.application.CurrentUser;
 import com.github.stimur1709.cloudops.common.config.JwtProperties;
 import com.github.stimur1709.cloudops.user.api.UserResponse;
 import com.github.stimur1709.cloudops.user.application.UserService;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -41,6 +42,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @ApiResponse(responseCode = "201", description = "Created", useReturnTypeSchema = true)
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
         UserResponse response =
                 UserResponse.from(authService.register(request.email(), request.displayName(), request.password()));
@@ -58,6 +60,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         authService.logout(refreshToken(request));
         return ResponseEntity.noContent()

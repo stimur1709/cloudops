@@ -5,6 +5,7 @@ import com.github.stimur1709.cloudops.common.api.error.ApiAccessDeniedHandler;
 import com.github.stimur1709.cloudops.common.api.error.ApiAuthenticationEntryPoint;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.security.SecureRandom;
+import java.util.List;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +26,9 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({JwtProperties.class, RefreshTokenProperties.class, WebCorsProperties.class})
 public class SecurityConfiguration {
+
+    public static final List<String> PUBLIC_ENDPOINTS =
+            List.of("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout");
 
     @Bean
     SecureRandom secureRandom() {
@@ -59,8 +63,7 @@ public class SecurityConfiguration {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(
-                                "/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout")
+                        .requestMatchers(PUBLIC_ENDPOINTS.toArray(String[]::new))
                         .permitAll()
                         .requestMatchers("/api/**")
                         .authenticated()
