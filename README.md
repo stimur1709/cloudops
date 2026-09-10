@@ -4,11 +4,15 @@
 
 ## Структура репозитория
 
+- `pom.xml` — корневая точка импорта Maven reactor для IDE и общих сборок;
 - `backend/` — Spring Boot API на Java 25;
 - `frontend/` — Web UI и его нормативная design specification;
 - `compose.yaml` — локальная PostgreSQL/RabbitMQ инфраструктура проекта.
 
 Backend и frontend являются независимыми модулями и меняются вместе только когда этого требует задача.
+При открытии корня репозитория IntelliJ IDEA импортируйте корневой `pom.xml`: он подключает
+`backend/` как Maven-модуль. Maven Wrapper остаётся внутри backend, поэтому команды разработки
+выполняются из `backend/`.
 
 ## Требования
 

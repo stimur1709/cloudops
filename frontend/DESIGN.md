@@ -7,7 +7,7 @@
 Приоритет правил:
 
 1. GitHub issue определяет scope конкретной задачи.
-2. Корневой `AGENTS.md` определяет engineering rules репозитория.
+2. Применимые `AGENTS.md` от корня репозитория до `frontend/` определяют engineering rules.
 3. `frontend/DESIGN.md` определяет visual, interaction, layout, component и accessibility rules frontend.
 
 Для любых изменений в `frontend/**` этот документ обязателен. Новый общий visual/component pattern сначала добавляется в `frontend/DESIGN.md` и shared frontend implementation, а затем используется в feature screens.
