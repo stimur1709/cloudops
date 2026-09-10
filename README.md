@@ -1,6 +1,18 @@
 # CloudOps
 
-Учебный backend-проект для управления инфраструктурными ресурсами на Java 25 и Spring Boot.
+Учебный проект для управления инфраструктурными ресурсами.
+
+## Структура репозитория
+
+- `pom.xml` — корневая точка импорта Maven reactor для IDE и общих сборок;
+- `backend/` — Spring Boot API на Java 25;
+- `frontend/` — Web UI и его нормативная design specification;
+- `compose.yaml` — локальная PostgreSQL/RabbitMQ инфраструктура проекта.
+
+Backend и frontend являются независимыми модулями и меняются вместе только когда этого требует задача.
+При открытии корня репозитория IntelliJ IDEA импортируйте корневой `pom.xml`: он подключает
+`backend/` как Maven-модуль. Maven Wrapper остаётся внутри backend, поэтому команды разработки
+выполняются из `backend/`.
 
 ## Требования
 
@@ -33,12 +45,13 @@ $env:JWT_ISSUER = "cloudops-local"
 $credentialKey = New-Object byte[] 32
 [Security.Cryptography.RandomNumberGenerator]::Fill($credentialKey)
 $env:CREDENTIALS_MASTER_KEY = [Convert]::ToBase64String($credentialKey)
+Set-Location backend
 ./mvnw.cmd spring-boot:run
 ```
 
 Для macOS или Linux используются те же переменные через `export`; JWT-ключ можно создать
 командой `export JWT_SECRET="$(openssl rand -base64 32)"`, а приложение запустить через
-`./mvnw spring-boot:run`.
+`cd backend && ./mvnw spring-boot:run`.
 
 `JWT_SECRET` обязателен, должен быть Base64-представлением ключа длиной не менее 32 байт
 и не имеет значения по умолчанию. `JWT_ISSUER` по умолчанию равен `cloudops`,
@@ -100,7 +113,7 @@ $env:CLOUDOPS_API_DOCS_ENABLED = "true"
 Чтобы снова отключить оба endpoint, задайте `CLOUDOPS_API_DOCS_ENABLED=false`. Сгенерированная
 спецификация отражает текущие controller и DTO и служит справочником backend-контракта для frontend.
 
-Остановить локальную инфраструктуру:
+Остановить локальную инфраструктуру из корня репозитория:
 
 ```shell
 docker compose down
@@ -493,6 +506,7 @@ Scheduler использует partial indexes для совместимых mon
 Java-код форматируется через Spotless:
 
 ```powershell
+Set-Location backend
 ./mvnw.cmd spotless:apply
 ./mvnw.cmd spotless:check
 ```
@@ -507,11 +521,13 @@ Spotless использует Palantir Java Format 2.96.0. Чтобы `Ctrl+Alt+
 Windows:
 
 ```powershell
+Set-Location backend
 ./mvnw.cmd verify
 ```
 
 macOS или Linux:
 
 ```shell
+cd backend
 ./mvnw verify
 ```
