@@ -14,6 +14,11 @@ target/
 hs_err_pid*
 replay_pid*
 
+# Node.js
+node_modules/
+dist/
+coverage/
+
 # Environment and secrets
 .env
 .env.*

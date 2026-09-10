@@ -1,0 +1,62 @@
+{
+  "name": "cloudops-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,html}\" \"scripts/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,html}\" \"scripts/*.mjs\"",
+    "lint": "eslint . && node scripts/check-design-tokens.mjs",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test -- --run && npm run build",
+    "api:generate": "orval --config orval.config.ts"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
+    "@radix-ui/react-dropdown-menu": "latest",
+    "@radix-ui/react-label": "latest",
+    "@radix-ui/react-separator": "latest",
+    "@radix-ui/react-slot": "latest",
+    "@radix-ui/react-tooltip": "latest",
+    "@tanstack/react-query": "^5.102.8",
+    "class-variance-authority": "latest",
+    "clsx": "latest",
+    "lucide-react": "^1.44.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-hook-form": "^7.87.0",
+    "react-router-dom": "^7.18.3",
+    "tailwind-merge": "latest",
+    "zod": "^4.6.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "latest",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "latest",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "latest",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.6",
+    "globals": "latest",
+    "jsdom": "^29.1.1",
+    "orval": "^8.31.0",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "latest",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.0"
+  }
+}

@@ -1,0 +1,112 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-subtle: var(--foreground-subtle);
+  --color-decoration-muted: var(--decoration-muted);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-control: var(--border-control);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-product-accent: var(--product-accent);
+  --color-product-accent-soft: var(--product-accent-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-status-down: var(--status-down);
+  --color-status-down-soft: var(--status-down-soft);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --font-sans: "Geist Sans", "Inter", "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", "Cascadia Code", Consolas, monospace;
+  --text-*: initial;
+  --text-page-title: 1.5rem;
+  --text-page-title--line-height: 2rem;
+  --text-page-title--font-weight: 600;
+  --text-section-title: 1.125rem;
+  --text-section-title--line-height: 1.5rem;
+  --text-section-title--font-weight: 600;
+  --text-card-title: 0.875rem;
+  --text-card-title--line-height: 1.25rem;
+  --text-card-title--font-weight: 500;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.25rem;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.25rem;
+  --text-label--font-weight: 500;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --spacing: 0.25rem;
+  --spacing-control: var(--control-height);
+  --spacing-icon: 1rem;
+  --radius-*: initial;
+  --radius-sm: 0.25rem;
+  --radius-control: 0.375rem;
+  --radius-panel: 0.5rem;
+  --radius-full: 999px;
+  --shadow-*: initial;
+  --shadow-popover: var(--elevation-popover);
+  --breakpoint-*: initial;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+}
+
+@layer base {
+  :root {
+    --control-height: 2.25rem;
+    --motion-fast: 120ms;
+    --motion-base: 160ms;
+    --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

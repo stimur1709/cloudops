@@ -17,6 +17,7 @@ Backend и frontend являются независимыми модулями �
 ## Требования
 
 - JDK 25;
+- Node.js 24 и npm;
 - Docker с поддержкой Docker Compose.
 
 Устанавливать Maven отдельно не нужно: в репозитории есть Maven Wrapper.
@@ -56,6 +57,40 @@ Set-Location backend
 `JWT_SECRET` обязателен, должен быть Base64-представлением ключа длиной не менее 32 байт
 и не имеет значения по умолчанию. `JWT_ISSUER` по умолчанию равен `cloudops`,
 `JWT_ACCESS_TOKEN_TTL` — `15m`, `JWT_REFRESH_TOKEN_TTL` — `30d`.
+
+### Frontend
+
+В отдельном терминале из корня репозитория запустите frontend:
+
+```shell
+cd frontend
+npm ci
+npm run dev
+```
+
+Web UI будет доступен на `http://localhost:5173`, backend API — на
+`http://localhost:8080`. Адрес API задаётся через `VITE_API_BASE_URL`; начните с копии
+`frontend/.env.example`. Access token хранится только в памяти вкладки, а refresh token — в
+`HttpOnly` cookie backend. Поэтому backend должен разрешать точный frontend origin и credentials,
+как показано ниже.
+
+Полная локальная проверка frontend:
+
+```shell
+cd frontend
+npm run verify
+```
+
+Чтобы обновить типизированный auth-клиент из OpenAPI, включите документацию backend и выполните:
+
+```shell
+cd frontend
+npm run api:generate
+```
+
+По умолчанию generator читает `http://localhost:8080/v3/api-docs`; другой адрес можно передать
+через `VITE_OPENAPI_URL`. Файлы в `frontend/src/api/generated/` генерируются Orval и вручную не
+редактируются.
 
 Для обращения frontend dev server `http://localhost:5173` к backend
 `http://localhost:8080` явно разрешите origin перед запуском приложения:
