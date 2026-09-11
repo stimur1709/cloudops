@@ -9,6 +9,7 @@ const allOrganizationsRequest: SearchRequest = {
   start: 0,
   size: 100,
   sort: [{ field: "name", order: "ASC" }],
+  getTotal: false,
 };
 
 export const organizationKeys = {
@@ -42,6 +43,7 @@ export async function getCurrentMembership(
           { field: "userId", operation: "EQ", value: String(userId) },
         ],
       },
+      getTotal: false,
     },
     { signal },
   );

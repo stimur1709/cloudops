@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { OrganizationResponse } from "../api/generated/model";
 import { organizationKeys } from "../features/organization/organization-api";
@@ -38,7 +39,8 @@ function authenticatedApi({
   organizations?: OrganizationResponse[];
   roles?: Record<number, "OWNER" | "ADMIN" | "MEMBER">;
 } = {}) {
-  return vi.fn(async (input: RequestInfo | URL) => {
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    void init;
     const url = String(input);
     if (url.endsWith("/api/auth/refresh")) return jsonResponse(session);
     if (url.endsWith("/api/auth/me")) return jsonResponse(currentUser);
@@ -81,7 +83,8 @@ beforeEach(() => {
 describe("organization-scoped application routing", () => {
   it("redirects an authenticated root to the first available organization", async () => {
     window.history.replaceState({}, "", "/");
-    vi.stubGlobal("fetch", authenticatedApi());
+    const fetchMock = authenticatedApi();
+    vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
     expect(screen.getByLabelText("Восстановление сессии")).toBeInTheDocument();
@@ -94,6 +97,15 @@ describe("organization-scoped application routing", () => {
         name: "Текущая организация: Alpha Platform. Переключить организацию",
       }),
     ).toHaveTextContent("OWNER");
+    const searchBodies = fetchMock.mock.calls
+      .filter(([url]) => String(url).includes("/search"))
+      .map(([, init]) => JSON.parse(String(init?.body)) as object);
+    expect(searchBodies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ getTotal: false }),
+        expect.objectContaining({ getTotal: false }),
+      ]),
+    );
   });
 
   it("keeps the organization context when a scoped URL is reloaded", async () => {
@@ -243,6 +255,29 @@ describe("organization-scoped application routing", () => {
 });
 
 describe("authentication with organization routing", () => {
+  it("restores one refresh session in StrictMode and redirects root to the organization home", async () => {
+    window.history.replaceState({}, "", "/");
+    const baseApi = authenticatedApi({ organizations: [alpha] });
+    const fetchMock = vi.fn((input: RequestInfo | URL) => baseApi(input));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "Ресурсы" }),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/organizations/11/resources");
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).endsWith("/api/auth/refresh"),
+      ),
+    ).toHaveLength(1);
+  });
+
   it("redirects an unauthenticated protected route to login", async () => {
     window.history.replaceState({}, "", "/organizations/11/monitoring");
     mockMissingSession();

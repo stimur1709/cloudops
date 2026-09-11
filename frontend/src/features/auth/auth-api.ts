@@ -3,7 +3,11 @@ import type {
   TokenResponse,
   UserResponse,
 } from "../../api/generated/model";
-import { apiRequest, setAccessToken } from "../../api/client/http-client";
+import {
+  apiRequest,
+  refreshAccessToken,
+  setAccessToken,
+} from "../../api/client/http-client";
 
 function storeAccessToken(session: TokenResponse): TokenResponse {
   if (!session.accessToken)
@@ -21,13 +25,8 @@ export async function login(request: LoginRequest): Promise<TokenResponse> {
   return storeAccessToken(session);
 }
 
-export async function restoreSession(): Promise<TokenResponse> {
-  const session = await apiRequest<TokenResponse>(
-    "/api/auth/refresh",
-    { method: "POST" },
-    "refresh",
-  );
-  return storeAccessToken(session);
+export async function restoreSession(): Promise<void> {
+  await refreshAccessToken();
 }
 
 export function getCurrentUser(): Promise<UserResponse> {
