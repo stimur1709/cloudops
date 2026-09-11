@@ -1,0 +1,78 @@
+:root {
+  --background: #fafafa;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: #f4f4f5;
+  --surface-active: #eaeaee;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --border-control: #82828c;
+  --foreground: #18181b;
+  --foreground-muted: #62626c;
+  --foreground-subtle: #696974;
+  --decoration-muted: #a1a1aa;
+  --product-accent: #6955cc;
+  --product-accent-soft: #f0edff;
+  --primary: #6d5bd0;
+  --primary-hover: #6251bd;
+  --primary-active: #5949ad;
+  --primary-foreground: #ffffff;
+  --destructive: #b42332;
+  --destructive-hover: #9f1e2b;
+  --destructive-foreground: #ffffff;
+  --status-up: #13764b;
+  --status-degraded: #8a5900;
+  --status-down: #ba2737;
+  --status-unknown: #62626c;
+  --status-running: #245fbb;
+  --status-up-soft: color-mix(in srgb, var(--status-up) 10%, var(--surface));
+  --status-degraded-soft: color-mix(
+    in srgb,
+    var(--status-degraded) 10%,
+    var(--surface)
+  );
+  --status-down-soft: color-mix(
+    in srgb,
+    var(--status-down) 10%,
+    var(--surface)
+  );
+  --status-unknown-soft: color-mix(
+    in srgb,
+    var(--status-unknown) 10%,
+    var(--surface)
+  );
+  --status-running-soft: color-mix(
+    in srgb,
+    var(--status-running) 10%,
+    var(--surface)
+  );
+  --ring: var(--product-accent);
+  --input: var(--border-control);
+  --overlay: rgb(0 0 0 / 0.6);
+  --layout-sidebar-width: 15rem;
+  --layout-content-max: 90rem;
+  --layout-form-max: 24rem;
+  --elevation-popover: 0 8px 24px rgb(0 0 0 / 0.2);
+}
+
+.dark {
+  --background: #09090b;
+  --surface: #0f1012;
+  --surface-raised: #151619;
+  --surface-hover: #1b1c20;
+  --surface-active: #23242a;
+  --border: #27282d;
+  --border-strong: #34353b;
+  --border-control: #787884;
+  --foreground: #f4f4f5;
+  --foreground-muted: #a1a1aa;
+  --foreground-subtle: #9898a3;
+  --decoration-muted: #71717a;
+  --product-accent: #a89bff;
+  --product-accent-soft: #252039;
+  --status-up: #3ad389;
+  --status-degraded: #f5b942;
+  --status-down: #f87171;
+  --status-unknown: #a1a1aa;
+  --status-running: #60a5fa;
+}
