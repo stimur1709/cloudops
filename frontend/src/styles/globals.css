@@ -27,6 +27,9 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-status-down: var(--status-down);
   --color-status-down-soft: var(--status-down-soft);
+  --color-status-up: var(--status-up);
+  --color-status-degraded: var(--status-degraded);
+  --color-status-unknown: var(--status-unknown);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --font-sans: "Geist Sans", "Inter", "Segoe UI", sans-serif;

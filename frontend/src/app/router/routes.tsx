@@ -22,6 +22,11 @@ const PlaceholderPage = lazy(() =>
     default: module.PlaceholderPage,
   })),
 );
+const ResourcesPage = lazy(() =>
+  import("../../features/resource/resources-page").then((module) => ({
+    default: module.ResourcesPage,
+  })),
+);
 
 function ProtectedRoutes() {
   const { status } = useAuth();
@@ -71,11 +76,12 @@ export function AppRoutes() {
             }
           >
             <Route index element={<Navigate to="resources" replace />} />
+            <Route path="resources" element={<ResourcesPage />} />
             <Route
-              path="resources"
+              path="resources/:resourceId"
               element={organizationPage(
-                "Ресурсы",
-                "Управление ресурсами будет добавлено отдельной задачей.",
+                "Детали ресурса",
+                "Страница ресурса будет добавлена отдельной задачей.",
               )}
             />
             <Route

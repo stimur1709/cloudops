@@ -36,6 +36,7 @@ import type {
   SearchRequest,
   SearchResponseOrganizationMemberResponse,
   SearchResponseOrganizationResponse,
+  SearchResponseResourceResponse,
   TokenResponse,
   UpdateOrganizationMemberRequest,
   UpdateOrganizationRequest,
@@ -923,6 +924,179 @@ export const useDelete4 = <
   TContext
 > => {
   return useMutation(getDelete4MutationOptions(options), queryClient);
+};
+
+export type search3Response200 = {
+  data: SearchResponseResourceResponse;
+  status: 200;
+};
+
+export type search3Response400 = {
+  data: Error400Response;
+  status: 400;
+};
+
+export type search3Response401 = {
+  data: Error401Response;
+  status: 401;
+};
+
+export type search3Response403 = {
+  data: Error403Response;
+  status: 403;
+};
+
+export type search3Response404 = {
+  data: Error404Response;
+  status: 404;
+};
+
+export type search3Response409 = {
+  data: Error409Response;
+  status: 409;
+};
+
+export type search3ResponseSuccess = search3Response200 & {
+  headers: Headers;
+};
+export type search3ResponseError = (
+  | search3Response400
+  | search3Response401
+  | search3Response403
+  | search3Response404
+  | search3Response409
+) & {
+  headers: Headers;
+};
+
+export type search3Response = search3ResponseSuccess | search3ResponseError;
+
+export const getSearch3Url = () => {
+  return `/api/resources/search`;
+};
+
+/**
+ * Allowed filter fields and operators: createdAt [EQ, GE, GT, LE, LT, NE]; healthStatus [EQ, NE]; id [EQ, GE, GT, LE, LT, NE]; name [CONTAINS, EQ, NE]; organizationId [EQ, GE, GT, LE, LT, NE]; status [EQ, NE]; type [EQ, NE]; updatedAt [EQ, GE, GT, LE, LT, NE]. Sortable fields: createdAt, id, name, organizationId, status, type, updatedAt. Default sort: id ASC.
+ */
+export const search3 = async (
+  searchRequest: SearchRequest,
+  options?: Parameters<typeof generatedRequest>[1],
+): Promise<search3Response> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return generatedRequest<search3Response>(getSearch3Url(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(searchRequest),
+  });
+};
+
+export const getSearch3MutationKey = () => ["search3"] as const;
+
+export const getSearch3MutationOptions = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof search3>>,
+    TError,
+    Search3MutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof generatedRequest>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof search3>>,
+  TError,
+  Search3MutationVariables,
+  TContext
+> => {
+  const mutationKey = getSearch3MutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof search3>>,
+    Search3MutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return search3(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type Search3MutationResult = NonNullable<
+  Awaited<ReturnType<typeof search3>>
+>;
+export type Search3MutationBody = SearchRequest;
+export type Search3MutationError =
+  | Error400Response
+  | Error401Response
+  | Error403Response
+  | Error404Response
+  | Error409Response;
+export type Search3MutationVariables = { data: SearchRequest };
+
+export const useSearch3 = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof search3>>,
+      TError,
+      Search3MutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof search3>>,
+  TError,
+  Search3MutationVariables,
+  TContext
+> => {
+  return useMutation(getSearch3MutationOptions(options), queryClient);
 };
 
 export type create1Response201 = {
