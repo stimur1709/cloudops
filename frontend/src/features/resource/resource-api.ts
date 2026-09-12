@@ -1,8 +1,16 @@
-import { search3 } from "../../api/generated/cloud-ops";
+import {
+  create,
+  delete2,
+  get1,
+  search3,
+  update1,
+} from "../../api/generated/cloud-ops";
 import type {
   Condition,
+  CreateResourceRequest,
   ResourceResponse,
   SearchRequest,
+  UpdateResourceRequest,
 } from "../../api/generated/model";
 
 export const resourceTypes = [
@@ -44,6 +52,9 @@ export interface ResourcePage {
 }
 
 export const resourceKeys = {
+  all: ["resources"] as const,
+  organization: (organizationId: number) =>
+    ["resources", organizationId] as const,
   list: (organizationId: number, state: ResourceListState) =>
     [
       "resources",
@@ -57,6 +68,8 @@ export const resourceKeys = {
       state.healthStatus,
       state.search,
     ] as const,
+  detail: (organizationId: number, resourceId: number) =>
+    ["resources", organizationId, "detail", resourceId] as const,
 };
 
 export function buildResourceSearchRequest(
@@ -108,4 +121,31 @@ export async function getResources(
     },
   );
   return response.data as ResourcePage;
+}
+
+export async function getResource(
+  resourceId: number,
+  signal?: AbortSignal,
+): Promise<ResourceResponse> {
+  const response = await get1(resourceId, { signal });
+  return response.data as ResourceResponse;
+}
+
+export async function createResource(
+  request: CreateResourceRequest,
+): Promise<ResourceResponse> {
+  const response = await create(request);
+  return response.data as ResourceResponse;
+}
+
+export async function updateResource(
+  resourceId: number,
+  request: UpdateResourceRequest,
+): Promise<ResourceResponse> {
+  const response = await update1(resourceId, request);
+  return response.data as ResourceResponse;
+}
+
+export async function deleteResource(resourceId: number): Promise<void> {
+  await delete2(resourceId);
 }

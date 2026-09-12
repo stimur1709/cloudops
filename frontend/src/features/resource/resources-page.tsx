@@ -16,8 +16,11 @@ import {
   FolderSearch,
   LoaderCircle,
   LockKeyhole,
+  Pencil,
+  Plus,
   Search,
   Server,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -67,6 +70,7 @@ import {
   resourceTypes,
 } from "./resource-api";
 import { parseResourceListState } from "./resource-list-state";
+import { ResourceDeleteDialog } from "./resource-delete-dialog";
 
 const allFilterValues = "__all";
 const resourceColumnClasses: Record<string, string> = {
@@ -91,28 +95,60 @@ function formatUpdatedAt(value?: string) {
 function ResourceActions({
   resource,
   href,
+  organizationId,
+  isManager,
 }: {
   resource: ResourceResponse;
   href: string;
+  organizationId: number;
+  isManager: boolean;
 }) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={`Действия для ${resource.name ?? "ресурса"}`}
-        >
-          <Ellipsis aria-hidden="true" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem asChild>
-          <Link to={href}>Открыть детали</Link>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Действия для ${resource.name ?? "ресурса"}`}
+          >
+            <Ellipsis aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link to={href}>Открыть детали</Link>
+          </DropdownMenuItem>
+          {isManager && (
+            <>
+              <DropdownMenuItem asChild>
+                <Link to={`${href}/edit`}>
+                  <Pencil aria-hidden="true" />
+                  Редактировать
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-status-down"
+                onSelect={() => setDeleteOpen(true)}
+              >
+                <Trash2 aria-hidden="true" />
+                Удалить
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {isManager && (
+        <ResourceDeleteDialog
+          resource={resource}
+          organizationId={organizationId}
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+        />
+      )}
+    </>
   );
 }
 
@@ -166,7 +202,7 @@ function LoadingTable() {
 }
 
 export function ResourcesPage() {
-  const { organizationId } = useOrganization();
+  const { organizationId, isManager } = useOrganization();
   const [searchParams, setSearchParams] = useSearchParams();
   const state = useMemo(
     () => parseResourceListState(searchParams),
@@ -272,11 +308,18 @@ export function ResourcesPage() {
         enableSorting: false,
         cell: ({ row }) => {
           const href = `/organizations/${organizationId}/resources/${row.original.id}`;
-          return <ResourceActions resource={row.original} href={href} />;
+          return (
+            <ResourceActions
+              resource={row.original}
+              href={href}
+              organizationId={organizationId}
+              isManager={isManager}
+            />
+          );
         },
       },
     ],
-    [organizationId],
+    [isManager, organizationId],
   );
 
   const sorting: SortingState = state.sort
@@ -350,27 +393,37 @@ export function ResourcesPage() {
 
   return (
     <section aria-labelledby="resources-heading" className="space-y-6">
-      <header>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 id="resources-heading" className="text-page-title">
-            Ресурсы
-          </h1>
-          {query.isFetching && (
-            <span
-              className="inline-flex items-center gap-2 text-caption text-foreground-muted"
-              role="status"
-            >
-              <LoaderCircle
-                aria-hidden="true"
-                className="size-icon animate-spin"
-              />
-              Обновление данных
-            </span>
-          )}
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 id="resources-heading" className="text-page-title">
+              Ресурсы
+            </h1>
+            {query.isFetching && (
+              <span
+                className="inline-flex items-center gap-2 text-caption text-foreground-muted"
+                role="status"
+              >
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-icon animate-spin"
+                />
+                Обновление данных
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-body text-foreground-muted">
+            Инфраструктура выбранной организации.
+          </p>
         </div>
-        <p className="mt-1 text-body text-foreground-muted">
-          Инфраструктура выбранной организации.
-        </p>
+        {isManager && (
+          <Button asChild variant="primary">
+            <Link to={`/organizations/${organizationId}/resources/new`}>
+              <Plus aria-hidden="true" />
+              Добавить ресурс
+            </Link>
+          </Button>
+        )}
       </header>
 
       <div className="flex flex-wrap items-end gap-3 rounded-panel border border-border bg-surface p-4">
@@ -572,7 +625,14 @@ export function ResourcesPage() {
                   key={resource.id ?? index}
                   resource={resource}
                   href={href}
-                  actions={<ResourceActions resource={resource} href={href} />}
+                  actions={
+                    <ResourceActions
+                      resource={resource}
+                      href={href}
+                      organizationId={organizationId}
+                      isManager={isManager}
+                    />
+                  }
                 />
               );
             })}

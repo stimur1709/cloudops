@@ -32,6 +32,7 @@
   --color-status-unknown: var(--status-unknown);
   --color-ring: var(--ring);
   --color-input: var(--input);
+  --color-overlay: var(--overlay);
   --font-sans: "Geist Sans", "Inter", "Segoe UI", sans-serif;
   --font-mono: "Geist Mono", "Cascadia Code", Consolas, monospace;
   --text-*: initial;
@@ -62,6 +63,7 @@
   --radius-full: 999px;
   --shadow-*: initial;
   --shadow-popover: var(--elevation-popover);
+  --shadow-dialog: var(--elevation-dialog);
   --breakpoint-*: initial;
   --breakpoint-md: 48rem;
   --breakpoint-lg: 64rem;

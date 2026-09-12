@@ -24,6 +24,7 @@ import type {
 import type {
   AddOrganizationMemberRequest,
   CreateOrganizationRequest,
+  CreateResourceRequest,
   Error400Response,
   Error401Response,
   Error403Response,
@@ -33,6 +34,7 @@ import type {
   OrganizationMemberResponse,
   OrganizationResponse,
   RegisterRequest,
+  ResourceResponse,
   SearchRequest,
   SearchResponseOrganizationMemberResponse,
   SearchResponseOrganizationResponse,
@@ -40,6 +42,7 @@ import type {
   TokenResponse,
   UpdateOrganizationMemberRequest,
   UpdateOrganizationRequest,
+  UpdateResourceRequest,
   UserResponse,
 } from "./model";
 
@@ -62,6 +65,537 @@ const withQueryKey = <T extends object, K>(
     });
   }
   return result;
+};
+
+export type get1Response200 = {
+  data: ResourceResponse;
+  status: 200;
+};
+
+export type get1Response400 = {
+  data: Error400Response;
+  status: 400;
+};
+
+export type get1Response401 = {
+  data: Error401Response;
+  status: 401;
+};
+
+export type get1Response403 = {
+  data: Error403Response;
+  status: 403;
+};
+
+export type get1Response404 = {
+  data: Error404Response;
+  status: 404;
+};
+
+export type get1Response409 = {
+  data: Error409Response;
+  status: 409;
+};
+
+export type get1ResponseSuccess = get1Response200 & {
+  headers: Headers;
+};
+export type get1ResponseError = (
+  | get1Response400
+  | get1Response401
+  | get1Response403
+  | get1Response404
+  | get1Response409
+) & {
+  headers: Headers;
+};
+
+export type get1Response = get1ResponseSuccess | get1ResponseError;
+
+export const getGet1Url = (id: number) => {
+  return `/api/resources/${id}`;
+};
+
+export const get1 = async (
+  id: number,
+  options?: Parameters<typeof generatedRequest>[1],
+): Promise<get1Response> => {
+  return generatedRequest<get1Response>(getGet1Url(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGet1QueryKey = (id: number) => {
+  return [`/api/resources/${id}`] as const;
+};
+
+export const getGet1QueryOptions = <
+  TData = Awaited<ReturnType<typeof get1>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get1>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGet1QueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof get1>>> = ({
+    signal,
+  }) => get1(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof get1>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type Get1QueryResult = NonNullable<Awaited<ReturnType<typeof get1>>>;
+export type Get1QueryError =
+  | Error400Response
+  | Error401Response
+  | Error403Response
+  | Error404Response
+  | Error409Response;
+
+export function useGet1<
+  TData = Awaited<ReturnType<typeof get1>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  id: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get1>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof get1>>,
+          TError,
+          Awaited<ReturnType<typeof get1>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGet1<
+  TData = Awaited<ReturnType<typeof get1>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get1>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof get1>>,
+          TError,
+          Awaited<ReturnType<typeof get1>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGet1<
+  TData = Awaited<ReturnType<typeof get1>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get1>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGet1<
+  TData = Awaited<ReturnType<typeof get1>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get1>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGet1QueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type update1Response200 = {
+  data: ResourceResponse;
+  status: 200;
+};
+
+export type update1Response400 = {
+  data: Error400Response;
+  status: 400;
+};
+
+export type update1Response401 = {
+  data: Error401Response;
+  status: 401;
+};
+
+export type update1Response403 = {
+  data: Error403Response;
+  status: 403;
+};
+
+export type update1Response404 = {
+  data: Error404Response;
+  status: 404;
+};
+
+export type update1Response409 = {
+  data: Error409Response;
+  status: 409;
+};
+
+export type update1ResponseSuccess = update1Response200 & {
+  headers: Headers;
+};
+export type update1ResponseError = (
+  | update1Response400
+  | update1Response401
+  | update1Response403
+  | update1Response404
+  | update1Response409
+) & {
+  headers: Headers;
+};
+
+export type update1Response = update1ResponseSuccess | update1ResponseError;
+
+export const getUpdate1Url = (id: number) => {
+  return `/api/resources/${id}`;
+};
+
+export const update1 = async (
+  id: number,
+  updateResourceRequest: UpdateResourceRequest,
+  options?: Parameters<typeof generatedRequest>[1],
+): Promise<update1Response> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return generatedRequest<update1Response>(getUpdate1Url(id), {
+    ...options,
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(updateResourceRequest),
+  });
+};
+
+export const getUpdate1MutationKey = () => ["update1"] as const;
+
+export const getUpdate1MutationOptions = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof update1>>,
+    TError,
+    Update1MutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof generatedRequest>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof update1>>,
+  TError,
+  Update1MutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdate1MutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof update1>>,
+    Update1MutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return update1(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type Update1MutationResult = NonNullable<
+  Awaited<ReturnType<typeof update1>>
+>;
+export type Update1MutationBody = UpdateResourceRequest;
+export type Update1MutationError =
+  | Error400Response
+  | Error401Response
+  | Error403Response
+  | Error404Response
+  | Error409Response;
+export type Update1MutationVariables = {
+  id: number;
+  data: UpdateResourceRequest;
+};
+
+export const useUpdate1 = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof update1>>,
+      TError,
+      Update1MutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof update1>>,
+  TError,
+  Update1MutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdate1MutationOptions(options), queryClient);
+};
+
+export type delete2Response204 = {
+  data: void;
+  status: 204;
+};
+
+export type delete2Response400 = {
+  data: Error400Response;
+  status: 400;
+};
+
+export type delete2Response401 = {
+  data: Error401Response;
+  status: 401;
+};
+
+export type delete2Response403 = {
+  data: Error403Response;
+  status: 403;
+};
+
+export type delete2Response404 = {
+  data: Error404Response;
+  status: 404;
+};
+
+export type delete2Response409 = {
+  data: Error409Response;
+  status: 409;
+};
+
+export type delete2ResponseSuccess = delete2Response204 & {
+  headers: Headers;
+};
+export type delete2ResponseError = (
+  | delete2Response400
+  | delete2Response401
+  | delete2Response403
+  | delete2Response404
+  | delete2Response409
+) & {
+  headers: Headers;
+};
+
+export type delete2Response = delete2ResponseSuccess | delete2ResponseError;
+
+export const getDelete2Url = (id: number) => {
+  return `/api/resources/${id}`;
+};
+
+export const delete2 = async (
+  id: number,
+  options?: Parameters<typeof generatedRequest>[1],
+): Promise<delete2Response> => {
+  return generatedRequest<delete2Response>(getDelete2Url(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDelete2MutationKey = () => ["delete2"] as const;
+
+export const getDelete2MutationOptions = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof delete2>>,
+    TError,
+    Delete2MutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof generatedRequest>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof delete2>>,
+  TError,
+  Delete2MutationVariables,
+  TContext
+> => {
+  const mutationKey = getDelete2MutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof delete2>>,
+    Delete2MutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return delete2(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type Delete2MutationResult = NonNullable<
+  Awaited<ReturnType<typeof delete2>>
+>;
+
+export type Delete2MutationError =
+  | Error400Response
+  | Error401Response
+  | Error403Response
+  | Error404Response
+  | Error409Response;
+export type Delete2MutationVariables = { id: number };
+
+export const useDelete2 = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof delete2>>,
+      TError,
+      Delete2MutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof delete2>>,
+  TError,
+  Delete2MutationVariables,
+  TContext
+> => {
+  return useMutation(getDelete2MutationOptions(options), queryClient);
 };
 
 export type updateRoleResponse200 = {
@@ -924,6 +1458,176 @@ export const useDelete4 = <
   TContext
 > => {
   return useMutation(getDelete4MutationOptions(options), queryClient);
+};
+
+export type createResponse201 = {
+  data: ResourceResponse;
+  status: 201;
+};
+
+export type createResponse400 = {
+  data: Error400Response;
+  status: 400;
+};
+
+export type createResponse401 = {
+  data: Error401Response;
+  status: 401;
+};
+
+export type createResponse403 = {
+  data: Error403Response;
+  status: 403;
+};
+
+export type createResponse404 = {
+  data: Error404Response;
+  status: 404;
+};
+
+export type createResponse409 = {
+  data: Error409Response;
+  status: 409;
+};
+
+export type createResponseSuccess = createResponse201 & {
+  headers: Headers;
+};
+export type createResponseError = (
+  | createResponse400
+  | createResponse401
+  | createResponse403
+  | createResponse404
+  | createResponse409
+) & {
+  headers: Headers;
+};
+
+export type createResponse = createResponseSuccess | createResponseError;
+
+export const getCreateUrl = () => {
+  return `/api/resources`;
+};
+
+export const create = async (
+  createResourceRequest: CreateResourceRequest,
+  options?: Parameters<typeof generatedRequest>[1],
+): Promise<createResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return generatedRequest<createResponse>(getCreateUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(createResourceRequest),
+  });
+};
+
+export const getCreateMutationKey = () => ["create"] as const;
+
+export const getCreateMutationOptions = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof create>>,
+    TError,
+    CreateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof generatedRequest>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof create>>,
+  TError,
+  CreateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof create>>,
+    CreateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return create(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof create>>
+>;
+export type CreateMutationBody = CreateResourceRequest;
+export type CreateMutationError =
+  | Error400Response
+  | Error401Response
+  | Error403Response
+  | Error404Response
+  | Error409Response;
+export type CreateMutationVariables = { data: CreateResourceRequest };
+
+export const useCreate = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof create>>,
+      TError,
+      CreateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof create>>,
+  TError,
+  CreateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateMutationOptions(options), queryClient);
 };
 
 export type search3Response200 = {

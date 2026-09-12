@@ -52,7 +52,9 @@
   --layout-sidebar-width: 15rem;
   --layout-content-max: 90rem;
   --layout-form-max: 24rem;
+  --layout-dialog-sm: 30rem;
   --elevation-popover: 0 8px 24px rgb(0 0 0 / 0.2);
+  --elevation-dialog: 0 16px 48px rgb(0 0 0 / 0.24);
 }
 
 .dark {
