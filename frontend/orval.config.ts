@@ -12,7 +12,11 @@ export default defineConfig({
       target: openApiUrl,
       filters: {
         mode: "include",
-        tags: ["auth-controller"],
+        tags: [
+          "auth-controller",
+          "organization-controller",
+          "organization-membership-controller",
+        ],
       },
     },
     output: {

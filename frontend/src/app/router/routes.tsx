@@ -1,9 +1,15 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { AppShell } from "../layout/app-shell";
-import { BootstrapScreen } from "../layout/bootstrap-screen";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "../../features/auth/auth-context";
 import { LoginPage } from "../../features/auth/login-page";
+import { FirstUsePage } from "../../features/organization/first-use-page";
+import { useAvailableOrganizations } from "../../features/organization/organization-context";
+import {
+  AvailableOrganizationsProvider,
+  OrganizationProvider,
+} from "../../features/organization/organization-provider";
+import { AppShell } from "../layout/app-shell";
+import { BootstrapScreen } from "../layout/bootstrap-screen";
 import { PageLoading } from "./page-loading";
 
 const NotFoundPage = lazy(() =>
@@ -23,7 +29,13 @@ function ProtectedRoutes() {
   if (status === "BOOTSTRAPPING") return <BootstrapScreen />;
   if (status === "UNAUTHENTICATED")
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  return <AppShell />;
+  return (
+    <AvailableOrganizationsProvider>
+      {(organizations) =>
+        organizations.length === 0 ? <FirstUsePage /> : <Outlet />
+      }
+    </AvailableOrganizationsProvider>
+  );
 }
 
 function LoginRoute() {
@@ -32,58 +44,69 @@ function LoginRoute() {
   return <LoginPage />;
 }
 
+function OrganizationIndexRoute() {
+  const { organizations } = useAvailableOrganizations();
+  return (
+    <Navigate to={`/organizations/${organizations[0]?.id}/resources`} replace />
+  );
+}
+
+function organizationPage(title: string, description: string) {
+  return <PlaceholderPage title={title} description={description} />;
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoading />}>
       <Routes>
         <Route path="/login" element={<LoginRoute />} />
         <Route element={<ProtectedRoutes />}>
-          <Route index element={<Navigate to="/resources" replace />} />
+          <Route index element={<OrganizationIndexRoute />} />
           <Route
-            path="resources"
+            path="organizations/:organizationId"
             element={
-              <PlaceholderPage
-                title="Ресурсы"
-                description="Управление ресурсами будет добавлено отдельной задачей."
-              />
+              <OrganizationProvider>
+                <AppShell />
+              </OrganizationProvider>
             }
-          />
-          <Route
-            path="monitoring"
-            element={
-              <PlaceholderPage
-                title="Мониторинг"
-                description="Мониторинг и история проверок появятся в отдельной задаче."
-              />
-            }
-          />
-          <Route
-            path="operations"
-            element={
-              <PlaceholderPage
-                title="Операции"
-                description="Запуск и отслеживание операций будет реализован отдельно."
-              />
-            }
-          />
-          <Route
-            path="credentials"
-            element={
-              <PlaceholderPage
-                title="Учётные данные"
-                description="Безопасное управление учётными данными будет добавлено отдельно."
-              />
-            }
-          />
-          <Route
-            path="settings"
-            element={
-              <PlaceholderPage
-                title="Настройки"
-                description="Настройки workspace появятся в следующих задачах."
-              />
-            }
-          />
+          >
+            <Route index element={<Navigate to="resources" replace />} />
+            <Route
+              path="resources"
+              element={organizationPage(
+                "Ресурсы",
+                "Управление ресурсами будет добавлено отдельной задачей.",
+              )}
+            />
+            <Route
+              path="monitoring"
+              element={organizationPage(
+                "Мониторинг",
+                "Мониторинг и история проверок появятся в отдельной задаче.",
+              )}
+            />
+            <Route
+              path="operations"
+              element={organizationPage(
+                "Операции",
+                "Запуск и отслеживание операций будет реализован отдельно.",
+              )}
+            />
+            <Route
+              path="credentials"
+              element={organizationPage(
+                "Учётные данные",
+                "Безопасное управление учётными данными будет добавлено отдельно.",
+              )}
+            />
+            <Route
+              path="settings"
+              element={organizationPage(
+                "Настройки",
+                "Настройки workspace появятся в следующих задачах.",
+              )}
+            />
+          </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

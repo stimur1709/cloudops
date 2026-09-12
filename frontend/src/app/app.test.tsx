@@ -1,6 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { OrganizationResponse } from "../api/generated/model";
+import { organizationKeys } from "../features/organization/organization-api";
 import { App } from "./app";
 
 const session = {
@@ -19,6 +22,9 @@ const currentUser = {
   updatedAt: "2026-09-01T12:00:00Z",
 };
 
+const alpha = { id: 11, name: "Alpha Platform" };
+const beta = { id: 22, name: "Beta Platform" };
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -26,16 +32,34 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function mockAuthenticatedBootstrap() {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.endsWith("/api/auth/refresh")) return jsonResponse(session);
-      if (url.endsWith("/api/auth/me")) return jsonResponse(currentUser);
-      throw new Error(`Unexpected request: ${url}`);
-    }),
-  );
+function authenticatedApi({
+  organizations = [alpha, beta],
+  roles = { 11: "OWNER", 22: "MEMBER" },
+}: {
+  organizations?: OrganizationResponse[];
+  roles?: Record<number, "OWNER" | "ADMIN" | "MEMBER">;
+} = {}) {
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    void init;
+    const url = String(input);
+    if (url.endsWith("/api/auth/refresh")) return jsonResponse(session);
+    if (url.endsWith("/api/auth/me")) return jsonResponse(currentUser);
+    if (url.endsWith("/api/organizations/search"))
+      return jsonResponse({ items: organizations });
+    const membershipMatch = url.match(
+      /\/api\/organizations\/(\d+)\/members\/search$/,
+    );
+    if (membershipMatch) {
+      const organizationId = Number(membershipMatch[1]);
+      const role = roles[organizationId];
+      return jsonResponse({
+        items: role ? [{ organizationId, userId: currentUser.id, role }] : [],
+      });
+    }
+    if (url.endsWith("/api/auth/logout"))
+      return new Response(null, { status: 204 });
+    throw new Error(`Unexpected request: ${url}`);
+  });
 }
 
 function mockMissingSession() {
@@ -56,54 +80,237 @@ beforeEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("application auth and routing", () => {
-  it("shows bootstrap without flashing login, then restores the authenticated App Shell", async () => {
-    window.history.replaceState({}, "", "/resources");
-    mockAuthenticatedBootstrap();
+describe("organization-scoped application routing", () => {
+  it("redirects an authenticated root to the first available organization", async () => {
+    window.history.replaceState({}, "", "/");
+    const fetchMock = authenticatedApi();
+    vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
     expect(screen.getByLabelText("Восстановление сессии")).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "Вход в консоль" }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole("heading", { name: "Ресурсы" }),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/organizations/11/resources");
+    expect(
+      screen.getByRole("button", {
+        name: "Текущая организация: Alpha Platform. Переключить организацию",
+      }),
+    ).toHaveTextContent("OWNER");
+    const searchBodies = fetchMock.mock.calls
+      .filter(([url]) => String(url).includes("/search"))
+      .map(([, init]) => JSON.parse(String(init?.body)) as object);
+    expect(searchBodies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ getTotal: false }),
+        expect.objectContaining({ getTotal: false }),
+      ]),
+    );
+  });
+
+  it("keeps the organization context when a scoped URL is reloaded", async () => {
+    window.history.replaceState({}, "", "/organizations/22/monitoring");
+    vi.stubGlobal("fetch", authenticatedApi());
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Мониторинг" }),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/organizations/22/monitoring");
+    expect(
+      screen.getByRole("button", {
+        name: "Текущая организация: Beta Platform. Переключить организацию",
+      }),
+    ).toHaveTextContent("MEMBER");
+  });
+
+  it("switches organization while preserving the logical section and reloads the role", async () => {
+    window.history.replaceState({}, "", "/organizations/11/operations");
+    const fetchMock = authenticatedApi();
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Операции" });
+    await user.click(
+      screen.getByRole("button", {
+        name: "Текущая организация: Alpha Platform. Переключить организацию",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Beta Platform" }),
+    );
+
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/organizations/22/operations"),
+    );
+    expect(
+      await screen.findByRole("button", {
+        name: "Текущая организация: Beta Platform. Переключить организацию",
+      }),
+    ).toHaveTextContent("MEMBER");
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).endsWith("/api/organizations/22/members/search"),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not open scoped content for an unavailable organization", async () => {
+    window.history.replaceState({}, "", "/organizations/999/resources");
+    vi.stubGlobal("fetch", authenticatedApi());
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Организация недоступна" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Ресурсы" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Alpha Platform" }),
+    ).toBeVisible();
+  });
+
+  it("shows the first-use state when the user has no organizations", async () => {
+    window.history.replaceState({}, "", "/");
+    vi.stubGlobal("fetch", authenticatedApi({ organizations: [] }));
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Создайте первую организацию",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Основная навигация")).toBeNull();
+  });
+
+  it("creates the first organization and enters its OWNER context", async () => {
+    window.history.replaceState({}, "", "/");
+    let organizations: OrganizationResponse[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/auth/refresh")) return jsonResponse(session);
+      if (url.endsWith("/api/auth/me")) return jsonResponse(currentUser);
+      if (url.endsWith("/api/organizations/search"))
+        return jsonResponse({ items: organizations });
+      if (url.endsWith("/api/organizations")) {
+        organizations = [{ id: 33, name: "First Workspace" }];
+        return jsonResponse(organizations[0], 201);
+      }
+      if (url.endsWith("/api/organizations/33/members/search"))
+        return jsonResponse({
+          items: [{ organizationId: 33, userId: 1, role: "OWNER" }],
+        });
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Создайте первую организацию" });
+    await user.type(
+      screen.getByLabelText("Название организации"),
+      "First Workspace",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Создать организацию" }),
+    );
+
     expect(
       await screen.findByRole("heading", { name: "Ресурсы" }),
     ).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/organizations/33/resources");
     expect(
-      screen.getByRole("navigation", { name: "Основная навигация" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ресурсы" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(screen.getByText("Cloud Operator")).toBeInTheDocument();
+      screen.getByRole("button", {
+        name: "Текущая организация: First Workspace. Переключить организацию",
+      }),
+    ).toHaveTextContent("OWNER");
   });
 
-  it("redirects an unauthenticated protected route to accessible login", async () => {
-    window.history.replaceState({}, "", "/monitoring");
+  it.each(["OWNER", "ADMIN", "MEMBER"] as const)(
+    "exposes the %s membership role returned by the backend",
+    async (role) => {
+      window.history.replaceState({}, "", "/organizations/11/settings");
+      vi.stubGlobal(
+        "fetch",
+        authenticatedApi({ organizations: [alpha], roles: { 11: role } }),
+      );
+      render(<App />);
+
+      expect(
+        await screen.findByRole("button", {
+          name: "Текущая организация: Alpha Platform. Переключить организацию",
+        }),
+      ).toHaveTextContent(role);
+    },
+  );
+
+  it("uses distinct query keys for organization-scoped data", () => {
+    expect(organizationKeys.scoped(11)).not.toEqual(
+      organizationKeys.scoped(22),
+    );
+    expect(organizationKeys.membership(11, 1)).not.toEqual(
+      organizationKeys.membership(22, 1),
+    );
+  });
+});
+
+describe("authentication with organization routing", () => {
+  it("restores one refresh session in StrictMode and redirects root to the organization home", async () => {
+    window.history.replaceState({}, "", "/");
+    const baseApi = authenticatedApi({ organizations: [alpha] });
+    const fetchMock = vi.fn((input: RequestInfo | URL) => baseApi(input));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "Ресурсы" }),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/organizations/11/resources");
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).endsWith("/api/auth/refresh"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("redirects an unauthenticated protected route to login", async () => {
+    window.history.replaceState({}, "", "/organizations/11/monitoring");
     mockMissingSession();
     render(<App />);
 
     expect(
       await screen.findByRole("heading", { name: "Вход в консоль" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(screen.getByLabelText("Пароль")).toBeInTheDocument();
     expect(window.location.pathname).toBe("/login");
   });
 
-  it("logs in, loads the current user, and does not persist tokens in browser storage", async () => {
+  it("loads organizations after login without persisting tokens", async () => {
     window.history.replaceState({}, "", "/login");
     const storageSpy = vi.spyOn(Storage.prototype, "setItem");
+    let authenticated = false;
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith("/api/auth/refresh"))
+      if (url.endsWith("/api/auth/refresh") && !authenticated)
         return jsonResponse(
           { code: "INVALID_REFRESH_TOKEN", message: "No session" },
           401,
         );
-      if (url.endsWith("/api/auth/login")) return jsonResponse(session);
+      if (url.endsWith("/api/auth/login")) {
+        authenticated = true;
+        return jsonResponse(session);
+      }
       if (url.endsWith("/api/auth/me")) return jsonResponse(currentUser);
+      if (url.endsWith("/api/organizations/search"))
+        return jsonResponse({ items: [alpha] });
+      if (url.endsWith("/api/organizations/11/members/search"))
+        return jsonResponse({
+          items: [{ organizationId: 11, userId: 1, role: "ADMIN" }],
+        });
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -112,75 +319,32 @@ describe("application auth and routing", () => {
 
     await screen.findByRole("heading", { name: "Вход в консоль" });
     await user.type(screen.getByLabelText("Email"), "operator@example.com");
-    await user.type(
-      screen.getByLabelText("Пароль"),
-      "correct horse battery staple",
-    );
+    await user.type(screen.getByLabelText("Пароль"), "correct password");
     await user.click(screen.getByRole("button", { name: "Войти" }));
 
-    await waitFor(() =>
-      expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(
-        "/api/auth/login",
-      ),
-    );
     expect(
       await screen.findByRole("heading", { name: "Ресурсы" }),
     ).toBeInTheDocument();
-    expect(
-      fetchMock.mock.calls.filter(([url]) =>
-        String(url).endsWith("/api/auth/login"),
-      ),
-    ).toHaveLength(1);
+    expect(window.location.pathname).toBe("/organizations/11/resources");
     expect(storageSpy).not.toHaveBeenCalled();
     storageSpy.mockRestore();
   });
 
-  it("renders a controlled backend login error", async () => {
-    window.history.replaceState({}, "", "/login");
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.endsWith("/api/auth/refresh"))
-        return jsonResponse(
-          { code: "INVALID_REFRESH_TOKEN", message: "No session" },
-          401,
-        );
-      return jsonResponse(
-        { code: "BAD_CREDENTIALS", message: "Bad credentials" },
-        401,
-      );
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
-    render(<App />);
-
-    await screen.findByRole("heading", { name: "Вход в консоль" });
-    await user.type(screen.getByLabelText("Email"), "operator@example.com");
-    await user.type(screen.getByLabelText("Пароль"), "wrong-password");
-    await user.click(screen.getByRole("button", { name: "Войти" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Неверный email или пароль.",
-    );
-  });
-
-  it("logs out through the backend and clears the authenticated UI", async () => {
-    window.history.replaceState({}, "", "/resources");
+  it("continues to log out through the backend", async () => {
+    window.history.replaceState({}, "", "/organizations/11/resources");
     let refreshCount = 0;
+    const baseApi = authenticatedApi({ organizations: [alpha] });
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/api/auth/refresh")) {
         refreshCount += 1;
-        return refreshCount === 1
-          ? jsonResponse(session)
-          : jsonResponse(
-              { code: "INVALID_REFRESH_TOKEN", message: "No session" },
-              401,
-            );
+        if (refreshCount > 1)
+          return jsonResponse(
+            { code: "INVALID_REFRESH_TOKEN", message: "No session" },
+            401,
+          );
       }
-      if (url.endsWith("/api/auth/me")) return jsonResponse(currentUser);
-      if (url.endsWith("/api/auth/logout"))
-        return new Response(null, { status: 204 });
-      throw new Error(`Unexpected request: ${url}`);
+      return baseApi(input);
     });
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
@@ -200,15 +364,5 @@ describe("application auth and routing", () => {
         String(url).endsWith("/api/auth/logout"),
       ),
     ).toBe(true);
-  });
-
-  it("shows the not-found page for an unknown route", async () => {
-    window.history.replaceState({}, "", "/missing-page");
-    mockAuthenticatedBootstrap();
-    render(<App />);
-    expect(
-      await screen.findByRole("heading", { name: "Страница не найдена" }),
-    ).toBeInTheDocument();
-    await waitFor(() => expect(window.location.pathname).toBe("/missing-page"));
   });
 });

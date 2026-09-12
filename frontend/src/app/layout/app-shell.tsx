@@ -19,18 +19,21 @@ import {
 } from "../../components/ui/dropdown-menu";
 import { Separator } from "../../components/ui/separator";
 import { useAuth } from "../../features/auth/auth-context";
+import { useOrganization } from "../../features/organization/organization-context";
+import { OrganizationSwitcher } from "../../features/organization/organization-switcher";
 import { cn } from "../../lib/cn";
 
 const navigation = [
-  { to: "/resources", label: "Ресурсы", icon: Boxes },
-  { to: "/monitoring", label: "Мониторинг", icon: Activity },
-  { to: "/operations", label: "Операции", icon: SquareTerminal },
-  { to: "/credentials", label: "Учётные данные", icon: KeyRound },
-  { to: "/settings", label: "Настройки", icon: Settings },
+  { section: "resources", label: "Ресурсы", icon: Boxes },
+  { section: "monitoring", label: "Мониторинг", icon: Activity },
+  { section: "operations", label: "Операции", icon: SquareTerminal },
+  { section: "credentials", label: "Учётные данные", icon: KeyRound },
+  { section: "settings", label: "Настройки", icon: Settings },
 ];
 
 export function AppShell() {
   const { user, logout } = useAuth();
+  const { organizationId } = useOrganization();
   return (
     <div className="min-h-screen bg-background md:grid md:grid-cols-[var(--layout-sidebar-width)_minmax(0,1fr)]">
       <aside className="border-b border-border bg-surface md:min-h-screen md:border-r md:border-b-0">
@@ -39,14 +42,18 @@ export function AppShell() {
           <span className="text-card-title">CloudOps</span>
         </div>
         <Separator />
+        <div className="p-2">
+          <OrganizationSwitcher />
+        </div>
+        <Separator />
         <nav
           aria-label="Основная навигация"
           className="flex gap-1 overflow-x-auto p-2 md:block md:space-y-1"
         >
-          {navigation.map(({ to, label, icon: Icon }) => (
+          {navigation.map(({ section, label, icon: Icon }) => (
             <NavLink
-              key={to}
-              to={to}
+              key={section}
+              to={`/organizations/${organizationId}/${section}`}
               className={({ isActive }) =>
                 cn(
                   "flex h-control shrink-0 items-center gap-3 rounded-control px-3 text-label text-foreground-muted transition-colors duration-(--motion-fast) hover:bg-surface-hover hover:text-foreground",
