@@ -24,8 +24,14 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ApiClientError, readableError } from "../../api/client/api-error";
 import type { ResourceResponse } from "../../api/generated/model";
 import { EmptyState } from "../../components/empty-state";
-import { HealthStatus, LifecycleStatus } from "../../components/health-status";
+import { HealthStatus } from "../../components/health-status";
 import { ResourceCard } from "../../components/resource-card";
+import {
+  getResourceTypeLabel,
+  resourceStatusLabels,
+  resourceTypeLabels,
+} from "../../components/resource-labels";
+import { LifecycleStatus } from "../../components/lifecycle-status";
 import { Alert } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
@@ -35,7 +41,13 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import { Skeleton } from "../../components/ui/skeleton";
 import {
   Table,
@@ -55,6 +67,16 @@ import {
   resourceTypes,
 } from "./resource-api";
 import { parseResourceListState } from "./resource-list-state";
+
+const allFilterValues = "__all";
+const resourceColumnClasses: Record<string, string> = {
+  name: "min-w-50",
+  healthStatus: "min-w-32",
+  type: "min-w-36",
+  status: "hidden min-w-32 lg:table-cell",
+  updatedAt: "hidden min-w-40 lg:table-cell",
+  actions: "w-11 text-right",
+};
 
 function formatUpdatedAt(value?: string) {
   if (!value) return "—";
@@ -136,7 +158,7 @@ function LoadingTable() {
     >
       <div className="space-y-4">
         {Array.from({ length: 6 }, (_, index) => (
-          <Skeleton key={index} className="h-11 w-full" />
+          <Skeleton key={index} className="h-row w-full" />
         ))}
       </div>
     </div>
@@ -214,8 +236,8 @@ export function ResourcesPage() {
           <SortHeader label="Тип" sortLabel="типу" column={column} />
         ),
         cell: ({ row }) => (
-          <span className="font-mono text-label">
-            {row.original.type ?? "OTHER"}
+          <span className="text-body">
+            {getResourceTypeLabel(row.original.type)}
           </span>
         ),
       },
@@ -230,13 +252,16 @@ export function ResourcesPage() {
         accessorKey: "updatedAt",
         header: ({ column }) => (
           <SortHeader
-            label="Обновлён"
+            label="Обновлено"
             sortLabel="дате обновления"
             column={column}
           />
         ),
         cell: ({ row }) => (
-          <time dateTime={row.original.updatedAt}>
+          <time
+            dateTime={row.original.updatedAt}
+            className="text-caption text-foreground-muted"
+          >
             {formatUpdatedAt(row.original.updatedAt)}
           </time>
         ),
@@ -257,7 +282,7 @@ export function ResourcesPage() {
   const sorting: SortingState = state.sort
     ? [{ id: state.sort, desc: state.order === "desc" }]
     : [];
-  // TanStack Table intentionally exposes stateful functions that React Compiler skips.
+  // TanStack Table exposes stateful functions that React Compiler intentionally skips.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: query.data?.items ?? [],
@@ -349,7 +374,7 @@ export function ResourcesPage() {
       </header>
 
       <div className="flex flex-wrap items-end gap-3 rounded-panel border border-border bg-surface p-4">
-        <label className="min-w-48 flex-1">
+        <label className="min-w-64 flex-1">
           <span className="mb-1 block text-label">Поиск по имени</span>
           <span className="relative block">
             <Search
@@ -358,6 +383,7 @@ export function ResourcesPage() {
             />
             <Input
               className="pl-12"
+              placeholder="Поиск ресурсов по имени…"
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
               onKeyDown={(event) => {
@@ -371,52 +397,76 @@ export function ResourcesPage() {
             />
           </span>
         </label>
-        <label>
+        <label className="w-48">
           <span className="mb-1 block text-label">Тип</span>
           <Select
-            value={state.type}
-            onChange={(event) =>
-              updateParams({ type: event.target.value || undefined }, true)
+            value={state.type || allFilterValues}
+            onValueChange={(value) =>
+              updateParams(
+                { type: value === allFilterValues ? undefined : value },
+                true,
+              )
             }
           >
-            <option value="">Все типы</option>
-            {resourceTypes.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
+            <SelectTrigger className="w-full" aria-label="Тип">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={allFilterValues}>Все типы</SelectItem>
+              {resourceTypes.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {resourceTypeLabels[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </label>
-        <label>
-          <span className="mb-1 block text-label">Lifecycle</span>
+        <label className="w-48">
+          <span className="mb-1 block text-label">Статус</span>
           <Select
-            value={state.status}
-            onChange={(event) =>
-              updateParams({ status: event.target.value || undefined }, true)
+            value={state.status || allFilterValues}
+            onValueChange={(value) =>
+              updateParams(
+                { status: value === allFilterValues ? undefined : value },
+                true,
+              )
             }
           >
-            <option value="">Все статусы</option>
-            {lifecycleStatuses.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
+            <SelectTrigger className="w-full" aria-label="Статус">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={allFilterValues}>Все статусы</SelectItem>
+              {lifecycleStatuses.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {resourceStatusLabels[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </label>
-        <label>
+        <label className="w-48">
           <span className="mb-1 block text-label">Здоровье</span>
           <Select
-            value={state.healthStatus}
-            onChange={(event) =>
-              updateParams({ health: event.target.value || undefined }, true)
+            value={state.healthStatus || allFilterValues}
+            onValueChange={(value) =>
+              updateParams(
+                { health: value === allFilterValues ? undefined : value },
+                true,
+              )
             }
           >
-            <option value="">Любое</option>
-            {healthStatuses.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
+            <SelectTrigger className="w-full" aria-label="Здоровье">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={allFilterValues}>Любое</SelectItem>
+              {healthStatuses.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {value}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </label>
         {hasFilters && (
@@ -444,7 +494,7 @@ export function ResourcesPage() {
       {query.data.items.length === 0 ? (
         <EmptyState
           icon={hasFilters ? Search : Server}
-          title={hasFilters ? "Ресурсы не найдены" : "Ресурсов пока нет"}
+          title={hasFilters ? "Ничего не найдено" : "Ресурсов ещё нет"}
           description={
             hasFilters
               ? "Измените поиск или сбросьте фильтры."
@@ -480,13 +530,9 @@ export function ResourcesPage() {
                             ? "ascending"
                             : header.column.getIsSorted() === "desc"
                               ? "descending"
-                              : "none"
+                              : undefined
                         }
-                        className={
-                          header.id === "actions"
-                            ? "w-11 text-right"
-                            : undefined
-                        }
+                        className={resourceColumnClasses[header.id]}
                       >
                         {header.isPlaceholder
                           ? null
@@ -505,11 +551,7 @@ export function ResourcesPage() {
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className={
-                          cell.column.id === "actions"
-                            ? "text-right"
-                            : undefined
-                        }
+                        className={resourceColumnClasses[cell.column.id]}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -544,31 +586,34 @@ export function ResourcesPage() {
           className="flex flex-wrap items-center justify-between gap-3"
         >
           <p className="text-caption text-foreground-muted">
-            Страница {state.page + 1}
-            {total !== undefined ? ` · Всего ${total}` : ""}
+            {total !== undefined
+              ? `${state.page * state.size + 1}–${Math.min(state.page * state.size + query.data.items.length, total)} из ${total}`
+              : `Страница ${state.page + 1}`}
           </p>
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-2 text-label">
-              На странице
+              Строк на странице
               <Select
-                value={state.size}
-                onChange={(event) =>
+                value={String(state.size)}
+                onValueChange={(value) =>
                   updateParams(
                     {
-                      size:
-                        event.target.value === "20"
-                          ? undefined
-                          : event.target.value,
+                      size: value === "20" ? undefined : value,
                     },
                     true,
                   )
                 }
               >
-                {pageSizes.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
+                <SelectTrigger className="w-20" aria-label="Строк на странице">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {pageSizes.map((value) => (
+                    <SelectItem key={value} value={String(value)}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </label>
             <Button

@@ -32,7 +32,7 @@ export function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       scope="col"
       className={cn(
-        "h-11 border-b border-border bg-surface px-3 text-left text-label text-foreground-muted",
+        "h-row border-b border-border bg-surface px-3 text-left text-label text-foreground-muted",
         className,
       )}
       {...props}
@@ -42,6 +42,6 @@ export function TableHead({ className, ...props }: React.ComponentProps<"th">) {
 
 export function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
-    <td className={cn("min-h-11 px-3 py-3 text-body", className)} {...props} />
+    <td className={cn("h-row px-3 py-2 text-body", className)} {...props} />
   );
 }

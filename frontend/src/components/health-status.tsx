@@ -24,15 +24,3 @@ export function HealthStatus({ status }: { status?: string }) {
     </span>
   );
 }
-
-export function LifecycleStatus({ status }: { status?: string }) {
-  return (
-    <span className="text-body text-foreground-muted">
-      {status === "ACTIVE"
-        ? "Активен"
-        : status === "INACTIVE"
-          ? "Неактивен"
-          : "Неизвестен"}
-    </span>
-  );
-}

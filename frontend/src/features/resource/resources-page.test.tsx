@@ -78,9 +78,15 @@ describe("ResourcesPage", () => {
       await screen.findByRole("heading", { name: "Ресурсы" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Поиск по имени")).toHaveValue("payments");
-    expect(screen.getByLabelText("Тип")).toHaveValue("SERVICE");
-    expect(screen.getByLabelText("Lifecycle")).toHaveValue("ACTIVE");
-    expect(screen.getByLabelText("Здоровье")).toHaveValue("DEGRADED");
+    expect(screen.getByRole("combobox", { name: "Тип" })).toHaveTextContent(
+      "Сервис",
+    );
+    expect(screen.getByRole("combobox", { name: "Статус" })).toHaveTextContent(
+      "Активен",
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Здоровье" }),
+    ).toHaveTextContent("DEGRADED");
     expect(vi.mocked(search3)).toHaveBeenCalledWith(
       expect.objectContaining({
         start: 100,
@@ -126,6 +132,7 @@ describe("ResourcesPage", () => {
     const sortButton = screen.getByRole("button", {
       name: "Сортировать по имени",
     });
+    expect(sortButton.closest("th")).not.toHaveAttribute("aria-sort");
     sortButton.focus();
     await user.keyboard("{Enter}");
     await waitFor(() =>
@@ -136,6 +143,10 @@ describe("ResourcesPage", () => {
         expect.anything(),
       ),
     );
+    expect(sortButton.closest("th")).toHaveAttribute("aria-sort", "ascending");
+    expect(
+      screen.getByRole("button", { name: "Сортировать по типу" }).closest("th"),
+    ).not.toHaveAttribute("aria-sort");
     expect(
       screen.getAllByRole("button", {
         name: "Действия для payments-api",
@@ -149,17 +160,19 @@ describe("ResourcesPage", () => {
 
     expect(screen.getAllByText("DEGRADED").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("Активен").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText("SERVICE").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Сервис").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("SERVICE")).toBeNull();
+    expect(screen.queryByText("ACTIVE")).toBeNull();
     expect(
       screen.getAllByRole("link", { name: "payments-api" })[0],
     ).toHaveAttribute("href", "/organizations/11/resources/7");
   });
 
   it.each([
-    { route: "/organizations/11/resources", title: "Ресурсов пока нет" },
+    { route: "/organizations/11/resources", title: "Ресурсов ещё нет" },
     {
       route: "/organizations/11/resources?health=DOWN",
-      title: "Ресурсы не найдены",
+      title: "Ничего не найдено",
     },
   ])("shows the $title empty state", async ({ route, title }) => {
     vi.mocked(search3).mockImplementation(() => response([], 0));
@@ -222,9 +235,66 @@ describe("ResourcesPage", () => {
     renderPage();
     await screen.findAllByText("payments-api");
 
-    await user.selectOptions(screen.getByLabelText("Здоровье"), "UP");
+    screen.getByRole("combobox", { name: "Здоровье" }).focus();
+    await user.keyboard("{Enter}{ArrowDown}{Enter}");
     expect(await screen.findByText("Обновление данных")).toBeInTheDocument();
     expect(screen.getAllByText("payments-api").length).toBeGreaterThan(0);
     resolveNext?.((await response()) as SearchResult);
+  });
+
+  it("uses localized Select labels while preserving raw API enum values", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findAllByText("payments-api");
+
+    const typeSelect = screen.getByRole("combobox", { name: "Тип" });
+    expect(typeSelect).toHaveTextContent("Все типы");
+    expect(
+      screen.queryByRole("button", { name: "Сбросить фильтры" }),
+    ).toBeNull();
+
+    await user.click(typeSelect);
+    const allTypesOption = await screen.findByRole("option", {
+      name: "Все типы",
+    });
+    expect(allTypesOption).toHaveAttribute("data-state", "checked");
+    expect(allTypesOption.querySelector("svg")).not.toBeNull();
+    const serverOption = await screen.findByRole("option", { name: "Сервер" });
+    await user.click(serverOption);
+
+    await waitFor(() =>
+      expect(vi.mocked(search3)).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          filter: expect.objectContaining({
+            conditions: expect.arrayContaining([
+              { field: "type", operation: "EQ", value: "SERVER" },
+            ]),
+          }),
+        }),
+        expect.anything(),
+      ),
+    );
+    expect(screen.getByRole("combobox", { name: "Тип" })).toHaveTextContent(
+      "Сервер",
+    );
+    expect(
+      screen.getByRole("button", { name: "Сбросить фильтры" }),
+    ).toBeVisible();
+  });
+
+  it("shows a result range and uses the shared Select for page size", async () => {
+    const pageResources = Array.from({ length: 20 }, (_, index) => ({
+      ...resources[0],
+      id: index + 21,
+      name: `resource-${index + 21}`,
+    }));
+    vi.mocked(search3).mockImplementation(() => response(pageResources, 73));
+    renderPage("/organizations/11/resources?page=2");
+    await screen.findAllByText("resource-21");
+
+    expect(screen.getByText("21–40 из 73")).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Строк на странице" }),
+    ).toHaveTextContent("20");
   });
 });

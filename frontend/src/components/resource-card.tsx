@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { ResourceResponse } from "../api/generated/model";
-import { HealthStatus, LifecycleStatus } from "./health-status";
+import { HealthStatus } from "./health-status";
+import { LifecycleStatus } from "./lifecycle-status";
+import { getResourceTypeLabel } from "./resource-labels";
 
 export function ResourceCard({
   resource,
@@ -24,8 +26,8 @@ export function ResourceCard({
           >
             {resource.name ?? "Без имени"}
           </Link>
-          <p className="mt-1 font-mono text-caption text-foreground-muted">
-            {resource.type ?? "OTHER"}
+          <p className="mt-1 text-caption text-foreground-muted">
+            {getResourceTypeLabel(resource.type)}
           </p>
         </div>
         <div
