@@ -156,6 +156,10 @@ Frontend использует существующий backend и его OpenAPI
 
 Отсутствие результата → UNKNOWN с причиной «Проверка ещё не выполнялась». Сетевая ошибка загрузки → error state. Старые данные → последнее здоровье + подпись свежести. Новое неизвестное значение enum → нейтральная подпись «Неизвестный статус» с доступным raw value в деталях; не приводить его к UP.
 
+### Отображение API enum
+
+Пользовательские значения API enum не выводить автоматически как raw backend value. Для каждого enum, являющегося частью пользовательского интерфейса, использовать централизованный mapping `value → localized label`; исходное value при этом сохраняется в API request/response и URL-контракте. Raw enum допустим только там, где эта спецификация явно считает значение техническим: health `UP | DEGRADED | DOWN | UNKNOWN`, технические типы monitor/task и аналогичные диагностические идентификаторы.
+
 ### Spacing, radius, borders, shadows
 
 | Spacing | Tailwind | Назначение |
@@ -401,6 +405,8 @@ shadcn/ui — принадлежащие проекту UI-компоненты,
 
 Не каждый shadcn компонент основан на Radix: Table/Card/Input остаются преимущественно HTML и стилями, Command использует cmdk, Chart — Recharts. Не устанавливать дублирующие реализации одной функции. Не добавлять React Aria, MUI, Ant Design или другую UI-систему ради единичного элемента.
 
+Все стандартные dropdown/select controls приложения используют единый shared `Select` на Radix; browser-native `<select>` не является самостоятельным визуальным компонентом продуктового UI. Trigger использует общие control tokens и состояния default, hover, pressed, focus-visible и disabled. Dropdown использует `surface-raised`; highlighted item — `surface-hover`; выбранный item — `product-accent-soft` с явным check/indicator. Один и тот же shared `Select` применяется и для фильтров, и для выбора page size.
+
 ### Buttons и iconography
 
 Primary — одно главное действие текущей страницы или открытого dialog. Secondary — bordered neutral; ghost — вторичное действие в toolbar; destructive — только опасное действие. Ссылки в тексте имеют underline, а не только violet. Иконка без текста допустима для устоявшихся действий с `aria-label` и tooltip: «Скопировать IP», «Действия для prod-api».
@@ -420,6 +426,8 @@ Header: label 13/500, secondary text, фон surface, border-bottom. Body: 14/40
 TanStack Table управляет columns, sorting, selection, visibility; данные и запросы находятся в TanStack Query. При серверной пагинации включать manual pagination/sorting/filtering. Не сортировать только текущую страницу, выдавая её за полный отсортированный набор. SearchRequest использует `start`, `size`, `filter`, `sort`, `getTotal`; размеры страниц 20/50/100 укладываются в текущий лимит API 100. При неизвестном `total` не показывать «из 0» или вымышленную последнюю страницу; доступность Next определяется контрактом ответа, пограничная пустая страница обрабатывается явно.
 
 Поиск с debounce 250 ms, Enter применяет немедленно; этот таймер — поведенческий token, не motion. Изменение фильтра сбрасывает страницу, сохраняет сортировку. Показывать активные фильтры и «Сбросить фильтры». Selection действует на явно выбранные записи; checkbox в header выбирает текущую страницу и сообщает это. «Выбрать все результаты» допустимо только с реализованным серверным bulk-сценарием и явным количеством.
+
+Search/filter toolbar строится как единая строка с переносом: search занимает доступную ширину, фильтры имеют стабильную компактную ширину, одинаковую высоту и общий spacing. При известном `total` pagination summary показывает фактический диапазон результатов, например `1–20 из 73`.
 
 Column sizing — централизованная схема таблицы: name min 200 px, health min 128 px, type min 144 px, technical metric min 112 px, timestamp min 160 px, actions 44 px; checkbox 44 px при наличии. Это разрешённые размерные токены, не inline spacing. Пользовательский resize может задавать runtime width в px; сохранять по id колонки и не ломать minimums. Для списка с ограниченной пагинацией не добавлять виртуализацию без измеренной потребности.
 

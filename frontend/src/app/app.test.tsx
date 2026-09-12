@@ -46,6 +46,8 @@ function authenticatedApi({
     if (url.endsWith("/api/auth/me")) return jsonResponse(currentUser);
     if (url.endsWith("/api/organizations/search"))
       return jsonResponse({ items: organizations });
+    if (url.endsWith("/api/resources/search"))
+      return jsonResponse({ items: [], total: 0 });
     const membershipMatch = url.match(
       /\/api\/organizations\/(\d+)\/members\/search$/,
     );
@@ -200,6 +202,8 @@ describe("organization-scoped application routing", () => {
         return jsonResponse({
           items: [{ organizationId: 33, userId: 1, role: "OWNER" }],
         });
+      if (url.endsWith("/api/resources/search"))
+        return jsonResponse({ items: [], total: 0 });
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -311,6 +315,8 @@ describe("authentication with organization routing", () => {
         return jsonResponse({
           items: [{ organizationId: 11, userId: 1, role: "ADMIN" }],
         });
+      if (url.endsWith("/api/resources/search"))
+        return jsonResponse({ items: [], total: 0 });
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);

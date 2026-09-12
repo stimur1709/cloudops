@@ -27,6 +27,9 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-status-down: var(--status-down);
   --color-status-down-soft: var(--status-down-soft);
+  --color-status-up: var(--status-up);
+  --color-status-degraded: var(--status-degraded);
+  --color-status-unknown: var(--status-unknown);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --font-sans: "Geist Sans", "Inter", "Segoe UI", sans-serif;
@@ -50,6 +53,7 @@
   --text-caption--line-height: 1rem;
   --spacing: 0.25rem;
   --spacing-control: var(--control-height);
+  --spacing-row: var(--row-height);
   --spacing-icon: 1rem;
   --radius-*: initial;
   --radius-sm: 0.25rem;
@@ -66,9 +70,23 @@
 @layer base {
   :root {
     --control-height: 2.25rem;
+    --row-height: 2.75rem;
     --motion-fast: 120ms;
     --motion-base: 160ms;
     --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  :root[data-density="compact"] {
+    --control-height: 2rem;
+    --row-height: 2.25rem;
+  }
+
+  @media (pointer: coarse) {
+    :root,
+    :root[data-density="compact"] {
+      --control-height: 2.75rem;
+      --row-height: 3rem;
+    }
   }
 
   * {
@@ -91,7 +109,8 @@
   }
 
   button,
-  input {
+  input,
+  select {
     font: inherit;
   }
 

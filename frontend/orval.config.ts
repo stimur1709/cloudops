@@ -10,12 +10,16 @@ export default defineConfig({
     },
     input: {
       target: openApiUrl,
+      override: {
+        transformer: "./scripts/openapi-transformer.mjs",
+      },
       filters: {
         mode: "include",
         tags: [
           "auth-controller",
           "organization-controller",
           "organization-membership-controller",
+          "resource-controller",
         ],
       },
     },
