@@ -295,8 +295,7 @@ class TaskApiIntegrationTest {
     private org.springframework.test.web.servlet.ResultActions createTask(
             String request,
             long userId
-    )
-            throws Exception {
+    ) throws Exception {
         return mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
                 .with(jwt().jwt(token -> token.subject(Long.toString(userId))))
                 .contentType(MediaType.APPLICATION_JSON)

@@ -437,11 +437,11 @@ class ResourceSearchApiIntegrationTest {
 
     private String configFor(String type) {
         return switch (type) {
-        case "DATABASE" -> "{\"host\":\"db.internal\",\"port\":5432,\"database\":\"orders\"}";
-        case "NETWORK_DEVICE" -> "{\"host\":\"network.internal\"}";
-        case "SERVICE" -> "{\"url\":\"https://api.example.com\"}";
-        case "OTHER" -> "{}";
-        default -> "{\"host\":\"server.internal\"}";
+            case "DATABASE" -> "{\"host\":\"db.internal\",\"port\":5432,\"database\":\"orders\"}";
+            case "NETWORK_DEVICE" -> "{\"host\":\"network.internal\"}";
+            case "SERVICE" -> "{\"url\":\"https://api.example.com\"}";
+            case "OTHER" -> "{}";
+            default -> "{\"host\":\"server.internal\"}";
         };
     }
 
@@ -508,8 +508,7 @@ class ResourceSearchApiIntegrationTest {
             String operation,
             String value,
             String expectedMessage
-    )
-            throws Exception {
+    ) throws Exception {
         search(filterRequest("AND", """
                 {"field": "%s", "operation": "%s", "value": "%s"}
                 """.formatted(field, operation, value)))

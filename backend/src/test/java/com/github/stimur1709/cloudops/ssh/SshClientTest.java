@@ -178,25 +178,25 @@ class SshClientTest {
             thread = Thread.ofVirtual().start(() -> {
                 try {
                     switch (command) {
-                    case "result" -> {
-                        stdout.write("standard output\n".getBytes(StandardCharsets.UTF_8));
-                        stderr.write("standard error\n".getBytes(StandardCharsets.UTF_8));
-                        stdout.flush();
-                        stderr.flush();
-                        exitCallback.onExit(7);
-                    }
-                    case "large" -> {
-                        stdout.write("a".repeat(200).getBytes(StandardCharsets.UTF_8));
-                        stderr.write("b".repeat(200).getBytes(StandardCharsets.UTF_8));
-                        stdout.flush();
-                        stderr.flush();
-                        exitCallback.onExit(0);
-                    }
-                    case "slow" -> {
-                        Thread.sleep(Duration.ofSeconds(5));
-                        exitCallback.onExit(0);
-                    }
-                    default -> exitCallback.onExit(127);
+                        case "result" -> {
+                            stdout.write("standard output\n".getBytes(StandardCharsets.UTF_8));
+                            stderr.write("standard error\n".getBytes(StandardCharsets.UTF_8));
+                            stdout.flush();
+                            stderr.flush();
+                            exitCallback.onExit(7);
+                        }
+                        case "large" -> {
+                            stdout.write("a".repeat(200).getBytes(StandardCharsets.UTF_8));
+                            stderr.write("b".repeat(200).getBytes(StandardCharsets.UTF_8));
+                            stdout.flush();
+                            stderr.flush();
+                            exitCallback.onExit(0);
+                        }
+                        case "slow" -> {
+                            Thread.sleep(Duration.ofSeconds(5));
+                            exitCallback.onExit(0);
+                        }
+                        default -> exitCallback.onExit(127);
                     }
                 } catch (InterruptedException exception) {
                     Thread.currentThread().interrupt();

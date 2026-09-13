@@ -580,8 +580,7 @@ class MonitorApiIntegrationTest {
     private org.springframework.test.web.servlet.ResultActions putOrganization(
             String type,
             String body
-    )
-            throws Exception {
+    ) throws Exception {
         return mockMvc.perform(put("/api/organizations/{id}/monitoring-settings/{type}", organizationId, type)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
@@ -591,8 +590,7 @@ class MonitorApiIntegrationTest {
             long resourceId,
             String type,
             String body
-    )
-            throws Exception {
+    ) throws Exception {
         return mockMvc.perform(put("/api/resources/{id}/monitoring-settings/{type}", resourceId, type)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
@@ -631,8 +629,7 @@ class MonitorApiIntegrationTest {
             Integer retention,
             int timeout,
             boolean override
-    )
-            throws Exception {
+    ) throws Exception {
         var result = mockMvc.perform(get("/api/resources/{id}/monitoring-settings", resourceId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.probeType == 'HTTP_CHECK')].source").value(source))

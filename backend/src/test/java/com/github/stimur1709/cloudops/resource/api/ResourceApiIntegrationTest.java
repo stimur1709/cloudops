@@ -312,8 +312,7 @@ class ResourceApiIntegrationTest {
             String name,
             String type,
             String status
-    )
-            throws Exception {
+    ) throws Exception {
         return mockMvc.perform(
                 post("/api/resources").contentType(MediaType.APPLICATION_JSON).content("""
                         {
@@ -329,11 +328,11 @@ class ResourceApiIntegrationTest {
 
     private String configFor(String type) {
         return switch (type) {
-        case "NETWORK_DEVICE" -> "{\"host\":\"10.0.0.1\"}";
-        case "SERVER" -> "{\"host\":\"10.0.0.15\"}";
-        case "DATABASE" -> "{\"host\":\"db.internal\",\"port\":5432,\"database\":\"orders\"}";
-        case "SERVICE" -> "{\"url\":\"https://api.example.com\"}";
-        default -> "{}";
+            case "NETWORK_DEVICE" -> "{\"host\":\"10.0.0.1\"}";
+            case "SERVER" -> "{\"host\":\"10.0.0.15\"}";
+            case "DATABASE" -> "{\"host\":\"db.internal\",\"port\":5432,\"database\":\"orders\"}";
+            case "SERVICE" -> "{\"url\":\"https://api.example.com\"}";
+            default -> "{}";
         };
     }
 

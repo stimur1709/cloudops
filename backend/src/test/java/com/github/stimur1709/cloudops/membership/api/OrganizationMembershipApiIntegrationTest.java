@@ -175,8 +175,7 @@ class OrganizationMembershipApiIntegrationTest {
             long userId,
             String role,
             long actorId
-    )
-            throws Exception {
+    ) throws Exception {
         return mockMvc.perform(post("/api/organizations/{id}/members", organizationId)
                 .with(as(actorId))
                 .contentType(MediaType.APPLICATION_JSON)
