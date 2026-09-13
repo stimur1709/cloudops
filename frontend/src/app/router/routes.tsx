@@ -37,6 +37,11 @@ const EditResourcePage = lazy(() =>
     default: module.EditResourcePage,
   })),
 );
+const ResourceDetailsPage = lazy(() =>
+  import("../../features/resource/resource-details-page").then((module) => ({
+    default: module.ResourceDetailsPage,
+  })),
+);
 
 function ProtectedRoutes() {
   const { status } = useAuth();
@@ -94,10 +99,7 @@ export function AppRoutes() {
             />
             <Route
               path="resources/:resourceId"
-              element={organizationPage(
-                "Детали ресурса",
-                "Страница ресурса будет добавлена отдельной задачей.",
-              )}
+              element={<ResourceDetailsPage />}
             />
             <Route
               path="monitoring"
