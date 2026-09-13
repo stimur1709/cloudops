@@ -91,7 +91,7 @@ class TaskOutboxCreationIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("SELECT message_type FROM outbox_messages", String.class))
                 .isEqualTo("TASK_EXECUTION_REQUESTED");
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT published_at FROM outbox_messages", java.time.OffsetDateTime.class))
+                "SELECT published_at FROM outbox_messages", java.time.OffsetDateTime.class))
                 .isNull();
     }
 
@@ -124,10 +124,10 @@ class TaskOutboxCreationIntegrationTest {
                 """);
 
         assertThatThrownBy(() -> taskService.create(
-                        resourceId,
-                        com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE,
-                        parameters(),
-                        TestAuthentication.USER_ID))
+                resourceId,
+                com.github.stimur1709.cloudops.task.TestTaskTypes.TYPE,
+                parameters(),
+                TestAuthentication.USER_ID))
                 .isInstanceOf(RuntimeException.class);
 
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tasks", Long.class))

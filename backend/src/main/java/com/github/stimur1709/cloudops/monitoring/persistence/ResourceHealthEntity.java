@@ -30,7 +30,8 @@ public class ResourceHealthEntity {
     @Column(name = "health_status", nullable = false, length = 10)
     private ResourceHealthStatus healthStatus;
 
-    protected ResourceHealthEntity() {}
+    protected ResourceHealthEntity() {
+    }
 
     private ResourceHealthEntity(ResourceEntity resource) {
         this.resource = resource;

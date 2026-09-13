@@ -8,17 +8,26 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record SshPrivateKeyCredentialRequest(
-        @NotBlank(message = "Name must not be blank") @Size(max = 100) String name,
+        @NotBlank(message = "Name must not be blank")
+        @Size(max = 100)
+        String name,
 
-        @NotNull(message = "Type is required") CredentialType type,
+        @NotNull(message = "Type is required")
+        CredentialType type,
 
-        @NotBlank(message = "Username must not be blank") @Size(max = 255) String username,
+        @NotBlank(message = "Username must not be blank")
+        @Size(max = 255)
+        String username,
 
-        @NotBlank(message = "Private key must not be blank") @Schema(accessMode = Schema.AccessMode.WRITE_ONLY)
-        String privateKey)
-        implements CredentialRequest {
+        @NotBlank(message = "Private key must not be blank")
+        @Schema(accessMode = Schema.AccessMode.WRITE_ONLY)
+        String privateKey
+)
+        implements
+        CredentialRequest {
 
-    @AssertTrue(message = "Type must be SSH_PRIVATE_KEY") @Schema(hidden = true)
+    @AssertTrue(message = "Type must be SSH_PRIVATE_KEY")
+    @Schema(hidden = true)
     public boolean isTypeValid() {
         return type == CredentialType.SSH_PRIVATE_KEY;
     }

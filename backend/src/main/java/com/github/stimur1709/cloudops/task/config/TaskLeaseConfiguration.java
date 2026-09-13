@@ -5,4 +5,5 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(TaskLeaseProperties.class)
-class TaskLeaseConfiguration {}
+class TaskLeaseConfiguration {
+}

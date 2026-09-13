@@ -6,7 +6,10 @@ public final class ConflictException extends RuntimeException {
 
     private final String code;
 
-    public ConflictException(String code, String message) {
+    public ConflictException(
+            String code,
+            String message
+    ) {
         super(Objects.requireNonNull(message));
         this.code = Objects.requireNonNull(code);
     }

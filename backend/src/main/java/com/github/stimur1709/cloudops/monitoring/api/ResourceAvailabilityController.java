@@ -22,9 +22,13 @@ public class ResourceAvailabilityController {
 
     @GetMapping
     public ResourceAvailabilityResponse get(
-            @PathVariable long resourceId,
-            @Valid @ModelAttribute ResourceAvailabilityRequest request,
-            Authentication authentication) {
+            @PathVariable
+            long resourceId,
+            @Valid
+            @ModelAttribute
+            ResourceAvailabilityRequest request,
+            Authentication authentication
+    ) {
         return ResourceAvailabilityResponse.from(
                 availabilityService.get(resourceId, request.from(), request.to(), CurrentUser.id(authentication)));
     }

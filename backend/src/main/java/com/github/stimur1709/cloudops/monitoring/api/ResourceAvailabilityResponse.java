@@ -15,7 +15,8 @@ public record ResourceAvailabilityResponse(
         long knownSeconds,
         BigDecimal uptimePercent,
         BigDecimal availabilityPercent,
-        BigDecimal coveragePercent) {
+        BigDecimal coveragePercent
+) {
 
     public static ResourceAvailabilityResponse from(ResourceAvailability availability) {
         return new ResourceAvailabilityResponse(

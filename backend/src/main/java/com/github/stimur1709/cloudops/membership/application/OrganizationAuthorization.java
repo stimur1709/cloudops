@@ -18,18 +18,27 @@ public class OrganizationAuthorization {
         this.membershipRepository = membershipRepository;
     }
 
-    public MembershipRole requireMember(long organizationId, long userId) {
+    public MembershipRole requireMember(
+            long organizationId,
+            long userId
+    ) {
         return membershipRepository.findRole(organizationId, userId).orElseThrow(NotFoundException::new);
     }
 
-    public void requireManager(long organizationId, long userId) {
+    public void requireManager(
+            long organizationId,
+            long userId
+    ) {
         MembershipRole role = requireMember(organizationId, userId);
         if (!MANAGERS.contains(role)) {
             throw new ForbiddenException();
         }
     }
 
-    public void requireOwner(long organizationId, long userId) {
+    public void requireOwner(
+            long organizationId,
+            long userId
+    ) {
         MembershipRole role = requireMember(organizationId, userId);
         if (role != MembershipRole.OWNER) {
             throw new ForbiddenException();

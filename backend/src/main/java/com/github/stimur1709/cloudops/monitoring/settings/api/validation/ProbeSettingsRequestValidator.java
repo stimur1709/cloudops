@@ -19,7 +19,10 @@ public class ProbeSettingsRequestValidator implements ConstraintValidator<ValidP
     }
 
     @Override
-    public boolean isValid(ProbeSettingsRequest value, ConstraintValidatorContext context) {
+    public boolean isValid(
+            ProbeSettingsRequest value,
+            ConstraintValidatorContext context
+    ) {
         if (value == null) {
             return true;
         }
@@ -36,8 +39,8 @@ public class ProbeSettingsRequestValidator implements ConstraintValidator<ValidP
             valid = false;
         }
 
-        boolean invalidHistoryRetention =
-                value.retentionDays() == null || value.retentionDays() < 1 || value.retentionDays() > 365;
+        boolean invalidHistoryRetention = value.retentionDays() == null || value.retentionDays() < 1
+                || value.retentionDays() > 365;
         if (value.storageMode() == StorageMode.HISTORY && invalidHistoryRetention) {
             violation(context, "retentionDays", "Retention days must be between 1 and 365 for HISTORY");
             valid = false;
@@ -74,7 +77,11 @@ public class ProbeSettingsRequestValidator implements ConstraintValidator<ValidP
         }
     }
 
-    private void violation(ConstraintValidatorContext context, String field, String message) {
+    private void violation(
+            ConstraintValidatorContext context,
+            String field,
+            String message
+    ) {
         context.buildConstraintViolationWithTemplate(message)
                 .addPropertyNode(field)
                 .addConstraintViolation();

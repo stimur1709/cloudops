@@ -5,4 +5,5 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(SshProperties.class)
-public class SshConfiguration {}
+public class SshConfiguration {
+}

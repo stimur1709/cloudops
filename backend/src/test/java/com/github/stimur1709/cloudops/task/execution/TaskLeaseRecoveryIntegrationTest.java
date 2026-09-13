@@ -44,10 +44,11 @@ class TaskLeaseRecoveryIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations
-                RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations
+                        RESTART IDENTITY
+                        """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, 'lease@example.com', 'User', '{noop}unused', now(), now())
@@ -94,7 +95,7 @@ class TaskLeaseRecoveryIntegrationTest {
                 .containsEntry("recovery_count", 1)
                 .containsEntry("attempt_count", 2);
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT deduplication_key FROM outbox_messages WHERE aggregate_id = ?", String.class, taskId))
+                "SELECT deduplication_key FROM outbox_messages WHERE aggregate_id = ?", String.class, taskId))
                 .isEqualTo("task:%d:execution:1".formatted(taskId));
     }
 
@@ -119,7 +120,7 @@ class TaskLeaseRecoveryIntegrationTest {
 
         assertThat(newClaim.executionId()).isNotEqualTo(OLD_EXECUTION_ID);
         assertThat(persistenceService.complete(
-                        taskId, OLD_EXECUTION_ID, tools.jackson.databind.node.JsonNodeFactory.instance.objectNode()))
+                taskId, OLD_EXECUTION_ID, tools.jackson.databind.node.JsonNodeFactory.instance.objectNode()))
                 .isFalse();
         assertThatThrownBy(() -> persistenceService.recordAttempt(taskId, OLD_EXECUTION_ID))
                 .isInstanceOf(StaleTaskExecutionException.class);
@@ -130,8 +131,7 @@ class TaskLeaseRecoveryIntegrationTest {
     @Test
     void activeTaskIsSkippedAndRecoveryLimitProducesSafeFailure() {
         long activeId = insertRunningTask(OLD_EXECUTION_ID, 0, 0, Instant.now().plusSeconds(60));
-        long exhaustedId =
-                insertRunningTask(UUID.randomUUID(), 3, 1, Instant.now().minusSeconds(1));
+        long exhaustedId = insertRunningTask(UUID.randomUUID(), 3, 1, Instant.now().minusSeconds(1));
 
         assertThat(recoveryService.recoverExpired()).isEqualTo(1);
 
@@ -160,7 +160,7 @@ class TaskLeaseRecoveryIntegrationTest {
             assertThat(Arrays.asList(first.get(), second.get())).containsExactlyInAnyOrder(0, 1);
         }
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM outbox_messages WHERE aggregate_id = ?", Integer.class, taskId))
+                "SELECT count(*) FROM outbox_messages WHERE aggregate_id = ?", Integer.class, taskId))
                 .isEqualTo(1);
     }
 
@@ -176,15 +176,20 @@ class TaskLeaseRecoveryIntegrationTest {
                 """, Long.class, organizationId, resourceId, TestAuthentication.USER_ID);
     }
 
-    private long insertRunningTask(UUID executionId, int recoveryCount, int attemptCount, Instant leaseExpiresAt) {
+    private long insertRunningTask(
+            UUID executionId,
+            int recoveryCount,
+            int attemptCount,
+            Instant leaseExpiresAt
+    ) {
         return jdbcTemplate.queryForObject(
                 """
-                INSERT INTO tasks (
-                    organization_id, resource_id, type, status, created_by, created_at, started_at,
-                    execution_id, lease_expires_at, recovery_count, attempt_count
-                )
-                VALUES (?, ?, 'RUN_COMMAND', 'RUNNING', ?, now(), now(), ?, ?, ?, ?) RETURNING id
-                """,
+                        INSERT INTO tasks (
+                            organization_id, resource_id, type, status, created_by, created_at, started_at,
+                            execution_id, lease_expires_at, recovery_count, attempt_count
+                        )
+                        VALUES (?, ?, 'RUN_COMMAND', 'RUNNING', ?, now(), now(), ?, ?, ?, ?) RETURNING id
+                        """,
                 Long.class,
                 organizationId,
                 resourceId,
@@ -195,7 +200,10 @@ class TaskLeaseRecoveryIntegrationTest {
                 attemptCount);
     }
 
-    private void insertOutbox(long taskId, String deduplicationKey) {
+    private void insertOutbox(
+            long taskId,
+            String deduplicationKey
+    ) {
         jdbcTemplate.update("""
                 INSERT INTO outbox_messages (
                     id, message_type, aggregate_type, aggregate_id, payload, created_at, deduplication_key

@@ -12,4 +12,6 @@ public record ResourceCredentialDetails(
         CredentialType type,
         String username,
         Instant createdAt,
-        Instant updatedAt) {}
+        Instant updatedAt
+) {
+}

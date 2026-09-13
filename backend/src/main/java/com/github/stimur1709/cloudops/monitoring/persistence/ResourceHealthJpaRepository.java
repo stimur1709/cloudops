@@ -11,5 +11,6 @@ public interface ResourceHealthJpaRepository extends JpaRepository<ResourceHealt
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT health FROM ResourceHealthEntity health WHERE health.resourceId = :resourceId")
-    Optional<ResourceHealthEntity> findByResourceIdForUpdate(@Param("resourceId") long resourceId);
+    Optional<ResourceHealthEntity> findByResourceIdForUpdate(@Param("resourceId")
+    long resourceId);
 }

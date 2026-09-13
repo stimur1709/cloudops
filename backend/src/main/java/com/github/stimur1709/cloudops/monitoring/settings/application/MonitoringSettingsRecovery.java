@@ -22,11 +22,17 @@ public class MonitoringSettingsRecovery {
         this.synchronizer = synchronizer;
     }
 
-    public synchronized void organizationCommitted(long id, ProbeType type) {
+    public synchronized void organizationCommitted(
+            long id,
+            ProbeType type
+    ) {
         synchronize(new PendingSettings(true, id, type), false);
     }
 
-    public synchronized void resourceCommitted(long id, ProbeType type) {
+    public synchronized void resourceCommitted(
+            long id,
+            ProbeType type
+    ) {
         synchronize(new PendingSettings(false, id, type), false);
     }
 
@@ -37,7 +43,10 @@ public class MonitoringSettingsRecovery {
         }
     }
 
-    private void synchronize(PendingSettings settings, boolean recovery) {
+    private void synchronize(
+            PendingSettings settings,
+            boolean recovery
+    ) {
         pending.add(settings);
         try {
             if (settings.organization()) {

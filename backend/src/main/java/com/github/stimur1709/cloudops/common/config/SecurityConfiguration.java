@@ -24,11 +24,11 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({JwtProperties.class, RefreshTokenProperties.class, WebCorsProperties.class})
+@EnableConfigurationProperties({ JwtProperties.class, RefreshTokenProperties.class, WebCorsProperties.class })
 public class SecurityConfiguration {
 
-    public static final List<String> PUBLIC_ENDPOINTS =
-            List.of("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout");
+    public static final List<String> PUBLIC_ENDPOINTS = List.of("/api/auth/register", "/api/auth/login",
+            "/api/auth/refresh", "/api/auth/logout");
 
     @Bean
     SecureRandom secureRandom() {
@@ -58,7 +58,8 @@ public class SecurityConfiguration {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             ApiAuthenticationEntryPoint authenticationEntryPoint,
-            ApiAccessDeniedHandler accessDeniedHandler) {
+            ApiAccessDeniedHandler accessDeniedHandler
+    ) {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

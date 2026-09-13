@@ -26,14 +26,24 @@ public class MonitorController {
 
     @PostMapping("/{id}/run")
     @ApiResponse(responseCode = "202", description = "Accepted for asynchronous execution", useReturnTypeSchema = true)
-    public ResponseEntity<Void> run(@PathVariable long id, Authentication authentication) {
+    public ResponseEntity<Void> run(
+            @PathVariable
+            long id,
+            Authentication authentication
+    ) {
         monitorService.scheduleRun(id, CurrentUser.id(authentication));
         return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/{id}/results/search")
     public SearchResponse<MonitoringResultResponse> searchResults(
-            @PathVariable long id, @Valid @RequestBody SearchRequest request, Authentication authentication) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            SearchRequest request,
+            Authentication authentication
+    ) {
         return SearchResponse.from(
                 monitorService.searchResults(id, request.toQuery(), CurrentUser.id(authentication)),
                 MonitoringResultResponse::from);

@@ -57,14 +57,14 @@ class PortCheckHandlerTest {
 
     @Test
     void registryProvidesTheSamePortHandlerToEveryCaller() {
-        ProbeHandlerRegistry registry =
-                new ProbeHandlerRegistry(List.of(new HttpCheckHandler(mock(HttpCheckClient.class)), handler));
+        ProbeHandlerRegistry registry = new ProbeHandlerRegistry(
+                List.of(new HttpCheckHandler(mock(HttpCheckClient.class)), handler));
 
         assertThat(registry.get(ProbeType.PORT_CHECK)).isSameAs(handler);
         assertThat(registry.supports(ProbeType.PORT_CHECK, new ServerResourceConfig("server", 22)))
                 .isTrue();
-        assertThatThrownBy(() ->
-                        handler.execute(new ProbeExecutionContext(1, ProbeType.PORT_CHECK, new OtherResourceConfig())))
+        assertThatThrownBy(
+                () -> handler.execute(new ProbeExecutionContext(1, ProbeType.PORT_CHECK, new OtherResourceConfig())))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

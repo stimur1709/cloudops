@@ -46,8 +46,12 @@ public class SshClient {
         this.knownHostsPath = properties.knownHostsPath();
     }
 
-    public SshConnectionResult check(String host, int port, ResolvedCredential credential, int connectionTimeoutMs)
-            throws SshClientException {
+    public SshConnectionResult check(
+            String host,
+            int port,
+            ResolvedCredential credential,
+            int connectionTimeoutMs
+    ) throws SshClientException {
         try (SSHClient client = connect(host, port, credential, connectionTimeoutMs);
                 Session ignored = client.startSession()) {
             return new SshConnectionResult(client.getTransport().getServerVersion());
@@ -61,10 +65,15 @@ public class SshClient {
     }
 
     public SshCommandResult execute(
-            String host, int port, ResolvedCredential credential, String command, Duration timeout, int maxOutputBytes)
-            throws SshClientException {
-        var executor = Executors.newVirtualThreadPerTaskExecutor();
-        try (SSHClient client = connect(host, port, credential, Math.toIntExact(timeout.toMillis()));
+            String host,
+            int port,
+            ResolvedCredential credential,
+            String command,
+            Duration timeout,
+            int maxOutputBytes
+    ) throws SshClientException {
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor();
+                SSHClient client = connect(host, port, credential, Math.toIntExact(timeout.toMillis()));
                 Session session = client.startSession();
                 Session.Command remoteCommand = session.exec(command)) {
             OutputBudget budget = new OutputBudget(maxOutputBytes);
@@ -89,12 +98,13 @@ public class SshClient {
             throw failure(SshErrorType.EXECUTION, "SSH command could not be executed", exception);
         } catch (IOException exception) {
             throw mapConnectionFailure(exception);
-        } finally {
-            executor.shutdownNow();
         }
     }
 
-    private static void awaitCompletion(Future<?> completion, Duration timeout) throws SshClientException {
+    private static void awaitCompletion(
+            Future<?> completion,
+            Duration timeout
+    ) throws SshClientException {
         try {
             completion.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException exception) {
@@ -108,8 +118,12 @@ public class SshClient {
         }
     }
 
-    private SSHClient connect(String host, int port, ResolvedCredential credential, int timeoutMs)
-            throws SshClientException {
+    private SSHClient connect(
+            String host,
+            int port,
+            ResolvedCredential credential,
+            int timeoutMs
+    ) throws SshClientException {
         SSHClient client = new SSHClient();
         try {
             client.setConnectTimeout(timeoutMs);
@@ -137,7 +151,10 @@ public class SshClient {
         }
     }
 
-    private static String read(InputStream input, OutputBudget budget) throws IOException {
+    private static String read(
+            InputStream input,
+            OutputBudget budget
+    ) throws IOException {
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
         int count;
@@ -169,16 +186,20 @@ public class SshClient {
     }
 
     private static HostKeyVerifier hostKeyVerifier(
-            SshHostKeyVerification verification, Path knownHostsPath, AtomicBoolean rejected)
-            throws SshClientException {
+            SshHostKeyVerification verification,
+            Path knownHostsPath,
+            AtomicBoolean rejected
+    ) throws SshClientException {
         return switch (verification) {
             case ACCEPT_ALL -> new PromiscuousVerifier();
             case KNOWN_HOSTS -> strictVerifier(knownHostsPath, rejected);
         };
     }
 
-    private static HostKeyVerifier strictVerifier(Path knownHostsPath, AtomicBoolean rejected)
-            throws SshClientException {
+    private static HostKeyVerifier strictVerifier(
+            Path knownHostsPath,
+            AtomicBoolean rejected
+    ) throws SshClientException {
         final OpenSSHKnownHosts knownHosts;
         try {
             knownHosts = new OpenSSHKnownHosts(knownHostsPath.toFile());
@@ -187,20 +208,30 @@ public class SshClient {
         }
         return new HostKeyVerifier() {
             @Override
-            public boolean verify(String hostname, int port, PublicKey key) {
+            public boolean verify(
+                    String hostname,
+                    int port,
+                    PublicKey key
+            ) {
                 boolean verified = knownHosts.verify(hostname, port, key);
                 rejected.set(!verified);
                 return verified;
             }
 
             @Override
-            public List<String> findExistingAlgorithms(String hostname, int port) {
+            public List<String> findExistingAlgorithms(
+                    String hostname,
+                    int port
+            ) {
                 return knownHosts.findExistingAlgorithms(hostname, port);
             }
         };
     }
 
-    private static KeyProvider loadKey(SSHClient client, ResolvedCredential credential) throws SshClientException {
+    private static KeyProvider loadKey(
+            SSHClient client,
+            ResolvedCredential credential
+    ) throws SshClientException {
         if (!(credential instanceof ResolvedSshPrivateKey key)) {
             return null;
         }
@@ -211,8 +242,11 @@ public class SshClient {
         }
     }
 
-    private static void authenticate(SSHClient client, ResolvedCredential credential, KeyProvider keyProvider)
-            throws SshClientException {
+    private static void authenticate(
+            SSHClient client,
+            ResolvedCredential credential,
+            KeyProvider keyProvider
+    ) throws SshClientException {
         try {
             switch (credential) {
                 case ResolvedUsernamePassword password -> client.authPassword(password.username(), password.password());
@@ -243,7 +277,10 @@ public class SshClient {
         return failure(SshErrorType.CONNECTION, "SSH connection could not be established", exception);
     }
 
-    private static boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {
+    private static boolean hasCause(
+            Throwable throwable,
+            Class<? extends Throwable> type
+    ) {
         for (Throwable current = throwable; current != null; current = current.getCause()) {
             if (type.isInstance(current)) {
                 return true;
@@ -252,7 +289,11 @@ public class SshClient {
         return false;
     }
 
-    private static SshClientException failure(SshErrorType type, String safeMessage, Throwable cause) {
+    private static SshClientException failure(
+            SshErrorType type,
+            String safeMessage,
+            Throwable cause
+    ) {
         return new SshClientException(type, safeMessage, cause);
     }
 

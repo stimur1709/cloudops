@@ -25,9 +25,14 @@ public class ResourceCredentialEntity {
     @Column(name = "credential_id", nullable = false)
     private Long credentialId;
 
-    protected ResourceCredentialEntity() {}
+    protected ResourceCredentialEntity() {
+    }
 
-    public ResourceCredentialEntity(long resourceId, CredentialPurpose purpose, long credentialId) {
+    public ResourceCredentialEntity(
+            long resourceId,
+            CredentialPurpose purpose,
+            long credentialId
+    ) {
         this.resourceId = resourceId;
         this.purpose = purpose;
         this.credentialId = credentialId;

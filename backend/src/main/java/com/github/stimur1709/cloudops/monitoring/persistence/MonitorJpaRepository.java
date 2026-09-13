@@ -19,11 +19,15 @@ public interface MonitorJpaRepository extends JpaRepository<MonitorEntity, Long>
             SELECT monitor.type AS type, monitor.compatible AS compatible, monitor.healthStatus AS healthStatus
             FROM MonitorEntity monitor WHERE monitor.resourceId = :resourceId
             """)
-    List<MonitorHealth> findHealthByResourceId(@Param("resourceId") long resourceId);
+    List<MonitorHealth> findHealthByResourceId(@Param("resourceId")
+    long resourceId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT monitor FROM MonitorEntity monitor WHERE monitor.resourceId = :resourceId AND monitor.type = :type")
-    Optional<MonitorEntity> findByResourceIdAndTypeForUpdate(long resourceId, ProbeType type);
+    Optional<MonitorEntity> findByResourceIdAndTypeForUpdate(
+            long resourceId,
+            ProbeType type
+    );
 
     @Modifying
     @Query(value = """
@@ -32,9 +36,16 @@ public interface MonitorJpaRepository extends JpaRepository<MonitorEntity, Long>
             ON CONFLICT (resource_id, type) DO NOTHING
             """, nativeQuery = true)
     int insertIfAbsent(
-            @Param("resourceId") long resourceId, @Param("type") String type, @Param("nextRunAt") Instant nextRunAt);
+            @Param("resourceId")
+            long resourceId,
+            @Param("type")
+            String type,
+            @Param("nextRunAt")
+            Instant nextRunAt
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT monitor FROM MonitorEntity monitor WHERE monitor.id = :id")
-    Optional<MonitorEntity> findByIdForUpdate(@Param("id") long id);
+    Optional<MonitorEntity> findByIdForUpdate(@Param("id")
+    long id);
 }

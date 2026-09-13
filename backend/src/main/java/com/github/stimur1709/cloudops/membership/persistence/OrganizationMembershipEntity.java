@@ -19,11 +19,11 @@ import java.time.Instant;
 
 @Entity
 @Table(
-        name = "organization_memberships",
-        uniqueConstraints =
-                @UniqueConstraint(
-                        name = "organization_memberships_organization_user_key",
-                        columnNames = {"organization_id", "user_id"}))
+        name = "organization_memberships", uniqueConstraints = @UniqueConstraint(
+                name = "organization_memberships_organization_user_key", columnNames = {
+                        "organization_id", "user_id" }
+        )
+)
 public class OrganizationMembershipEntity {
 
     @Id
@@ -54,10 +54,15 @@ public class OrganizationMembershipEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected OrganizationMembershipEntity() {}
+    protected OrganizationMembershipEntity() {
+    }
 
     private OrganizationMembershipEntity(
-            OrganizationEntity organization, UserEntity user, MembershipRole role, Instant createdAt) {
+            OrganizationEntity organization,
+            UserEntity user,
+            MembershipRole role,
+            Instant createdAt
+    ) {
         this.organization = organization;
         this.organizationId = organization.id();
         this.user = user;
@@ -68,11 +73,18 @@ public class OrganizationMembershipEntity {
     }
 
     public static OrganizationMembershipEntity create(
-            OrganizationEntity organization, UserEntity user, MembershipRole role, Instant createdAt) {
+            OrganizationEntity organization,
+            UserEntity user,
+            MembershipRole role,
+            Instant createdAt
+    ) {
         return new OrganizationMembershipEntity(organization, user, role, createdAt);
     }
 
-    public void changeRole(MembershipRole role, Instant updatedAt) {
+    public void changeRole(
+            MembershipRole role,
+            Instant updatedAt
+    ) {
         this.role = role;
         this.updatedAt = updatedAt;
     }

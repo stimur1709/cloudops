@@ -8,5 +8,9 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties("cloudops.ssh")
 public record SshProperties(
-        @NotNull SshHostKeyVerification hostKeyVerification,
-        @NotNull Path knownHostsPath) {}
+        @NotNull
+        SshHostKeyVerification hostKeyVerification,
+        @NotNull
+        Path knownHostsPath
+) {
+}

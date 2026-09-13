@@ -39,9 +39,10 @@ class ResourceConfigApiIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, 'test@example.com', 'Test', '{noop}unused-password', now(), now())
@@ -78,7 +79,7 @@ class ResourceConfigApiIntegrationTest {
                 .andExpect(jsonPath("$.config.*", hasSize(0)));
 
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM resources WHERE jsonb_typeof(config) = 'object'", Integer.class))
+                "SELECT count(*) FROM resources WHERE jsonb_typeof(config) = 'object'", Integer.class))
                 .isEqualTo(5);
     }
 
@@ -94,7 +95,7 @@ class ResourceConfigApiIntegrationTest {
         long id = ((Number) JsonPath.read(response, "$.id")).longValue();
 
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT config ->> 'database' FROM resources WHERE id = ?", String.class, id))
+                "SELECT config ->> 'database' FROM resources WHERE id = ?", String.class, id))
                 .isEqualTo("orders");
         mockMvc.perform(get("/api/resources/{id}", id))
                 .andExpect(status().isOk())
@@ -111,7 +112,7 @@ class ResourceConfigApiIntegrationTest {
                 .andExpect(jsonPath("$.config.timeoutMs").doesNotExist());
 
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT config ? 'timeoutMs' FROM resources WHERE name = 'service'", Boolean.class))
+                "SELECT config ? 'timeoutMs' FROM resources WHERE name = 'service'", Boolean.class))
                 .isFalse();
     }
 
@@ -168,27 +169,42 @@ class ResourceConfigApiIntegrationTest {
                 .andExpect(jsonPath("$.errors[0].field").value("config.url"));
     }
 
-    private ResultActions create(String name, String type, String config) throws Exception {
+    private ResultActions create(
+            String name,
+            String type,
+            String config
+    ) throws Exception {
         return mockMvc.perform(post("/api/resources")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(resourceJson(name, type, config)));
     }
 
-    private ResultActions createWithoutConfig(String name, String type) throws Exception {
+    private ResultActions createWithoutConfig(
+            String name,
+            String type
+    ) throws Exception {
         return mockMvc.perform(
                 post("/api/resources").contentType(MediaType.APPLICATION_JSON).content("""
                         {"name":"%s","type":"%s","status":"ACTIVE","organizationId":%d}
                         """.formatted(
-                                name, type, organizationId)));
+                        name, type, organizationId)));
     }
 
-    private ResultActions update(long id, String type, String config) throws Exception {
+    private ResultActions update(
+            long id,
+            String type,
+            String config
+    ) throws Exception {
         return mockMvc.perform(put("/api/resources/{id}", id)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(resourceJson("resource", type, config)));
     }
 
-    private String resourceJson(String name, String type, String config) {
+    private String resourceJson(
+            String name,
+            String type,
+            String config
+    ) {
         return """
                 {"name":"%s","type":"%s","status":"ACTIVE","organizationId":%d,"config":%s}
                 """.formatted(name, type, organizationId, config);

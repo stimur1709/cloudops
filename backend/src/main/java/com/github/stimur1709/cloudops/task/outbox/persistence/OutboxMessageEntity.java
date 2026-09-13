@@ -45,9 +45,16 @@ public class OutboxMessageEntity {
     @Column(name = "deduplication_key", nullable = false, length = 150)
     private String deduplicationKey;
 
-    protected OutboxMessageEntity() {}
+    protected OutboxMessageEntity() {
+    }
 
-    private OutboxMessageEntity(UUID id, long taskId, JsonNode payload, Instant createdAt, String deduplicationKey) {
+    private OutboxMessageEntity(
+            UUID id,
+            long taskId,
+            JsonNode payload,
+            Instant createdAt,
+            String deduplicationKey
+    ) {
         this.id = id;
         this.messageType = OutboxMessageType.TASK_EXECUTION_REQUESTED;
         this.aggregateType = OutboxAggregateType.TASK;
@@ -58,7 +65,11 @@ public class OutboxMessageEntity {
     }
 
     public static OutboxMessageEntity taskExecutionRequested(
-            long taskId, int recoveryCount, JsonNode payload, Instant createdAt) {
+            long taskId,
+            int recoveryCount,
+            JsonNode payload,
+            Instant createdAt
+    ) {
         return new OutboxMessageEntity(
                 UUID.randomUUID(), taskId, payload, createdAt, "task:%d:execution:%d".formatted(taskId, recoveryCount));
     }

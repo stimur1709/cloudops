@@ -41,8 +41,8 @@ class TaskExecutionServiceTest {
         registry = mock(TaskHandlerRegistry.class);
         handler = mock(TaskHandler.class);
         leaseManager = mock(TaskLeaseManager.class);
-        TaskRetryProperties properties =
-                new TaskRetryProperties(true, 3, Duration.ofMillis(1), 2.0, Duration.ofMillis(2));
+        TaskRetryProperties properties = new TaskRetryProperties(true, 3, Duration.ofMillis(1), 2.0,
+                Duration.ofMillis(2));
         RetryTemplate retryTemplate = new TaskRetryConfiguration().taskRetryTemplate(properties);
         service = new TaskExecutionService(
                 persistence, registry, new ObjectMapper(), retryTemplate, properties, leaseManager);

@@ -24,9 +24,10 @@ class RefreshTokenCleanupIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         jdbcTemplate.update("""
                 INSERT INTO users (email, display_name, password_hash, created_at, updated_at)
                 VALUES ('cleanup@example.com', 'Cleanup', 'hash', NOW(), NOW())
@@ -49,7 +50,11 @@ class RefreshTokenCleanupIntegrationTest {
                 .isEqualTo(2);
     }
 
-    private void insert(String hash, Instant expiresAt, Instant revokedAt) {
+    private void insert(
+            String hash,
+            Instant expiresAt,
+            Instant revokedAt
+    ) {
         jdbcTemplate.update("""
                 INSERT INTO refresh_tokens (user_id, token_hash, expires_at, revoked_at, created_at)
                 VALUES (1, ?, ?, ?, NOW())

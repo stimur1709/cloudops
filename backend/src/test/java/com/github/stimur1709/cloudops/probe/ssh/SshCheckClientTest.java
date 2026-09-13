@@ -28,7 +28,7 @@ class SshCheckClientTest {
         KeyPair hostKey = keyPair();
         try (LocalSshServer server = server(hostKey, null)) {
             SshCheckOutcome outcome = client(new SshProperties(
-                            SshHostKeyVerification.ACCEPT_ALL, temporaryDirectory.resolve("missing-known-hosts")))
+                    SshHostKeyVerification.ACCEPT_ALL, temporaryDirectory.resolve("missing-known-hosts")))
                     .execute(
                             "127.0.0.1",
                             server.port(),
@@ -50,7 +50,7 @@ class SshCheckClientTest {
         String privateKey = pem(userKey);
         try (LocalSshServer server = server(hostKey, userKey)) {
             SshCheckOutcome outcome = client(new SshProperties(
-                            SshHostKeyVerification.ACCEPT_ALL, temporaryDirectory.resolve("missing-known-hosts")))
+                    SshHostKeyVerification.ACCEPT_ALL, temporaryDirectory.resolve("missing-known-hosts")))
                     .execute("127.0.0.1", server.port(), new ResolvedSshPrivateKey("cloudops", privateKey), 3000);
 
             assertThat(outcome.completed()).as(outcome.toString()).isTrue();
@@ -63,13 +63,13 @@ class SshCheckClientTest {
     void distinguishesAuthenticationAndHostKeyFailures() throws Exception {
         KeyPair hostKey = keyPair();
         try (LocalSshServer server = server(hostKey, null)) {
-            SshCheckClient client =
-                    client(new SshProperties(SshHostKeyVerification.KNOWN_HOSTS, knownHosts(server.port(), hostKey)));
+            SshCheckClient client = client(
+                    new SshProperties(SshHostKeyVerification.KNOWN_HOSTS, knownHosts(server.port(), hostKey)));
             SshCheckOutcome authentication = client.execute(
                     "127.0.0.1", server.port(), new ResolvedUsernamePassword("cloudops", "wrong-password"), 3000);
             Files.writeString(temporaryDirectory.resolve("untrusted-known-hosts"), "", StandardCharsets.UTF_8);
             SshCheckOutcome hostKeyFailure = client(new SshProperties(
-                            SshHostKeyVerification.KNOWN_HOSTS, temporaryDirectory.resolve("untrusted-known-hosts")))
+                    SshHostKeyVerification.KNOWN_HOSTS, temporaryDirectory.resolve("untrusted-known-hosts")))
                     .execute(
                             "127.0.0.1",
                             server.port(),
@@ -85,20 +85,32 @@ class SshCheckClientTest {
         return new SshCheckClient(new SshClient(properties));
     }
 
-    private LocalSshServer server(KeyPair hostKey, KeyPair acceptedUserKey) throws Exception {
+    private LocalSshServer server(
+            KeyPair hostKey,
+            KeyPair acceptedUserKey
+    ) throws Exception {
         SshServer server = SshServer.setUpDefaultServer();
         server.setHost("127.0.0.1");
         server.setPort(0);
         server.setKeyPairProvider(KeyPairProvider.wrap(hostKey));
         server.setPasswordAuthenticator(
-                (username, password, session) -> username.equals("cloudops") && password.equals("correct-password"));
-        server.setPublickeyAuthenticator((username, key, session) ->
-                username.equals("cloudops") && acceptedUserKey != null && key.equals(acceptedUserKey.getPublic()));
+                (
+                        username,
+                        password,
+                        session) -> username.equals("cloudops") && password.equals("correct-password"));
+        server.setPublickeyAuthenticator((
+                username,
+                key,
+                session) -> username.equals("cloudops") && acceptedUserKey != null
+                        && key.equals(acceptedUserKey.getPublic()));
         server.start();
         return new LocalSshServer(server);
     }
 
-    private Path knownHosts(int port, KeyPair hostKey) throws Exception {
+    private Path knownHosts(
+            int port,
+            KeyPair hostKey
+    ) throws Exception {
         Path path = temporaryDirectory.resolve("known-hosts-" + port);
         Files.writeString(
                 path,
@@ -114,7 +126,7 @@ class SshCheckClientTest {
     }
 
     private String pem(KeyPair keyPair) {
-        String encoded = Base64.getMimeEncoder(64, new byte[] {'\n'})
+        String encoded = Base64.getMimeEncoder(64, new byte[] { '\n' })
                 .encodeToString(keyPair.getPrivate().getEncoded());
         return "-----BEGIN PRIVATE KEY-----\n" + encoded + "\n-----END PRIVATE KEY-----\n";
     }

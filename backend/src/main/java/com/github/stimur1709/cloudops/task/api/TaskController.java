@@ -24,13 +24,21 @@ public class TaskController {
     }
 
     @GetMapping("/{id}")
-    public TaskResponse get(@PathVariable long id, Authentication authentication) {
+    public TaskResponse get(
+            @PathVariable
+            long id,
+            Authentication authentication
+    ) {
         return TaskResponse.from(taskService.get(id, CurrentUser.id(authentication)));
     }
 
     @PostMapping("/search")
     public SearchResponse<TaskResponse> search(
-            @Valid @RequestBody SearchRequest request, Authentication authentication) {
+            @Valid
+            @RequestBody
+            SearchRequest request,
+            Authentication authentication
+    ) {
         return SearchResponse.from(
                 taskService.search(request.toQuery(), CurrentUser.id(authentication)), TaskResponse::from);
     }

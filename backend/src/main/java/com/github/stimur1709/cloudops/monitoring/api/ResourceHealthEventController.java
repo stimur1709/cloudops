@@ -24,7 +24,13 @@ public class ResourceHealthEventController {
 
     @PostMapping("/search")
     public SearchResponse<ResourceHealthEventResponse> search(
-            @PathVariable long resourceId, @Valid @RequestBody SearchRequest request, Authentication authentication) {
+            @PathVariable
+            long resourceId,
+            @Valid
+            @RequestBody
+            SearchRequest request,
+            Authentication authentication
+    ) {
         return SearchResponse.from(
                 eventService.search(resourceId, request.toQuery(), CurrentUser.id(authentication)),
                 ResourceHealthEventResponse::from);

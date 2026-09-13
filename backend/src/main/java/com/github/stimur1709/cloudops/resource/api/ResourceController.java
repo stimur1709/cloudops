@@ -27,7 +27,10 @@ public class ResourceController {
     private final ResourceService resourceService;
     private final ResourceConfigMapper configMapper;
 
-    public ResourceController(ResourceService resourceService, ResourceConfigMapper configMapper) {
+    public ResourceController(
+            ResourceService resourceService,
+            ResourceConfigMapper configMapper
+    ) {
         this.resourceService = resourceService;
         this.configMapper = configMapper;
     }
@@ -35,7 +38,11 @@ public class ResourceController {
     @PostMapping
     @ApiResponse(responseCode = "201", description = "Created", useReturnTypeSchema = true)
     public ResponseEntity<ResourceResponse> create(
-            @Valid @RequestBody CreateResourceRequest request, Authentication authentication) {
+            @Valid
+            @RequestBody
+            CreateResourceRequest request,
+            Authentication authentication
+    ) {
         ResourceDetails resource = resourceService.create(
                 request.name(),
                 request.type(),
@@ -49,13 +56,21 @@ public class ResourceController {
     }
 
     @GetMapping("/{id}")
-    public ResourceResponse get(@PathVariable long id, Authentication authentication) {
+    public ResourceResponse get(
+            @PathVariable
+            long id,
+            Authentication authentication
+    ) {
         return ResourceResponse.from(resourceService.get(id, CurrentUser.id(authentication)), configMapper);
     }
 
     @PostMapping("/search")
     public SearchResponse<ResourceResponse> search(
-            @Valid @RequestBody SearchRequest request, Authentication authentication) {
+            @Valid
+            @RequestBody
+            SearchRequest request,
+            Authentication authentication
+    ) {
         return SearchResponse.from(
                 resourceService.search(request.toQuery(), CurrentUser.id(authentication)),
                 resource -> ResourceResponse.from(resource, configMapper));
@@ -63,7 +78,13 @@ public class ResourceController {
 
     @PutMapping("/{id}")
     public ResourceResponse update(
-            @PathVariable long id, @Valid @RequestBody UpdateResourceRequest request, Authentication authentication) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            UpdateResourceRequest request,
+            Authentication authentication
+    ) {
         ResourceDetails resource = resourceService.update(
                 id,
                 request.name(),
@@ -77,7 +98,11 @@ public class ResourceController {
 
     @DeleteMapping("/{id}")
     @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
-    public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
+    public ResponseEntity<Void> delete(
+            @PathVariable
+            long id,
+            Authentication authentication
+    ) {
         resourceService.delete(id, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();
     }

@@ -5,13 +5,12 @@ import com.github.stimur1709.cloudops.credential.application.ResolvedSshPrivateK
 import com.github.stimur1709.cloudops.credential.application.ResolvedUsernamePassword;
 
 public enum SshAuthMethod {
-    PASSWORD,
-    PUBLIC_KEY;
+    PASSWORD, PUBLIC_KEY;
 
     static SshAuthMethod from(ResolvedCredential credential) {
         return switch (credential) {
-            case ResolvedUsernamePassword ignored -> PASSWORD;
-            case ResolvedSshPrivateKey ignored -> PUBLIC_KEY;
+        case ResolvedUsernamePassword ignored -> PASSWORD;
+        case ResolvedSshPrivateKey ignored -> PUBLIC_KEY;
         };
     }
 }

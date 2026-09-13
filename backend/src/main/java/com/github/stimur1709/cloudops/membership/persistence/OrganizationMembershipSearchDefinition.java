@@ -9,12 +9,12 @@ import java.time.Instant;
 public final class OrganizationMembershipSearchDefinition {
 
     public static final JpaSearchDefinition<OrganizationMembershipEntity> DEFINITION = JpaSearchDefinition.builder(
-                    OrganizationMembershipEntity.class)
+            OrganizationMembershipEntity.class)
             .field(
                     OrganizationMembershipEntity_.ID,
                     JpaSearchField.<OrganizationMembershipEntity, Long>comparable(
-                                    root -> root.get(OrganizationMembershipEntity_.id),
-                                    SearchValueConverter.longInteger())
+                            root -> root.get(OrganizationMembershipEntity_.id),
+                            SearchValueConverter.longInteger())
                             .sortable())
             .field(
                     OrganizationMembershipEntity_.ORGANIZATION_ID,
@@ -24,29 +24,30 @@ public final class OrganizationMembershipSearchDefinition {
             .field(
                     OrganizationMembershipEntity_.USER_ID,
                     JpaSearchField.<OrganizationMembershipEntity, Long>comparable(
-                                    root -> root.get(OrganizationMembershipEntity_.userId),
-                                    SearchValueConverter.longInteger())
+                            root -> root.get(OrganizationMembershipEntity_.userId),
+                            SearchValueConverter.longInteger())
                             .sortable())
             .field(
                     OrganizationMembershipEntity_.ROLE,
                     JpaSearchField.<OrganizationMembershipEntity, MembershipRole>equality(
-                                    root -> root.get(OrganizationMembershipEntity_.role),
-                                    SearchValueConverter.enumeration(MembershipRole.class))
+                            root -> root.get(OrganizationMembershipEntity_.role),
+                            SearchValueConverter.enumeration(MembershipRole.class))
                             .sortable())
             .field(
                     OrganizationMembershipEntity_.CREATED_AT,
                     JpaSearchField.<OrganizationMembershipEntity, Instant>comparable(
-                                    root -> root.get(OrganizationMembershipEntity_.createdAt),
-                                    SearchValueConverter.instant())
+                            root -> root.get(OrganizationMembershipEntity_.createdAt),
+                            SearchValueConverter.instant())
                             .sortable())
             .field(
                     OrganizationMembershipEntity_.UPDATED_AT,
                     JpaSearchField.<OrganizationMembershipEntity, Instant>comparable(
-                                    root -> root.get(OrganizationMembershipEntity_.updatedAt),
-                                    SearchValueConverter.instant())
+                            root -> root.get(OrganizationMembershipEntity_.updatedAt),
+                            SearchValueConverter.instant())
                             .sortable())
             .defaultSort(OrganizationMembershipEntity_.ID)
             .build();
 
-    private OrganizationMembershipSearchDefinition() {}
+    private OrganizationMembershipSearchDefinition() {
+    }
 }

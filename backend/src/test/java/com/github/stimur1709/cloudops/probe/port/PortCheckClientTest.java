@@ -15,8 +15,8 @@ class PortCheckClientTest {
     @Test
     void connectsToLocalTcpServerAndReportsResponseTime() throws Exception {
         try (ServerSocket server = new ServerSocket(0)) {
-            PortCheckOutcome outcome =
-                    new PortCheckClient(Duration.ofSeconds(1)).execute("127.0.0.1", server.getLocalPort());
+            PortCheckOutcome outcome = new PortCheckClient(Duration.ofSeconds(1)).execute("127.0.0.1",
+                    server.getLocalPort());
 
             assertThat(outcome.completed()).isTrue();
             assertThat(outcome.result().host()).isEqualTo("127.0.0.1");
@@ -32,8 +32,14 @@ class PortCheckClientTest {
         assertFailure(new UnknownHostException(), ProbeErrorCode.DNS_ERROR);
     }
 
-    private void assertFailure(java.io.IOException exception, ProbeErrorCode expectedCode) {
-        PortCheckClient client = new PortCheckClient(Duration.ofSeconds(1), (host, port, timeout) -> {
+    private void assertFailure(
+            java.io.IOException exception,
+            ProbeErrorCode expectedCode
+    ) {
+        PortCheckClient client = new PortCheckClient(Duration.ofSeconds(1), (
+                host,
+                port,
+                timeout) -> {
             throw exception;
         });
 

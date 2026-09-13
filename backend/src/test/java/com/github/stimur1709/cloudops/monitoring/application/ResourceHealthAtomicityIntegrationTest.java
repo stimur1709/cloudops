@@ -40,19 +40,22 @@ class ResourceHealthAtomicityIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health,
-                    outbox_messages, tasks, organization_memberships, resources, users, organizations
-                    RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health,
+                            outbox_messages, tasks, organization_memberships, resources, users, organizations
+                            RESTART IDENTITY
+                        """);
         long organizationId = jdbcTemplate.queryForObject("""
                 INSERT INTO organizations (name, created_at, updated_at)
                 VALUES ('Atomic health', now(), now()) RETURNING id
                 """, Long.class);
-        resourceId = jdbcTemplate.queryForObject("""
-                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
-                VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{"url":"https://example.com"}'::jsonb, now(), now()) RETURNING id
-                """, Long.class, organizationId);
+        resourceId = jdbcTemplate.queryForObject(
+                """
+                        INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                        VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{"url":"https://example.com"}'::jsonb, now(), now()) RETURNING id
+                        """,
+                Long.class, organizationId);
         jdbcTemplate.update(
                 "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')", resourceId);
         monitorId = jdbcTemplate.queryForObject("""
@@ -67,15 +70,15 @@ class ResourceHealthAtomicityIntegrationTest {
         when(eventRepository.save(any(ResourceHealthEventEntity.class)))
                 .thenThrow(new IllegalStateException("event persistence failed"));
 
-        assertThatThrownBy(() ->
-                        persistenceService.saveResult(monitorId, Instant.now(), objectMapper.createObjectNode(), true))
+        assertThatThrownBy(
+                () -> persistenceService.saveResult(monitorId, Instant.now(), objectMapper.createObjectNode(), true))
                 .isInstanceOf(IllegalStateException.class);
 
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT health_status FROM resource_health WHERE resource_id = ?", String.class, resourceId))
+                "SELECT health_status FROM resource_health WHERE resource_id = ?", String.class, resourceId))
                 .isEqualTo("UNKNOWN");
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT health_status FROM monitors WHERE id = ?", String.class, monitorId))
+                "SELECT health_status FROM monitors WHERE id = ?", String.class, monitorId))
                 .isEqualTo("UNKNOWN");
     }
 }

@@ -8,17 +8,26 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record UsernamePasswordCredentialRequest(
-        @NotBlank(message = "Name must not be blank") @Size(max = 100) String name,
+        @NotBlank(message = "Name must not be blank")
+        @Size(max = 100)
+        String name,
 
-        @NotNull(message = "Type is required") CredentialType type,
+        @NotNull(message = "Type is required")
+        CredentialType type,
 
-        @NotBlank(message = "Username must not be blank") @Size(max = 255) String username,
+        @NotBlank(message = "Username must not be blank")
+        @Size(max = 255)
+        String username,
 
-        @NotBlank(message = "Password must not be blank") @Schema(accessMode = Schema.AccessMode.WRITE_ONLY)
-        String password)
-        implements CredentialRequest {
+        @NotBlank(message = "Password must not be blank")
+        @Schema(accessMode = Schema.AccessMode.WRITE_ONLY)
+        String password
+)
+        implements
+        CredentialRequest {
 
-    @AssertTrue(message = "Type must be USERNAME_PASSWORD") @Schema(hidden = true)
+    @AssertTrue(message = "Type must be USERNAME_PASSWORD")
+    @Schema(hidden = true)
     public boolean isTypeValid() {
         return type == CredentialType.USERNAME_PASSWORD;
     }

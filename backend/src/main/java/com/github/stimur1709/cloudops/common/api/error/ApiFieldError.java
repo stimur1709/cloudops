@@ -8,4 +8,7 @@ public record ApiFieldError(
         @Schema(description = "Field path; omitted for an object-level violation")
         String field,
 
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String message) {}
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+        String message
+) {
+}

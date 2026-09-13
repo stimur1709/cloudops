@@ -15,12 +15,21 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("cloudops.monitoring")
 public record MonitoringProperties(
         boolean schedulerEnabled,
-        @NotNull @DurationMin(nanos = 1) Duration pollInterval,
-        @Min(1) int batchSize,
-        @Min(1) int minimumIntervalSeconds,
-        @NotNull @DurationMin(nanos = 1) Duration retentionPollInterval,
-        @Min(1) int retentionBatchSize,
-        @NotNull Map<ProbeType, @Valid DefaultProbeSettings> defaults) {
+        @NotNull
+        @DurationMin(nanos = 1)
+        Duration pollInterval,
+        @Min(1)
+        int batchSize,
+        @Min(1)
+        int minimumIntervalSeconds,
+        @NotNull
+        @DurationMin(nanos = 1)
+        Duration retentionPollInterval,
+        @Min(1)
+        int retentionBatchSize,
+        @NotNull
+        Map<ProbeType, @Valid DefaultProbeSettings> defaults
+) {
     public MonitoringProperties {
         if (defaults != null) {
             for (ProbeType type : ProbeType.values()) {

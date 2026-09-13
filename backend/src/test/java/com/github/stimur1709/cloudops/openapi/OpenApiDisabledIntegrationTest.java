@@ -25,11 +25,11 @@ class OpenApiDisabledIntegrationTest {
                 .apply(springSecurity())
                 .build();
         for (String path : new String[] {
-            "/v3/api-docs",
-            "/v3/api-docs.yaml",
-            "/v3/api-docs/swagger-config",
-            "/swagger-ui.html",
-            "/swagger-ui/index.html"
+                "/v3/api-docs",
+                "/v3/api-docs.yaml",
+                "/v3/api-docs/swagger-config",
+                "/swagger-ui.html",
+                "/swagger-ui/index.html"
         }) {
             mvc.perform(get(path)).andExpect(status().isNotFound());
         }

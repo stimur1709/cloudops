@@ -34,20 +34,34 @@ public class RefreshTokenEntity {
     @Column(name = "replaced_by")
     private Long replacedBy;
 
-    protected RefreshTokenEntity() {}
+    protected RefreshTokenEntity() {
+    }
 
-    private RefreshTokenEntity(long userId, String tokenHash, Instant expiresAt, Instant createdAt) {
+    private RefreshTokenEntity(
+            long userId,
+            String tokenHash,
+            Instant expiresAt,
+            Instant createdAt
+    ) {
         this.userId = userId;
         this.tokenHash = tokenHash;
         this.expiresAt = expiresAt;
         this.createdAt = createdAt;
     }
 
-    public static RefreshTokenEntity create(long userId, String tokenHash, Instant expiresAt, Instant createdAt) {
+    public static RefreshTokenEntity create(
+            long userId,
+            String tokenHash,
+            Instant expiresAt,
+            Instant createdAt
+    ) {
         return new RefreshTokenEntity(userId, tokenHash, expiresAt, createdAt);
     }
 
-    public void rotate(Instant revokedAt, long replacementId) {
+    public void rotate(
+            Instant revokedAt,
+            long replacementId
+    ) {
         this.revokedAt = revokedAt;
         this.replacedBy = replacementId;
     }

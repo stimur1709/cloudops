@@ -6,10 +6,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(
-        prefix = "cloudops.security.refresh",
-        name = "cleanup-enabled",
-        havingValue = "true",
-        matchIfMissing = true)
+        prefix = "cloudops.security.refresh", name = "cleanup-enabled", havingValue = "true", matchIfMissing = true
+)
 public class RefreshTokenCleanupScheduler {
 
     private final RefreshTokenCleanupService service;

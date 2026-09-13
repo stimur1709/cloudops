@@ -17,21 +17,31 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 public record UpdateResourceRequest(
-        @NotBlank(message = "Name must not be blank") @Size(max = 100, message = "Name must be at most 100 characters") String name,
+        @NotBlank(message = "Name must not be blank")
+        @Size(max = 100, message = "Name must be at most 100 characters")
+        String name,
 
-        @NotNull(message = "Type is required") ResourceType type,
-        @NotNull(message = "Status is required") ResourceStatus status,
+        @NotNull(message = "Type is required")
+        ResourceType type,
+        @NotNull(message = "Status is required")
+        ResourceStatus status,
 
-        @NotNull(message = "Organization id is required") @Positive(message = "Organization id must be positive") Long organizationId,
+        @NotNull(message = "Organization id is required")
+        @Positive(message = "Organization id must be positive")
+        Long organizationId,
 
-        @NotNull(message = "Config is required") @Valid @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
+        @NotNull(message = "Config is required")
+        @Valid
+        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type")
         @Schema(
                 oneOf = {
-                    ServerResourceConfig.class,
-                    NetworkDeviceResourceConfig.class,
-                    DatabaseResourceConfig.class,
-                    ServiceResourceConfig.class,
-                    OtherResourceConfig.class
-                },
-                description = "Selected by the sibling type field; config has no nested discriminator")
-        ResourceConfig config) {}
+                        ServerResourceConfig.class,
+                        NetworkDeviceResourceConfig.class,
+                        DatabaseResourceConfig.class,
+                        ServiceResourceConfig.class,
+                        OtherResourceConfig.class
+                }, description = "Selected by the sibling type field; config has no nested discriminator"
+        )
+        ResourceConfig config
+){
+}

@@ -11,5 +11,6 @@ public interface OrganizationJpaRepository extends JpaRepository<OrganizationEnt
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT organization FROM OrganizationEntity organization WHERE organization.id = :id")
-    Optional<OrganizationEntity> findByIdForUpdate(@Param("id") long id);
+    Optional<OrganizationEntity> findByIdForUpdate(@Param("id")
+    long id);
 }

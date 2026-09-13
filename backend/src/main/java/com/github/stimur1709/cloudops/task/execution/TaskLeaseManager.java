@@ -19,18 +19,27 @@ public class TaskLeaseManager {
     private final TaskPersistenceService persistenceService;
     private final TaskLeaseProperties properties;
 
-    public TaskLeaseManager(TaskPersistenceService persistenceService, TaskLeaseProperties properties) {
+    public TaskLeaseManager(
+            TaskPersistenceService persistenceService,
+            TaskLeaseProperties properties
+    ) {
         this.persistenceService = persistenceService;
         this.properties = properties;
     }
 
-    public void register(long taskId, UUID executionId) {
+    public void register(
+            long taskId,
+            UUID executionId
+    ) {
         if (properties.enabled()) {
             activeExecutions.put(taskId, executionId);
         }
     }
 
-    public void unregister(long taskId, UUID executionId) {
+    public void unregister(
+            long taskId,
+            UUID executionId
+    ) {
         activeExecutions.remove(taskId, executionId);
     }
 
@@ -42,7 +51,10 @@ public class TaskLeaseManager {
         activeExecutions.forEach(this::renew);
     }
 
-    private void renew(long taskId, UUID executionId) {
+    private void renew(
+            long taskId,
+            UUID executionId
+    ) {
         try {
             if (!persistenceService.renewLease(taskId, executionId)) {
                 activeExecutions.remove(taskId, executionId);

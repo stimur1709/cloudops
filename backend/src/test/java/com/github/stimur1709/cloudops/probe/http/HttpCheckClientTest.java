@@ -21,7 +21,10 @@ class HttpCheckClientTest {
         assertFailure(new IOException("other"), ProbeErrorCode.HTTP_CLIENT_ERROR);
     }
 
-    private void assertFailure(IOException cause, ProbeErrorCode expectedCode) {
+    private void assertFailure(
+            IOException cause,
+            ProbeErrorCode expectedCode
+    ) {
         HttpCheckOutcome outcome = client.classify(new IOException(cause));
 
         assertThat(outcome.completed()).isFalse();

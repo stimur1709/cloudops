@@ -16,8 +16,7 @@ import org.junit.jupiter.api.Test;
 
 class MonitoringPropertiesTest {
 
-    private final Validator validator =
-            Validation.buildDefaultValidatorFactory().getValidator();
+    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Test
     void acceptsPositiveDurations() {
@@ -27,15 +26,18 @@ class MonitoringPropertiesTest {
 
     @Test
     void rejectsNonPositiveDurations() {
-        Set<ConstraintViolation<MonitoringProperties>> violations =
-                validator.validate(properties(Duration.ZERO, Duration.ofSeconds(-1)));
+        Set<ConstraintViolation<MonitoringProperties>> violations = validator
+                .validate(properties(Duration.ZERO, Duration.ofSeconds(-1)));
 
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsExactlyInAnyOrder("pollInterval", "retentionPollInterval");
     }
 
-    private MonitoringProperties properties(Duration pollInterval, Duration retentionPollInterval) {
+    private MonitoringProperties properties(
+            Duration pollInterval,
+            Duration retentionPollInterval
+    ) {
         var defaults = Arrays.stream(ProbeType.values())
                 .collect(Collectors.toMap(
                         type -> type,

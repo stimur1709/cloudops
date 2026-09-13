@@ -14,7 +14,10 @@ public class RefreshTokenCleanupService {
     private final Clock clock;
 
     public RefreshTokenCleanupService(
-            RefreshTokenCleanupRepository repository, RefreshTokenProperties properties, Clock clock) {
+            RefreshTokenCleanupRepository repository,
+            RefreshTokenProperties properties,
+            Clock clock
+    ) {
         this.repository = repository;
         this.properties = properties;
         this.clock = clock;

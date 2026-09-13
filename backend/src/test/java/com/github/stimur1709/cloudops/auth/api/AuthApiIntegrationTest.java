@@ -62,9 +62,10 @@ class AuthApiIntegrationTest {
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext)
                 .apply(springSecurity())
                 .build();
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
     }
 
     @Test
@@ -141,8 +142,7 @@ class AuthApiIntegrationTest {
     @Test
     void refreshRotatesCookieAndRejectsPreviousToken() throws Exception {
         registerAndGetId("user@example.com", "User");
-        Cookie original =
-                requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
+        Cookie original = requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
 
         MvcResult refreshed = refresh(original)
                 .andExpect(status().isOk())
@@ -152,8 +152,8 @@ class AuthApiIntegrationTest {
         Cookie replacement = requireRefreshCookie(refreshed);
         assertThat(replacement.getValue()).isNotEqualTo(original.getValue());
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM refresh_tokens WHERE revoked_at IS NOT NULL AND replaced_by IS NOT NULL",
-                        Integer.class))
+                "SELECT COUNT(*) FROM refresh_tokens WHERE revoked_at IS NOT NULL AND replaced_by IS NOT NULL",
+                Integer.class))
                 .isEqualTo(1);
 
         refresh(original)
@@ -167,8 +167,7 @@ class AuthApiIntegrationTest {
     @Test
     void invalidAndExpiredRefreshTokensHaveControlledErrors() throws Exception {
         registerAndGetId("user@example.com", "User");
-        Cookie refresh =
-                requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
+        Cookie refresh = requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
         jdbcTemplate.update("UPDATE refresh_tokens SET expires_at = NOW() - INTERVAL '1 second'");
 
         refresh(refresh)
@@ -202,10 +201,8 @@ class AuthApiIntegrationTest {
     @Test
     void concurrentRefreshAllowsOnlyOneRotation() throws Exception {
         registerAndGetId("user@example.com", "User");
-        Cookie original =
-                requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
-        Callable<MvcResult> request = () ->
-                refresh(new Cookie(original.getName(), original.getValue())).andReturn();
+        Cookie original = requireRefreshCookie(login("user@example.com", PASSWORD).andReturn());
+        Callable<MvcResult> request = () -> refresh(new Cookie(original.getName(), original.getValue())).andReturn();
 
         try (var executor = Executors.newFixedThreadPool(2)) {
             var futures = executor.invokeAll(List.of(request, request));
@@ -226,7 +223,7 @@ class AuthApiIntegrationTest {
                     .findFirst()
                     .orElseThrow();
             assertThat(JsonPath.read(rejected.getResponse().getContentAsString(), "$.code")
-                            .toString())
+                    .toString())
                     .isEqualTo("REFRESH_TOKEN_REVOKED");
         }
     }
@@ -288,12 +285,12 @@ class AuthApiIntegrationTest {
         register("public@example.com", "Public", PASSWORD).andExpect(status().isCreated());
         login("public@example.com", PASSWORD).andExpect(status().isOk());
         mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"other@example.com\",\"displayName\":\"Other\"}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"other@example.com\",\"displayName\":\"Other\"}"))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/organizations")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Secret\"}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Secret\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -303,15 +300,15 @@ class AuthApiIntegrationTest {
         long otherId = registerAndGetId("other@example.com", "Other");
         String ownerToken = loginToken("owner@example.com", PASSWORD);
         String otherToken = loginToken("other@example.com", PASSWORD);
-        String originalHash =
-                jdbcTemplate.queryForObject("SELECT password_hash FROM users WHERE id = ?", String.class, ownerId);
+        String originalHash = jdbcTemplate.queryForObject("SELECT password_hash FROM users WHERE id = ?", String.class,
+                ownerId);
 
         mockMvc.perform(get("/api/users/{id}", otherId).header(HttpHeaders.AUTHORIZATION, bearer(ownerToken)))
                 .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/users/{id}", ownerId)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"OWNER2@example.com\",\"displayName\":\"Owner 2\"}"))
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"OWNER2@example.com\",\"displayName\":\"Owner 2\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("owner2@example.com"));
         assertThat(jdbcTemplate.queryForObject("SELECT password_hash FROM users WHERE id = ?", String.class, ownerId))
@@ -319,19 +316,19 @@ class AuthApiIntegrationTest {
 
         String search = "{\"start\":0,\"size\":10,\"getTotal\":true}";
         mockMvc.perform(post("/api/users/search")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(otherToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(search))
+                .header(HttpHeaders.AUTHORIZATION, bearer(otherToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(search))
                 .andExpect(status().isForbidden());
         mockMvc.perform(post("/api/organizations")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Platform\"}"))
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Platform\"}"))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/users/search")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(search))
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(search))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(2));
     }
@@ -341,9 +338,9 @@ class AuthApiIntegrationTest {
         long userId = registerAndGetId("owner@example.com", "Owner");
         String token = loginToken("owner@example.com", PASSWORD);
         String body = mockMvc.perform(post("/api/organizations")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Platform\"}"))
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Platform\"}"))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
@@ -356,7 +353,11 @@ class AuthApiIntegrationTest {
                 .isEqualTo("OWNER");
     }
 
-    private ResultActions register(String email, String displayName, String password) throws Exception {
+    private ResultActions register(
+            String email,
+            String displayName,
+            String password
+    ) throws Exception {
         return mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -364,7 +365,10 @@ class AuthApiIntegrationTest {
                         """.formatted(email, displayName, password)));
     }
 
-    private long registerAndGetId(String email, String displayName) throws Exception {
+    private long registerAndGetId(
+            String email,
+            String displayName
+    ) throws Exception {
         String body = register(email, displayName, PASSWORD)
                 .andExpect(status().isCreated())
                 .andReturn()
@@ -373,13 +377,19 @@ class AuthApiIntegrationTest {
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }
 
-    private ResultActions login(String email, String password) throws Exception {
+    private ResultActions login(
+            String email,
+            String password
+    ) throws Exception {
         return mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"%s\",\"password\":\"%s\"}".formatted(email, password)));
     }
 
-    private String loginToken(String email, String password) throws Exception {
+    private String loginToken(
+            String email,
+            String password
+    ) throws Exception {
         String body = login(email, password)
                 .andExpect(status().isOk())
                 .andReturn()
@@ -400,7 +410,11 @@ class AuthApiIntegrationTest {
         return java.util.Objects.requireNonNull(result.getResponse().getCookie("cloudops_refresh"));
     }
 
-    private String token(String issuer, Instant issuedAt, Instant expiresAt) {
+    private String token(
+            String issuer,
+            Instant issuedAt,
+            Instant expiresAt
+    ) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .subject("1")

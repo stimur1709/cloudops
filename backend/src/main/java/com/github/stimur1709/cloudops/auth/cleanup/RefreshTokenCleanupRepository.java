@@ -31,11 +31,17 @@ public class RefreshTokenCleanupRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public int deleteBatch(Instant expiredCutoff, Instant revokedCutoff, int batchSize) {
+    public int deleteBatch(
+            Instant expiredCutoff,
+            Instant revokedCutoff,
+            int batchSize
+    ) {
         return jdbcTemplate
                 .query(
                         DELETE_SQL,
-                        (resultSet, _) -> resultSet.getLong(RefreshTokenEntity_.ID),
+                        (
+                                resultSet,
+                                _) -> resultSet.getLong(RefreshTokenEntity_.ID),
                         Timestamp.from(expiredCutoff),
                         Timestamp.from(revokedCutoff),
                         batchSize)

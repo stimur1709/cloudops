@@ -10,7 +10,9 @@ public record MonitoringResultResponse(
         long id,
         long monitorId,
         Instant checkedAt,
-        @Schema(implementation = ProbeExecutionResult.class) JsonNode result) {
+        @Schema(implementation = ProbeExecutionResult.class)
+        JsonNode result
+) {
 
     public static MonitoringResultResponse from(MonitoringResultEntity result) {
         return new MonitoringResultResponse(result.id(), result.monitorId(), result.checkedAt(), result.result());

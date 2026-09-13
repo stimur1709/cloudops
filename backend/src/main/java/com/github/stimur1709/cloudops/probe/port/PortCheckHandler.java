@@ -27,10 +27,10 @@ public class PortCheckHandler implements ProbeHandler {
     @Override
     public boolean isCompatibleWith(ResourceConfig resourceConfig) {
         return switch (resourceConfig) {
-            case ServerResourceConfig server -> server.port() != null;
-            case NetworkDeviceResourceConfig device -> device.managementPort() != null;
-            case DatabaseResourceConfig ignored -> true;
-            default -> false;
+        case ServerResourceConfig server -> server.port() != null;
+        case NetworkDeviceResourceConfig device -> device.managementPort() != null;
+        case DatabaseResourceConfig ignored -> true;
+        default -> false;
         };
     }
 
@@ -46,14 +46,18 @@ public class PortCheckHandler implements ProbeHandler {
 
     private Endpoint endpoint(ResourceConfig resourceConfig) {
         return switch (resourceConfig) {
-            case ServerResourceConfig server when server.port() != null -> new Endpoint(server.host(), server.port());
-            case NetworkDeviceResourceConfig device
-            when device.managementPort() != null -> new Endpoint(device.host(), device.managementPort());
-            case DatabaseResourceConfig database -> new Endpoint(database.host(), database.port());
-            default ->
-                throw new IllegalArgumentException("PORT_CHECK requires resource configuration with host and port");
+        case ServerResourceConfig server when server.port() != null -> new Endpoint(server.host(), server.port());
+        case NetworkDeviceResourceConfig device when device.managementPort() != null ->
+            new Endpoint(device.host(), device.managementPort());
+        case DatabaseResourceConfig database -> new Endpoint(database.host(), database.port());
+        default ->
+            throw new IllegalArgumentException("PORT_CHECK requires resource configuration with host and port");
         };
     }
 
-    private record Endpoint(String host, int port) {}
+    private record Endpoint(
+            String host,
+            int port
+    ) {
+    }
 }

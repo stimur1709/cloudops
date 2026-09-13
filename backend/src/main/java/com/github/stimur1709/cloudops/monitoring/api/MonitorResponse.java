@@ -12,13 +12,16 @@ public record MonitorResponse(
         long id,
         long resourceId,
         ProbeType type,
-        @Schema(nullable = true) Instant nextRunAt,
-        @Schema(nullable = true) Instant lastCheckedAt,
+        @Schema(nullable = true)
+        Instant nextRunAt,
+        @Schema(nullable = true)
+        Instant lastCheckedAt,
 
         @Schema(implementation = ProbeExecutionResult.class, nullable = true)
         JsonNode lastResult,
 
-        HealthStatus healthStatus) {
+        HealthStatus healthStatus
+) {
     public static MonitorResponse from(MonitorEntity monitor) {
         return new MonitorResponse(
                 monitor.id(),

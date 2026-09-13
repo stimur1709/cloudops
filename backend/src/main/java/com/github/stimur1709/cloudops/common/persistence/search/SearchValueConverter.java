@@ -12,7 +12,10 @@ public final class SearchValueConverter<T> {
     private final Function<String, T> converter;
     private final String invalidValueMessage;
 
-    private SearchValueConverter(Function<String, T> converter, String invalidValueMessage) {
+    private SearchValueConverter(
+            Function<String, T> converter,
+            String invalidValueMessage
+    ) {
         this.converter = Objects.requireNonNull(converter);
         this.invalidValueMessage = Objects.requireNonNull(invalidValueMessage);
     }
@@ -30,16 +33,22 @@ public final class SearchValueConverter<T> {
     }
 
     public static <E extends Enum<E>> SearchValueConverter<E> enumeration(Class<E> enumType) {
-        String allowedValues =
-                Arrays.stream(enumType.getEnumConstants()).map(Enum::name).collect(Collectors.joining(", "));
+        String allowedValues = Arrays.stream(enumType.getEnumConstants()).map(Enum::name)
+                .collect(Collectors.joining(", "));
         return of(value -> Enum.valueOf(enumType, value), "Value must be one of: " + allowedValues);
     }
 
-    public static <T> SearchValueConverter<T> of(Function<String, T> converter, String invalidValueMessage) {
+    public static <T> SearchValueConverter<T> of(
+            Function<String, T> converter,
+            String invalidValueMessage
+    ) {
         return new SearchValueConverter<>(converter, invalidValueMessage);
     }
 
-    T convert(String value, String fieldPath) {
+    T convert(
+            String value,
+            String fieldPath
+    ) {
         try {
             return converter.apply(value);
         } catch (RuntimeException exception) {

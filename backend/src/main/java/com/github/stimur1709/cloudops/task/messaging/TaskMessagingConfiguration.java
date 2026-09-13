@@ -31,9 +31,12 @@ public class TaskMessagingConfiguration {
 
     @Bean
     Binding taskExecutionBinding(
-            @Qualifier("taskExecutionQueue") Queue taskExecutionQueue,
-            @Qualifier("taskExchange") DirectExchange taskExchange,
-            TaskMessagingProperties properties) {
+            @Qualifier("taskExecutionQueue")
+            Queue taskExecutionQueue,
+            @Qualifier("taskExchange")
+            DirectExchange taskExchange,
+            TaskMessagingProperties properties
+    ) {
         return BindingBuilder.bind(taskExecutionQueue).to(taskExchange).with(properties.routingKey());
     }
 
@@ -49,9 +52,12 @@ public class TaskMessagingConfiguration {
 
     @Bean
     Binding taskDeadLetterBinding(
-            @Qualifier("taskDeadLetterQueue") Queue taskDeadLetterQueue,
-            @Qualifier("taskDeadLetterExchange") DirectExchange taskDeadLetterExchange,
-            TaskMessagingProperties properties) {
+            @Qualifier("taskDeadLetterQueue")
+            Queue taskDeadLetterQueue,
+            @Qualifier("taskDeadLetterExchange")
+            DirectExchange taskDeadLetterExchange,
+            TaskMessagingProperties properties
+    ) {
         return BindingBuilder.bind(taskDeadLetterQueue)
                 .to(taskDeadLetterExchange)
                 .with(properties.deadLetterRoutingKey());

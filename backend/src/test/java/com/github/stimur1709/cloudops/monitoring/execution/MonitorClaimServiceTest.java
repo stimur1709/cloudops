@@ -27,13 +27,13 @@ class MonitorClaimServiceTest {
     void requestedRunsUseBatchCapacityAndPreserveFuturePeriodicDeadline() {
         MonitorScheduleRepository repository = mock(MonitorScheduleRepository.class);
         MonitoringSettingsResolver resolver = mock(MonitoringSettingsResolver.class);
-        MonitoringProperties properties =
-                new MonitoringProperties(true, Duration.ofSeconds(5), 1, 30, Duration.ofHours(1), 100, null);
+        MonitoringProperties properties = new MonitoringProperties(true, Duration.ofSeconds(5), 1, 30,
+                Duration.ofHours(1), 100, null);
         Instant scheduled = NOW.plusSeconds(1200);
         when(repository.claimRequested(1))
                 .thenReturn(List.of(new ClaimedMonitor(7, 8, 9, ProbeType.HTTP_CHECK, scheduled)));
-        MonitorClaimService service =
-                new MonitorClaimService(repository, resolver, properties, Clock.fixed(NOW, ZoneOffset.UTC));
+        MonitorClaimService service = new MonitorClaimService(repository, resolver, properties,
+                Clock.fixed(NOW, ZoneOffset.UTC));
 
         assertThat(service.claimDue()).containsExactly(7L);
 
@@ -46,8 +46,8 @@ class MonitorClaimServiceTest {
     void periodicClaimResolvesSettingsOnceAndReservesScheduleOnce() {
         MonitorScheduleRepository repository = mock(MonitorScheduleRepository.class);
         MonitoringSettingsResolver resolver = mock(MonitoringSettingsResolver.class);
-        MonitoringProperties properties =
-                new MonitoringProperties(true, Duration.ofSeconds(5), 20, 30, Duration.ofHours(1), 100, null);
+        MonitoringProperties properties = new MonitoringProperties(true, Duration.ofSeconds(5), 20, 30,
+                Duration.ofHours(1), 100, null);
         var claimed = new ClaimedMonitor(7, 8, 9, ProbeType.HTTP_CHECK, NOW);
         when(repository.claimDue(NOW, 20)).thenReturn(List.of(claimed));
         when(resolver.resolve(8, 9, ProbeType.HTTP_CHECK))
@@ -61,8 +61,8 @@ class MonitorClaimServiceTest {
                         null,
                         500,
                         SettingsSource.ORGANIZATION));
-        MonitorClaimService service =
-                new MonitorClaimService(repository, resolver, properties, Clock.fixed(NOW, ZoneOffset.UTC));
+        MonitorClaimService service = new MonitorClaimService(repository, resolver, properties,
+                Clock.fixed(NOW, ZoneOffset.UTC));
 
         assertThat(service.claimDue()).containsExactly(7L);
 

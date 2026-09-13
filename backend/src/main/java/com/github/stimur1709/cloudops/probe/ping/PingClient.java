@@ -17,7 +17,10 @@ public class PingClient {
         this(Duration.ZERO, PingClient::isReachable);
     }
 
-    PingClient(Duration timeout, Reachability reachability) {
+    PingClient(
+            Duration timeout,
+            Reachability reachability
+    ) {
         this.timeout = timeout;
         this.reachability = reachability;
     }
@@ -26,12 +29,14 @@ public class PingClient {
         return execute(host, Math.toIntExact(timeout.toMillis()));
     }
 
-    PingOutcome execute(String host, int timeoutMs) {
+    PingOutcome execute(
+            String host,
+            int timeoutMs
+    ) {
         long startedAt = System.nanoTime();
         try {
             boolean reachable = reachability.isReachable(host, timeoutMs);
-            long responseTimeMs =
-                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             if (reachable) {
                 return PingOutcome.completed(new PingResult(host, responseTimeMs));
             }
@@ -43,12 +48,18 @@ public class PingClient {
         }
     }
 
-    private static boolean isReachable(String host, int timeoutMs) throws IOException {
+    private static boolean isReachable(
+            String host,
+            int timeoutMs
+    ) throws IOException {
         return InetAddress.getByName(host).isReachable(timeoutMs);
     }
 
     @FunctionalInterface
     interface Reachability {
-        boolean isReachable(String host, int timeoutMs) throws IOException;
+        boolean isReachable(
+                String host,
+                int timeoutMs
+        ) throws IOException;
     }
 }

@@ -9,11 +9,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface CredentialJpaRepository extends JpaRepository<CredentialEntity, Long> {
 
-    boolean existsByOrganizationIdAndName(long organizationId, String name);
+    boolean existsByOrganizationIdAndName(
+            long organizationId,
+            String name
+    );
 
-    boolean existsByOrganizationIdAndNameAndIdNot(long organizationId, String name, long id);
+    boolean existsByOrganizationIdAndNameAndIdNot(
+            long organizationId,
+            String name,
+            long id
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT credential FROM CredentialEntity credential WHERE credential.id = :id")
-    Optional<CredentialEntity> findByIdForUpdate(@Param("id") long id);
+    Optional<CredentialEntity> findByIdForUpdate(@Param("id")
+    long id);
 }

@@ -19,9 +19,10 @@ import org.springframework.web.context.WebApplicationContext;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(
         properties = {
-            "cloudops.web.cors.allowed-origins=https://frontend.example.com",
-            "cloudops.web.cors.allow-credentials=false"
-        })
+                "cloudops.web.cors.allowed-origins=https://frontend.example.com",
+                "cloudops.web.cors.allow-credentials=false"
+        }
+)
 class WebCorsCredentialsDisabledIntegrationTest {
 
     private MockMvc mockMvc;
@@ -39,8 +40,8 @@ class WebCorsCredentialsDisabledIntegrationTest {
     @Test
     void disabledCredentialsPolicyOmitsAllowCredentialsHeader() throws Exception {
         mockMvc.perform(options("/api/auth/refresh")
-                        .header(HttpHeaders.ORIGIN, "https://frontend.example.com")
-                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .header(HttpHeaders.ORIGIN, "https://frontend.example.com")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://frontend.example.com"))
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS));

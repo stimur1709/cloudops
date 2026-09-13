@@ -14,7 +14,8 @@ public class MonitorScheduler {
     public MonitorScheduler(
             MonitorClaimService claimService,
             MonitorExecutionService executionService,
-            MonitoringProperties properties) {
+            MonitoringProperties properties
+    ) {
         this.claimService = claimService;
         this.executionService = executionService;
         this.properties = properties;

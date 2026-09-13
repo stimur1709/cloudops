@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
 
-@Import({TestcontainersConfiguration.class, ResourceApiIntegrationTest.ErrorTestController.class})
+@Import({ TestcontainersConfiguration.class, ResourceApiIntegrationTest.ErrorTestController.class })
 @SpringBootTest
 class ResourceApiIntegrationTest {
 
@@ -49,9 +49,10 @@ class ResourceApiIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, 'test@example.com', 'Test', '{noop}unused-password', now(), now())
@@ -132,14 +133,14 @@ class ResourceApiIntegrationTest {
     @Test
     void returnsAllValidationErrorsWithTheirFieldNames() throws Exception {
         mockMvc.perform(post("/api/resources")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "  ",
-                                  "type": null,
-                                  "status": null
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": "  ",
+                          "type": null,
+                          "status": null
+                        }
+                        """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.message").value("Request validation failed"))
@@ -166,15 +167,15 @@ class ResourceApiIntegrationTest {
     @Test
     void returnsFieldErrorForUnknownEnumValue() throws Exception {
         mockMvc.perform(post("/api/resources")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "router-01",
-                                  "type": "ROUTER",
-                                  "status": "ACTIVE",
-                                  "config": {}
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": "router-01",
+                          "type": "ROUTER",
+                          "status": "ACTIVE",
+                          "config": {}
+                        }
+                        """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.path").value("/api/resources"))
@@ -187,8 +188,8 @@ class ResourceApiIntegrationTest {
     @Test
     void returnsUnifiedErrorForMalformedJson() throws Exception {
         mockMvc.perform(post("/api/resources")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.message").value("Request body is invalid"))
@@ -262,14 +263,14 @@ class ResourceApiIntegrationTest {
     @Test
     void returnsFullFieldPathAndEnumNamesForNestedInvalidEnum() throws Exception {
         mockMvc.perform(post("/api/test/nested-enum")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "configuration": {
-                                    "type": "INVALID"
-                                  }
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "configuration": {
+                            "type": "INVALID"
+                          }
+                        }
+                        """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.errors[0].field").value("configuration.type"))
@@ -307,7 +308,11 @@ class ResourceApiIntegrationTest {
                 .andExpect(content().string(not(containsString("sensitive internal detail"))));
     }
 
-    private org.springframework.test.web.servlet.ResultActions createResource(String name, String type, String status)
+    private org.springframework.test.web.servlet.ResultActions createResource(
+            String name,
+            String type,
+            String status
+    )
             throws Exception {
         return mockMvc.perform(
                 post("/api/resources").contentType(MediaType.APPLICATION_JSON).content("""
@@ -319,16 +324,16 @@ class ResourceApiIntegrationTest {
                           "config": %s
                         }
                         """.formatted(
-                                name, type, status, organizationId, configFor(type))));
+                        name, type, status, organizationId, configFor(type))));
     }
 
     private String configFor(String type) {
         return switch (type) {
-            case "NETWORK_DEVICE" -> "{\"host\":\"10.0.0.1\"}";
-            case "SERVER" -> "{\"host\":\"10.0.0.15\"}";
-            case "DATABASE" -> "{\"host\":\"db.internal\",\"port\":5432,\"database\":\"orders\"}";
-            case "SERVICE" -> "{\"url\":\"https://api.example.com\"}";
-            default -> "{}";
+        case "NETWORK_DEVICE" -> "{\"host\":\"10.0.0.1\"}";
+        case "SERVER" -> "{\"host\":\"10.0.0.15\"}";
+        case "DATABASE" -> "{\"host\":\"db.internal\",\"port\":5432,\"database\":\"orders\"}";
+        case "SERVICE" -> "{\"url\":\"https://api.example.com\"}";
+        default -> "{}";
         };
     }
 
@@ -341,13 +346,19 @@ class ResourceApiIntegrationTest {
         }
 
         @GetMapping("/api/test/count/{count}")
-        void count(@PathVariable long count) {}
+        void count(@PathVariable
+        long count) {
+        }
 
         @GetMapping("/api/test/modes/{mode}")
-        void mode(@PathVariable TestMode mode) {}
+        void mode(@PathVariable
+        TestMode mode) {
+        }
 
         @PostMapping("/api/test/nested-enum")
-        void nestedEnum(@RequestBody NestedEnumRequest request) {}
+        void nestedEnum(@RequestBody
+        NestedEnumRequest request) {
+        }
 
         @GetMapping("/api/test/global-field-error")
         ApiFieldError globalFieldError() {
@@ -355,13 +366,14 @@ class ResourceApiIntegrationTest {
         }
     }
 
-    record NestedEnumRequest(NestedConfiguration configuration) {}
+    record NestedEnumRequest(NestedConfiguration configuration) {
+    }
 
-    record NestedConfiguration(TestMode type) {}
+    record NestedConfiguration(TestMode type) {
+    }
 
     enum TestMode {
-        FIRST,
-        SECOND;
+        FIRST, SECOND;
 
         @Override
         public String toString() {

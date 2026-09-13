@@ -27,23 +27,37 @@ public class OrganizationProbeSettingsController {
     }
 
     @GetMapping
-    public List<ProbeSettingsResponse> list(@PathVariable long organizationId, Authentication auth) {
+    public List<ProbeSettingsResponse> list(
+            @PathVariable
+            long organizationId,
+            Authentication auth
+    ) {
         return service.listOrganization(organizationId, CurrentUser.id(auth));
     }
 
     @PutMapping("/{probeType}")
     public ProbeSettingsResponse put(
-            @PathVariable long organizationId,
-            @PathVariable ProbeType probeType,
-            @Valid @RequestBody ProbeSettingsRequest request,
-            Authentication auth) {
+            @PathVariable
+            long organizationId,
+            @PathVariable
+            ProbeType probeType,
+            @Valid
+            @RequestBody
+            ProbeSettingsRequest request,
+            Authentication auth
+    ) {
         return service.putOrganization(organizationId, probeType, request, CurrentUser.id(auth));
     }
 
     @DeleteMapping("/{probeType}")
     @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> delete(
-            @PathVariable long organizationId, @PathVariable ProbeType probeType, Authentication auth) {
+            @PathVariable
+            long organizationId,
+            @PathVariable
+            ProbeType probeType,
+            Authentication auth
+    ) {
         service.deleteOrganization(organizationId, probeType, CurrentUser.id(auth));
         return ResponseEntity.noContent().build();
     }

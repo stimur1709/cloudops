@@ -21,7 +21,8 @@ public class MonitorClaimService {
             MonitorScheduleRepository scheduleRepository,
             MonitoringSettingsResolver settingsResolver,
             MonitoringProperties properties,
-            Clock clock) {
+            Clock clock
+    ) {
         this.scheduleRepository = scheduleRepository;
         this.settingsResolver = settingsResolver;
         this.properties = properties;
@@ -44,7 +45,10 @@ public class MonitorClaimService {
         return claimed.stream().map(ClaimedMonitor::id).toList();
     }
 
-    private void reserve(ClaimedMonitor monitor, Instant now) {
+    private void reserve(
+            ClaimedMonitor monitor,
+            Instant now
+    ) {
         Instant nextRunAt = monitor.nextRunAt();
         if (!nextRunAt.isAfter(now)) {
             var settings = settingsResolver.resolve(monitor.resourceId(), monitor.organizationId(), monitor.type());

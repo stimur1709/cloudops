@@ -27,7 +27,8 @@ public class TaskCapabilityResolver {
             ResourceJpaRepository resourceRepository,
             OrganizationAuthorization authorization,
             ResourceConfigMapper configMapper,
-            TaskCapabilityProviderRegistry providerRegistry) {
+            TaskCapabilityProviderRegistry providerRegistry
+    ) {
         this.resourceRepository = resourceRepository;
         this.authorization = authorization;
         this.configMapper = configMapper;
@@ -35,7 +36,10 @@ public class TaskCapabilityResolver {
     }
 
     @Transactional(readOnly = true)
-    public List<TaskCapability> resolve(long resourceId, long currentUserId) {
+    public List<TaskCapability> resolve(
+            long resourceId,
+            long currentUserId
+    ) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
         MembershipRole role = authorization.requireMember(resource.organizationId(), currentUserId);
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
@@ -44,7 +48,11 @@ public class TaskCapabilityResolver {
                 .toList();
     }
 
-    public void requireAvailable(ResourceEntity resource, TaskType type, long currentUserId) {
+    public void requireAvailable(
+            ResourceEntity resource,
+            TaskType type,
+            long currentUserId
+    ) {
         MembershipRole role = authorization.requireMember(resource.organizationId(), currentUserId);
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
         TaskCapability capability = resolve(providerRegistry.get(type), resource, config, role);
@@ -57,7 +65,11 @@ public class TaskCapabilityResolver {
     }
 
     private TaskCapability resolve(
-            TaskCapabilityProvider provider, ResourceEntity resource, ResourceConfig config, MembershipRole role) {
+            TaskCapabilityProvider provider,
+            ResourceEntity resource,
+            ResourceConfig config,
+            MembershipRole role
+    ) {
         TaskCapabilityAssessment assessment = provider.assess(resource, config);
         boolean allowed = provider.allowed(role);
         List<TaskCapabilityReason> reasons = new ArrayList<>(assessment.reasons());

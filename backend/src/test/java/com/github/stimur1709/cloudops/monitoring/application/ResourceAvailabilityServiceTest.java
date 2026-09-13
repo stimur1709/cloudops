@@ -106,7 +106,10 @@ class ResourceAvailabilityServiceTest {
         assertDurationsCoverPeriod(result);
     }
 
-    private ResourceAvailability calculate(ResourceHealthStatus initialStatus, List<ResourceHealthEventEntity> events) {
+    private ResourceAvailability calculate(
+            ResourceHealthStatus initialStatus,
+            List<ResourceHealthEventEntity> events
+    ) {
         return ResourceAvailabilityService.calculate(FROM, TO, initialStatus, events);
     }
 
@@ -116,7 +119,8 @@ class ResourceAvailabilityServiceTest {
             long degradedSeconds,
             long downSeconds,
             String uptimePercent,
-            String availabilityPercent) {
+            String availabilityPercent
+    ) {
         ResourceAvailability result = calculate(status, List.of());
 
         assertThat(result.upSeconds()).isEqualTo(upSeconds);
@@ -135,7 +139,11 @@ class ResourceAvailabilityServiceTest {
                 .isEqualTo(result.periodSeconds());
     }
 
-    private ResourceHealthEventEntity event(ResourceHealthStatus from, ResourceHealthStatus to, String changedAt) {
+    private ResourceHealthEventEntity event(
+            ResourceHealthStatus from,
+            ResourceHealthStatus to,
+            String changedAt
+    ) {
         return ResourceHealthEventEntity.create(1L, from, to, Instant.parse(changedAt));
     }
 }

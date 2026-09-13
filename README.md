@@ -549,9 +549,17 @@ Set-Location backend
 На macOS и Linux используйте `./mvnw` вместо `./mvnw.cmd`. Проверка форматирования также
 выполняется в фазе `verify` и в CI.
 
-Spotless использует Palantir Java Format 2.96.0. Чтобы `Ctrl+Alt+L` в IntelliJ IDEA создавал
-тот же результат, установите плагин `palantir-java-format` из Marketplace и включите его для
-проекта в `Settings | palantir-java-format Settings | Enable palantir-java-format`.
+Spotless использует Eclipse JDT 4.38 и общий профиль
+`backend/config/formatter/eclipse-java.xml`. Чтобы `Ctrl+Alt+L` в IntelliJ IDEA форматировал код
+по этому же профилю:
+
+1. отключите для проекта плагин `palantir-java-format`;
+2. установите из Marketplace плагин `Adapter for Eclipse Code Formatter`;
+3. в `Settings | Other Settings | Adapter for Eclipse Code Formatter` укажите файлом
+   Java formatter profile `backend/config/formatter/eclipse-java.xml` и выберите профиль `CloudOps`.
+
+Профиль содержит полный набор настроек Eclipse formatter. Не сокращайте его до изменённых свойств:
+IDEA-адаптер не загружает неполные профили.
 
 Windows:
 

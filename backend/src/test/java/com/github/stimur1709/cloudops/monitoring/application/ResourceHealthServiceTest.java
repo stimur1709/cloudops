@@ -14,7 +14,10 @@ class ResourceHealthServiceTest {
 
     @ParameterizedTest
     @MethodSource("aggregations")
-    void aggregatesEnabledMonitorHealth(List<HealthStatus> monitorStatuses, ResourceHealthStatus expected) {
+    void aggregatesEnabledMonitorHealth(
+            List<HealthStatus> monitorStatuses,
+            ResourceHealthStatus expected
+    ) {
         assertThat(ResourceHealthService.aggregate(monitorStatuses)).isEqualTo(expected);
     }
 

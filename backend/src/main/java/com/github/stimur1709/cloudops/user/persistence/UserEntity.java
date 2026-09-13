@@ -32,9 +32,15 @@ public class UserEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected UserEntity() {}
+    protected UserEntity() {
+    }
 
-    private UserEntity(String email, String displayName, String passwordHash, Instant createdAt) {
+    private UserEntity(
+            String email,
+            String displayName,
+            String passwordHash,
+            Instant createdAt
+    ) {
         this.email = normalizeEmail(email);
         this.displayName = displayName;
         this.passwordHash = passwordHash;
@@ -42,11 +48,20 @@ public class UserEntity {
         this.updatedAt = createdAt;
     }
 
-    public static UserEntity create(String email, String displayName, String passwordHash, Instant createdAt) {
+    public static UserEntity create(
+            String email,
+            String displayName,
+            String passwordHash,
+            Instant createdAt
+    ) {
         return new UserEntity(email, displayName, passwordHash, createdAt);
     }
 
-    public void update(String email, String displayName, Instant updatedAt) {
+    public void update(
+            String email,
+            String displayName,
+            Instant updatedAt
+    ) {
         this.email = normalizeEmail(email);
         this.displayName = displayName;
         this.updatedAt = updatedAt;

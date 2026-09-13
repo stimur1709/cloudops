@@ -30,7 +30,8 @@ public class RunCommandTaskHandler implements TaskHandler {
             TaskParameterCodecRegistry parameterCodecRegistry,
             CredentialResolver credentialResolver,
             SshClient sshClient,
-            RunCommandProperties properties) {
+            RunCommandProperties properties
+    ) {
         this.parameterCodecRegistry = parameterCodecRegistry;
         this.credentialResolver = credentialResolver;
         this.sshClient = sshClient;
@@ -51,8 +52,8 @@ public class RunCommandTaskHandler implements TaskHandler {
             return TaskExecutionResult.failed(
                     TaskErrorCode.RESOURCE_UNSUPPORTED, "Resource no longer supports RUN_COMMAND");
         }
-        RunCommandParameters parameters =
-                parameterCodecRegistry.decode(context.type(), context.parameters(), RunCommandParameters.class);
+        RunCommandParameters parameters = parameterCodecRegistry.decode(context.type(), context.parameters(),
+                RunCommandParameters.class);
         final ResolvedCredential credential;
         try {
             credential = credentialResolver.resolve(context.resourceId(), CredentialPurpose.SSH);
@@ -89,12 +90,12 @@ public class RunCommandTaskHandler implements TaskHandler {
 
     private TaskErrorCode errorCode(SshClientException exception) {
         return switch (exception.type()) {
-            case CONNECTION, CONNECTION_TIMEOUT -> TaskErrorCode.SSH_CONNECTION_ERROR;
-            case HOST_KEY -> TaskErrorCode.SSH_HOST_KEY_ERROR;
-            case AUTHENTICATION -> TaskErrorCode.SSH_AUTHENTICATION_ERROR;
-            case CREDENTIAL -> TaskErrorCode.SSH_CREDENTIAL_ERROR;
-            case EXECUTION -> TaskErrorCode.SSH_EXECUTION_ERROR;
-            case COMMAND_TIMEOUT -> TaskErrorCode.COMMAND_TIMEOUT;
+        case CONNECTION, CONNECTION_TIMEOUT -> TaskErrorCode.SSH_CONNECTION_ERROR;
+        case HOST_KEY -> TaskErrorCode.SSH_HOST_KEY_ERROR;
+        case AUTHENTICATION -> TaskErrorCode.SSH_AUTHENTICATION_ERROR;
+        case CREDENTIAL -> TaskErrorCode.SSH_CREDENTIAL_ERROR;
+        case EXECUTION -> TaskErrorCode.SSH_EXECUTION_ERROR;
+        case COMMAND_TIMEOUT -> TaskErrorCode.COMMAND_TIMEOUT;
         };
     }
 }

@@ -7,4 +7,5 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
 @EnableConfigurationProperties(OutboxRelayProperties.class)
-class OutboxConfiguration {}
+class OutboxConfiguration {
+}

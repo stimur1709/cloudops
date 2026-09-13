@@ -32,7 +32,8 @@ public class MonitorService {
             OrganizationAuthorization authorization,
             JpaSearchService searchService,
             MonitoringSettingsResolver settingsResolver,
-            Clock clock) {
+            Clock clock
+    ) {
         this.monitorRepository = monitorRepository;
         this.resourceRepository = resourceRepository;
         this.authorization = authorization;
@@ -42,17 +43,22 @@ public class MonitorService {
     }
 
     @Transactional(readOnly = true)
-    public List<MonitorEntity> list(long resourceId, long currentUserId) {
+    public List<MonitorEntity> list(
+            long resourceId,
+            long currentUserId
+    ) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
         return monitorRepository.findAllByResourceIdOrderById(resourceId);
     }
 
     @Transactional
-    public void scheduleRun(long id, long currentUserId) {
+    public void scheduleRun(
+            long id,
+            long currentUserId
+    ) {
         MonitorEntity monitor = monitorRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
-        ResourceEntity resource =
-                resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
+        ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
         if (!monitor.compatible()) {
             throw new ConflictException("MONITOR_INCOMPATIBLE", "An incompatible monitor cannot be scheduled");
@@ -64,10 +70,13 @@ public class MonitorService {
     }
 
     @Transactional(readOnly = true)
-    public SearchResult<MonitoringResultEntity> searchResults(long monitorId, SearchQuery query, long currentUserId) {
+    public SearchResult<MonitoringResultEntity> searchResults(
+            long monitorId,
+            SearchQuery query,
+            long currentUserId
+    ) {
         MonitorEntity monitor = monitorRepository.findById(monitorId).orElseThrow(NotFoundException::new);
-        ResourceEntity resource =
-                resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
+        ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
         if (settingsResolver.resolve(resource, monitor.type()).storageMode() != StorageMode.HISTORY) {
             throw new ConflictException(

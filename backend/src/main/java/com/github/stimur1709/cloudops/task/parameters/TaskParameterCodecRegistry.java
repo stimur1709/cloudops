@@ -17,7 +17,10 @@ public class TaskParameterCodecRegistry {
     private final Map<TaskType, TaskParameterDefinition<?>> definitions;
 
     public TaskParameterCodecRegistry(
-            ObjectMapper objectMapper, Validator validator, List<TaskParameterDefinition<?>> definitions) {
+            ObjectMapper objectMapper,
+            Validator validator,
+            List<TaskParameterDefinition<?>> definitions
+    ) {
         this.objectMapper = objectMapper;
         this.validator = validator;
         EnumMap<TaskType, TaskParameterDefinition<?>> indexed = new EnumMap<>(TaskType.class);
@@ -32,7 +35,10 @@ public class TaskParameterCodecRegistry {
         this.definitions = Map.copyOf(indexed);
     }
 
-    public TaskParameters decode(TaskType type, JsonNode parameters) {
+    public TaskParameters decode(
+            TaskType type,
+            JsonNode parameters
+    ) {
         TaskParameterDefinition<?> definition = definitions.get(type);
         if (definition == null) {
             throw invalid("parameters", "Parameters are not configured for task type " + type);
@@ -41,7 +47,7 @@ public class TaskParameterCodecRegistry {
             throw invalid("parameters", "Parameters are required");
         }
         java.util.Set<String> allowedFields = java.util.Arrays.stream(
-                        definition.parametersType().getRecordComponents())
+                definition.parametersType().getRecordComponents())
                 .map(java.lang.reflect.RecordComponent::getName)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
         if (!allowedFields.containsAll(parameters.propertyNames())) {
@@ -66,7 +72,11 @@ public class TaskParameterCodecRegistry {
         return decoded;
     }
 
-    public <P extends TaskParameters> P decode(TaskType type, JsonNode parameters, Class<P> expectedType) {
+    public <P extends TaskParameters> P decode(
+            TaskType type,
+            JsonNode parameters,
+            Class<P> expectedType
+    ) {
         TaskParameters decoded = decode(type, parameters);
         if (!expectedType.isInstance(decoded)) {
             throw new IllegalStateException("Unexpected parameters type for " + type);
@@ -78,7 +88,10 @@ public class TaskParameterCodecRegistry {
         return objectMapper.valueToTree(parameters);
     }
 
-    private TaskParameterValidationException invalid(String field, String message) {
+    private TaskParameterValidationException invalid(
+            String field,
+            String message
+    ) {
         return new TaskParameterValidationException(
                 List.of(new TaskParameterValidationException.ParameterError(field, message)));
     }

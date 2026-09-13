@@ -30,7 +30,8 @@ public class ResourceHealthService {
             ResourceHealthJpaRepository resourceHealthRepository,
             ResourceHealthEventJpaRepository eventRepository,
             Clock clock,
-            MonitoringSettingsResolver settingsResolver) {
+            MonitoringSettingsResolver settingsResolver
+    ) {
         this.monitorRepository = monitorRepository;
         this.resourceHealthRepository = resourceHealthRepository;
         this.eventRepository = eventRepository;
@@ -45,8 +46,8 @@ public class ResourceHealthService {
 
     @Transactional
     public ResourceHealthEntity recalculate(long resourceId) {
-        ResourceHealthEntity resourceHealth =
-                resourceHealthRepository.findByResourceIdForUpdate(resourceId).orElseThrow(NotFoundException::new);
+        ResourceHealthEntity resourceHealth = resourceHealthRepository.findByResourceIdForUpdate(resourceId)
+                .orElseThrow(NotFoundException::new);
         ResourceEntity resource = resourceHealth.resource();
         var effectiveSettings = settingsResolver.resolveAll(resource);
         List<HealthStatus> statuses = monitorRepository.findHealthByResourceId(resourceId).stream()

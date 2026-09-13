@@ -21,11 +21,12 @@ class MonitorScheduleIndexIntegrationTest {
 
     @Test
     void actualClaimQueriesUsePartialIndexesWithMostlyInactiveMonitors() {
-        jdbc.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings,
-                    monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
-                    organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbc.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings,
+                            monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
+                            organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         long organizationId = jdbc.queryForObject("""
                 INSERT INTO organizations (name, created_at, updated_at)
                 VALUES ('Index plan', NOW(), NOW()) RETURNING id
@@ -56,13 +57,13 @@ class MonitorScheduleIndexIntegrationTest {
         assertThat(periodicPlan).contains("monitors_due_idx");
         assertThat(requestedPlan).contains("monitors_requested_idx");
         assertThat(jdbc.queryForObject(
-                        "SELECT COUNT(*) FROM monitors WHERE compatible AND next_run_at IS NOT NULL", Integer.class))
+                "SELECT COUNT(*) FROM monitors WHERE compatible AND next_run_at IS NOT NULL", Integer.class))
                 .isEqualTo(10);
         assertThat(jdbc.queryForList("""
                 SELECT indexdef FROM pg_indexes
                 WHERE tablename = 'monitors' AND indexname IN ('monitors_due_idx', 'monitors_requested_idx')
                 """, String.class))
-                .allSatisfy(definition ->
-                        assertThat(definition).contains("WHERE", "compatible", "next_run_at IS NOT NULL"));
+                .allSatisfy(definition -> assertThat(definition).contains("WHERE", "compatible",
+                        "next_run_at IS NOT NULL"));
     }
 }

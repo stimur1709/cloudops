@@ -5,10 +5,14 @@ import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 public final class AvailabilityPeriodValidator
-        implements ConstraintValidator<ValidAvailabilityPeriod, ResourceAvailabilityRequest> {
+        implements
+        ConstraintValidator<ValidAvailabilityPeriod, ResourceAvailabilityRequest> {
 
     @Override
-    public boolean isValid(ResourceAvailabilityRequest request, ConstraintValidatorContext context) {
+    public boolean isValid(
+            ResourceAvailabilityRequest request,
+            ConstraintValidatorContext context
+    ) {
         if (request == null || request.from() == null || request.to() == null) {
             return true;
         }

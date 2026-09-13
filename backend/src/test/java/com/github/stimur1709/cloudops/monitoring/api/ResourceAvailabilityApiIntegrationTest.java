@@ -40,11 +40,12 @@ class ResourceAvailabilityApiIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health,
-                    outbox_messages, tasks, organization_memberships, resources, users, organizations
-                    RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health,
+                            outbox_messages, tasks, organization_memberships, resources, users, organizations
+                            RESTART IDENTITY
+                        """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, 'availability@example.com', 'Availability User', '{noop}unused', now(), now())
@@ -62,8 +63,8 @@ class ResourceAvailabilityApiIntegrationTest {
         long resourceId = insertResource(organizationId, "unknown-" + resourceType, resourceType);
 
         mockMvc.perform(get("/api/resources/{id}/health/availability", resourceId)
-                        .queryParam("from", "2026-08-28T10:00:00Z")
-                        .queryParam("to", "2026-08-28T11:00:00Z"))
+                .queryParam("from", "2026-08-28T10:00:00Z")
+                .queryParam("to", "2026-08-28T11:00:00Z"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.from").value("2026-08-28T10:00:00Z"))
                 .andExpect(jsonPath("$.to").value("2026-08-28T11:00:00Z"))
@@ -92,8 +93,8 @@ class ResourceAvailabilityApiIntegrationTest {
         sqlStatementRecorder.clear();
 
         mockMvc.perform(get("/api/resources/{id}/health/availability", resourceId)
-                        .queryParam("from", "2026-08-28T10:00:00Z")
-                        .queryParam("to", "2026-08-28T11:00:00Z"))
+                .queryParam("from", "2026-08-28T10:00:00Z")
+                .queryParam("to", "2026-08-28T11:00:00Z"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.periodSeconds").value(3600))
                 .andExpect(jsonPath("$.upSeconds").value(2100))
@@ -111,8 +112,8 @@ class ResourceAvailabilityApiIntegrationTest {
                 .toList();
         assertThat(eventQueries).hasSize(2).allMatch(statement -> statement.contains("resource_id"));
         assertThat(sqlStatementRecorder.statements().stream()
-                        .map(String::toLowerCase)
-                        .noneMatch(statement -> statement.contains(" from monitoring_results ")))
+                .map(String::toLowerCase)
+                .noneMatch(statement -> statement.contains(" from monitoring_results ")))
                 .isTrue();
     }
 
@@ -122,8 +123,8 @@ class ResourceAvailabilityApiIntegrationTest {
         insertEvent(resourceId, "UNKNOWN", "UP", "2026-08-28T09:50:00Z");
 
         mockMvc.perform(get("/api/resources/{id}/health/availability", resourceId)
-                        .queryParam("from", "2026-08-28T10:00:00Z")
-                        .queryParam("to", "2026-08-28T11:00:00Z"))
+                .queryParam("from", "2026-08-28T10:00:00Z")
+                .queryParam("to", "2026-08-28T11:00:00Z"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.upSeconds").value(3600))
                 .andExpect(jsonPath("$.knownSeconds").value(3600))
@@ -137,21 +138,21 @@ class ResourceAvailabilityApiIntegrationTest {
         long resourceId = insertResource(organizationId, "validation-resource");
 
         mockMvc.perform(get("/api/resources/{id}/health/availability", resourceId)
-                        .queryParam("from", "2026-08-28T11:00:00Z")
-                        .queryParam("to", "2026-08-28T11:00:00Z"))
+                .queryParam("from", "2026-08-28T11:00:00Z")
+                .queryParam("to", "2026-08-28T11:00:00Z"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.errors[0].field").value("to"))
                 .andExpect(jsonPath("$.errors[0].message").value("To must be after from"));
 
         mockMvc.perform(get("/api/resources/{id}/health/availability", resourceId)
-                        .queryParam("from", "2026-08-28T12:00:00Z")
-                        .queryParam("to", "2026-08-28T11:00:00Z"))
+                .queryParam("from", "2026-08-28T12:00:00Z")
+                .queryParam("to", "2026-08-28T11:00:00Z"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("to"));
 
         mockMvc.perform(get("/api/resources/{id}/health/availability", resourceId)
-                        .queryParam("from", "2026-08-28T10:00:00Z"))
+                .queryParam("from", "2026-08-28T10:00:00Z"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.errors[0].field").value("to"));
@@ -168,8 +169,8 @@ class ResourceAvailabilityApiIntegrationTest {
 
     private void assertNotFound(long resourceId) throws Exception {
         mockMvc.perform(get("/api/resources/{id}/health/availability", resourceId)
-                        .queryParam("from", "2026-08-28T10:00:00Z")
-                        .queryParam("to", "2026-08-28T11:00:00Z"))
+                .queryParam("from", "2026-08-28T10:00:00Z")
+                .queryParam("to", "2026-08-28T11:00:00Z"))
                 .andExpect(status().isNotFound());
     }
 
@@ -180,11 +181,18 @@ class ResourceAvailabilityApiIntegrationTest {
                 """, Long.class, name);
     }
 
-    private long insertResource(long targetOrganizationId, String name) {
+    private long insertResource(
+            long targetOrganizationId,
+            String name
+    ) {
         return insertResource(targetOrganizationId, name, ResourceType.SERVICE);
     }
 
-    private long insertResource(long targetOrganizationId, String name, ResourceType type) {
+    private long insertResource(
+            long targetOrganizationId,
+            String name,
+            ResourceType type
+    ) {
         long resourceId = jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
                 VALUES (?, ?, 'ACTIVE', ?, '{}'::jsonb, now(), now()) RETURNING id
@@ -194,7 +202,12 @@ class ResourceAvailabilityApiIntegrationTest {
         return resourceId;
     }
 
-    private void insertEvent(long resourceId, String from, String to, String changedAt) {
+    private void insertEvent(
+            long resourceId,
+            String from,
+            String to,
+            String changedAt
+    ) {
         jdbcTemplate.update("""
                 INSERT INTO resource_health_events (resource_id, from_status, to_status, changed_at)
                 VALUES (?, ?, ?, CAST(? AS TIMESTAMP WITH TIME ZONE))

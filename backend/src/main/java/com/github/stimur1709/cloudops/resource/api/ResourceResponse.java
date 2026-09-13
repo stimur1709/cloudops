@@ -25,19 +25,23 @@ public record ResourceResponse(
 
         @Schema(
                 oneOf = {
-                    ServerResourceConfig.class,
-                    NetworkDeviceResourceConfig.class,
-                    DatabaseResourceConfig.class,
-                    ServiceResourceConfig.class,
-                    OtherResourceConfig.class
-                },
-                description = "Selected by the sibling type field; config has no nested discriminator")
+                        ServerResourceConfig.class,
+                        NetworkDeviceResourceConfig.class,
+                        DatabaseResourceConfig.class,
+                        ServiceResourceConfig.class,
+                        OtherResourceConfig.class
+                }, description = "Selected by the sibling type field; config has no nested discriminator"
+        )
         ResourceConfig config,
 
         Instant createdAt,
-        Instant updatedAt) {
+        Instant updatedAt
+){
 
-    static ResourceResponse from(ResourceDetails details, ResourceConfigMapper configMapper) {
+    static ResourceResponse from(
+            ResourceDetails details,
+            ResourceConfigMapper configMapper
+    ) {
         ResourceEntity resource = details.resource();
         return new ResourceResponse(
                 resource.id(),

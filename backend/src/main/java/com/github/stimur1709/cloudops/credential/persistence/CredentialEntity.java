@@ -48,7 +48,8 @@ public class CredentialEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected CredentialEntity() {}
+    protected CredentialEntity() {
+    }
 
     private CredentialEntity(
             OrganizationEntity organization,
@@ -56,7 +57,8 @@ public class CredentialEntity {
             CredentialType type,
             String username,
             String secretEncrypted,
-            Instant now) {
+            Instant now
+    ) {
         this.organization = organization;
         this.organizationId = organization.id();
         this.name = name;
@@ -73,11 +75,18 @@ public class CredentialEntity {
             CredentialType type,
             String username,
             String secretEncrypted,
-            Instant now) {
+            Instant now
+    ) {
         return new CredentialEntity(organization, name, type, username, secretEncrypted, now);
     }
 
-    public void update(String name, CredentialType type, String username, String secretEncrypted, Instant now) {
+    public void update(
+            String name,
+            CredentialType type,
+            String username,
+            String secretEncrypted,
+            Instant now
+    ) {
         this.name = name;
         this.type = type;
         this.username = username;

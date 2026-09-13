@@ -55,7 +55,8 @@ public class ProbeSettingsService {
             MonitoringProperties properties,
             ProbeHandlerRegistry handlerRegistry,
             ResourceConfigMapper configMapper,
-            MonitoringSettingsRecovery synchronizer) {
+            MonitoringSettingsRecovery synchronizer
+    ) {
         this.organizationRepository = organizationRepository;
         this.resourceRepository = resourceRepository;
         this.organizationSettingsRepository = organizationSettingsRepository;
@@ -69,12 +70,15 @@ public class ProbeSettingsService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProbeSettingsResponse> listOrganization(long organizationId, long userId) {
+    public List<ProbeSettingsResponse> listOrganization(
+            long organizationId,
+            long userId
+    ) {
         requireOrganization(organizationId);
         authorization.requireMember(organizationId, userId);
-        Map<ProbeType, OrganizationProbeSettingsEntity> ownSettings =
-                organizationSettingsRepository.findAllByOrganizationId(organizationId).stream()
-                        .collect(Collectors.toMap(OrganizationProbeSettingsEntity::probeType, Function.identity()));
+        Map<ProbeType, OrganizationProbeSettingsEntity> ownSettings = organizationSettingsRepository
+                .findAllByOrganizationId(organizationId).stream()
+                .collect(Collectors.toMap(OrganizationProbeSettingsEntity::probeType, Function.identity()));
         return Arrays.stream(ProbeType.values())
                 .map(type -> {
                     var own = ownSettings.get(type);
@@ -88,7 +92,11 @@ public class ProbeSettingsService {
 
     @Transactional
     public ProbeSettingsResponse putOrganization(
-            long organizationId, ProbeType type, ProbeSettingsRequest request, long userId) {
+            long organizationId,
+            ProbeType type,
+            ProbeSettingsRequest request,
+            long userId
+    ) {
         requireOrganization(organizationId);
         authorization.requireManager(organizationId, userId);
         ProbeSettings values = values(request);
@@ -103,7 +111,11 @@ public class ProbeSettingsService {
     }
 
     @Transactional
-    public void deleteOrganization(long organizationId, ProbeType type, long userId) {
+    public void deleteOrganization(
+            long organizationId,
+            ProbeType type,
+            long userId
+    ) {
         requireOrganization(organizationId);
         authorization.requireManager(organizationId, userId);
         organizationSettingsRepository.deleteByOrganizationIdAndProbeType(organizationId, type);
@@ -112,7 +124,10 @@ public class ProbeSettingsService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProbeSettingsResponse> listResource(long resourceId, long userId) {
+    public List<ProbeSettingsResponse> listResource(
+            long resourceId,
+            long userId
+    ) {
         ResourceEntity resource = requireResource(resourceId);
         authorization.requireMember(resource.organizationId(), userId);
         ResourceConfig config = configMapper.fromJson(resource.type(), resource.config());
@@ -129,7 +144,11 @@ public class ProbeSettingsService {
 
     @Transactional
     public ProbeSettingsResponse putResource(
-            long resourceId, ProbeType type, ProbeSettingsRequest request, long userId) {
+            long resourceId,
+            ProbeType type,
+            ProbeSettingsRequest request,
+            long userId
+    ) {
         ResourceEntity resource = requireResource(resourceId);
         authorization.requireManager(resource.organizationId(), userId);
         ProbeSettings values = values(request);
@@ -146,7 +165,11 @@ public class ProbeSettingsService {
     }
 
     @Transactional
-    public void deleteResource(long resourceId, ProbeType type, long userId) {
+    public void deleteResource(
+            long resourceId,
+            ProbeType type,
+            long userId
+    ) {
         ResourceEntity resource = requireResource(resourceId);
         authorization.requireManager(resource.organizationId(), userId);
         resourceSettingsRepository.deleteByResourceIdAndProbeType(resourceId, type);
@@ -175,7 +198,11 @@ public class ProbeSettingsService {
                 request.timeoutMs());
     }
 
-    private EffectiveProbeSettings effective(ProbeType type, ProbeSettings settings, SettingsSource source) {
+    private EffectiveProbeSettings effective(
+            ProbeType type,
+            ProbeSettings settings,
+            SettingsSource source
+    ) {
         return new EffectiveProbeSettings(
                 type,
                 settings.enabled(),

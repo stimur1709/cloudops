@@ -69,11 +69,12 @@ class MonitorApiIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors,
-                    resource_health_events, resource_health, outbox_messages, tasks, organization_memberships,
-                    resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors,
+                            resource_health_events, resource_health, outbox_messages, tasks, organization_memberships,
+                            resources, users, organizations RESTART IDENTITY
+                        """);
         settingsIndex.reload();
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
@@ -100,9 +101,9 @@ class MonitorApiIntegrationTest {
         updateResource(resourceId, "OTHER", "{}");
         assertThat(types(resourceId)).hasSize(4);
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM monitors WHERE resource_id = ? AND compatible",
-                        Integer.class,
-                        resourceId))
+                "SELECT count(*) FROM monitors WHERE resource_id = ? AND compatible",
+                Integer.class,
+                resourceId))
                 .isZero();
         long monitorId = jdbcTemplate.queryForObject(
                 "SELECT id FROM monitors WHERE resource_id = ? ORDER BY id LIMIT 1", Long.class, resourceId);
@@ -111,27 +112,27 @@ class MonitorApiIntegrationTest {
 
         updateResource(resourceId, "SERVICE", "{\"url\":\"https://example.com\"}");
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT compatible FROM monitors WHERE id = ?", Boolean.class, monitorId))
+                "SELECT compatible FROM monitors WHERE id = ?", Boolean.class, monitorId))
                 .isTrue();
         assertThat(nextRunAt(monitorId)).isNotNull();
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM monitors WHERE resource_id = ?", Integer.class, resourceId))
+                "SELECT count(*) FROM monitors WHERE resource_id = ?", Integer.class, resourceId))
                 .isEqualTo(4);
 
         mockMvc.perform(post("/api/resources/{id}/monitors", resourceId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
                 .andExpect(status().isMethodNotAllowed());
     }
 
     @Test
     void provisionsOneSshMonitorForCompatibleResourcesAndExposesEffectiveSettings() throws Exception {
         String response = mockMvc.perform(post("/api/resources")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                {"name":"ssh-server","type":"SERVER","status":"ACTIVE","organizationId":%d,
-                 "config":{"host":"server.internal"}}
-                """.formatted(organizationId)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"ssh-server","type":"SERVER","status":"ACTIVE","organizationId":%d,
+                         "config":{"host":"server.internal"}}
+                        """.formatted(organizationId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.config.sshPort").value(22))
                 .andReturn()
@@ -149,21 +150,21 @@ class MonitorApiIntegrationTest {
 
         updateResource(resourceId, "SERVER", "{\"host\":\"updated.internal\",\"sshPort\":2222}");
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM monitors WHERE resource_id = ? AND type = 'SSH_CHECK'",
-                        Integer.class,
-                        resourceId))
+                "SELECT count(*) FROM monitors WHERE resource_id = ? AND type = 'SSH_CHECK'",
+                Integer.class,
+                resourceId))
                 .isEqualTo(1);
 
         updateResource(resourceId, "OTHER", "{}");
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT compatible FROM monitors WHERE resource_id = ? AND type = 'SSH_CHECK'",
-                        Boolean.class,
-                        resourceId))
+                "SELECT compatible FROM monitors WHERE resource_id = ? AND type = 'SSH_CHECK'",
+                Boolean.class,
+                resourceId))
                 .isFalse();
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"UP", "DOWN"})
+    @ValueSource(strings = { "UP", "DOWN" })
     void newUnknownMonitorKeepsKnownResourceHealthWithoutCreatingEvent(String knownStatus) throws Exception {
         long resourceId = createService("http://example.com");
         jdbcTemplate.update("UPDATE monitors SET health_status = ? WHERE resource_id = ?", knownStatus, resourceId);
@@ -173,15 +174,15 @@ class MonitorApiIntegrationTest {
         updateResource(resourceId, "SERVICE", "{\"url\":\"https://example.com\"}");
 
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT health_status FROM resource_health WHERE resource_id = ?", String.class, resourceId))
+                "SELECT health_status FROM resource_health WHERE resource_id = ?", String.class, resourceId))
                 .isEqualTo(knownStatus);
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT health_status FROM monitors WHERE resource_id = ? AND type = 'TLS_CHECK'",
-                        String.class,
-                        resourceId))
+                "SELECT health_status FROM monitors WHERE resource_id = ? AND type = 'TLS_CHECK'",
+                String.class,
+                resourceId))
                 .isEqualTo("UNKNOWN");
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM resource_health_events WHERE resource_id = ?", Integer.class, resourceId))
+                "SELECT count(*) FROM resource_health_events WHERE resource_id = ?", Integer.class, resourceId))
                 .isZero();
     }
 
@@ -248,7 +249,7 @@ class MonitorApiIntegrationTest {
         long monitorId = jdbcTemplate.queryForObject(
                 "SELECT id FROM monitors WHERE resource_id = ? AND type = 'PING'", Long.class, resourceId);
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
+                "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
                 .isNull();
         assertThat(claimService.claimDue()).doesNotContain(monitorId);
         assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNull();
@@ -258,9 +259,9 @@ class MonitorApiIntegrationTest {
         assertThat(claimService.claimDue()).contains(monitorId);
         assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNotNull();
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT count(*) FROM monitors WHERE resource_id = ? AND type = 'PING'",
-                        Integer.class,
-                        resourceId))
+                "SELECT count(*) FROM monitors WHERE resource_id = ? AND type = 'PING'",
+                Integer.class,
+                resourceId))
                 .isEqualTo(1);
     }
 
@@ -305,7 +306,7 @@ class MonitorApiIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
+    @ValueSource(booleans = { false, true })
     void concurrentSchedulerClaimsReturnMonitorOnlyOnce(boolean manual) throws Exception {
         long resourceId = createService("https://example.com");
         long monitorId = jdbcTemplate.queryForObject(
@@ -341,8 +342,7 @@ class MonitorApiIntegrationTest {
         });
         server.start();
         try {
-            long resourceId =
-                    createService("http://127.0.0.1:" + server.getAddress().getPort());
+            long resourceId = createService("http://127.0.0.1:" + server.getAddress().getPort());
             long monitorId = jdbcTemplate.queryForObject(
                     "SELECT id FROM monitors WHERE resource_id = ? AND type = 'HTTP_CHECK'", Long.class, resourceId);
             jdbcTemplate.update("UPDATE monitors SET next_run_at = NOW() + INTERVAL '1 hour'");
@@ -352,13 +352,13 @@ class MonitorApiIntegrationTest {
                     "SELECT run_requested_at FROM monitors WHERE id = ?", Instant.class, monitorId);
             mockMvc.perform(post("/api/monitors/{id}/run", monitorId)).andExpect(status().isAccepted());
             assertThat(jdbcTemplate.queryForObject(
-                            "SELECT run_requested_at FROM monitors WHERE id = ?", Instant.class, monitorId))
+                    "SELECT run_requested_at FROM monitors WHERE id = ?", Instant.class, monitorId))
                     .isEqualTo(requested);
             var claimed = claimService.claimDue();
             assertThat(claimed).containsExactly(monitorId);
             claimed.forEach(executionService::execute);
             assertThat(jdbcTemplate.queryForObject(
-                            "SELECT health_status FROM monitors WHERE id = ?", String.class, monitorId))
+                    "SELECT health_status FROM monitors WHERE id = ?", String.class, monitorId))
                     .isEqualTo("UP");
             assertThat(nextRunAt(monitorId)).isEqualTo(scheduled);
             assertThat(claimService.claimDue()).isEmpty();
@@ -374,7 +374,7 @@ class MonitorApiIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
+    @ValueSource(booleans = { false, true })
     void disablingOrLosingCompatibilityCancelsPendingRequest(boolean incompatible) throws Exception {
         long resourceId = createService("https://example.com");
         long monitorId = jdbcTemplate.queryForObject(
@@ -388,7 +388,7 @@ class MonitorApiIntegrationTest {
         }
         assertThat(nextRunAt(monitorId)).isNull();
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT run_requested_at FROM monitors WHERE id = ?", Instant.class, monitorId))
+                "SELECT run_requested_at FROM monitors WHERE id = ?", Instant.class, monitorId))
                 .isNull();
         assertThat(claimService.claimDue()).doesNotContain(monitorId);
     }
@@ -422,7 +422,7 @@ class MonitorApiIntegrationTest {
         assertThat(executionPersistenceService.loadIfExecutable(monitorId)).isNotNull();
 
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
+                "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
                 .isEqualTo(scheduled);
     }
 
@@ -449,7 +449,7 @@ class MonitorApiIntegrationTest {
         updateResource(resourceId, "OTHER", "{}");
         mockMvc.perform(post("/api/monitors/{id}/run", monitorId)).andExpect(status().isConflict());
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
+                "SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId))
                 .isNull();
     }
 
@@ -491,7 +491,7 @@ class MonitorApiIntegrationTest {
                         "resource_credentials_purpose_check");
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbcTemplate.update(
-                        "UPDATE resource_probe_settings SET interval_seconds = 0 WHERE resource_id = ?", resourceId))
+                "UPDATE resource_probe_settings SET interval_seconds = 0 WHERE resource_id = ?", resourceId))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
@@ -513,11 +513,11 @@ class MonitorApiIntegrationTest {
 
     private long createService(String url) throws Exception {
         String response = mockMvc.perform(post("/api/resources")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                {"name":"service-%d","type":"SERVICE","status":"ACTIVE","organizationId":%d,
-                 "config":{"url":"%s"}}
-                """.formatted(System.nanoTime(), organizationId, url)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"service-%d","type":"SERVICE","status":"ACTIVE","organizationId":%d,
+                         "config":{"url":"%s"}}
+                        """.formatted(System.nanoTime(), organizationId, url)))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
@@ -525,12 +525,16 @@ class MonitorApiIntegrationTest {
         return ((Number) JsonPath.read(response, "$.id")).longValue();
     }
 
-    private void updateResource(long resourceId, String type, String config) throws Exception {
+    private void updateResource(
+            long resourceId,
+            String type,
+            String config
+    ) throws Exception {
         mockMvc.perform(put("/api/resources/{id}", resourceId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                {"name":"updated","type":"%s","status":"ACTIVE","organizationId":%d,"config":%s}
-                """.formatted(type, organizationId, config)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"updated","type":"%s","status":"ACTIVE","organizationId":%d,"config":%s}
+                        """.formatted(type, organizationId, config)))
                 .andExpect(status().isOk());
     }
 
@@ -542,7 +546,10 @@ class MonitorApiIntegrationTest {
         return jdbcTemplate.queryForObject("SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId);
     }
 
-    private long insertResult(long monitorId, String checkedAtExpression) {
+    private long insertResult(
+            long monitorId,
+            String checkedAtExpression
+    ) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO monitoring_results (monitor_id, checked_at, result)
                 VALUES (?, %s, '{}'::jsonb)
@@ -550,12 +557,15 @@ class MonitorApiIntegrationTest {
                 """.formatted(checkedAtExpression), Long.class, monitorId);
     }
 
-    private void assertNextRunUsesInterval(long monitorId, int intervalSeconds) {
+    private void assertNextRunUsesInterval(
+            long monitorId,
+            int intervalSeconds
+    ) {
         jdbcTemplate.update("UPDATE monitors SET next_run_at = now() - interval '1 second' WHERE id = ?", monitorId);
         Instant before = Instant.now();
         assertThat(claimService.claimDue()).contains(monitorId);
-        Instant nextRunAt =
-                jdbcTemplate.queryForObject("SELECT next_run_at FROM monitors WHERE id = ?", Instant.class, monitorId);
+        Instant nextRunAt = jdbcTemplate.queryForObject("SELECT next_run_at FROM monitors WHERE id = ?", Instant.class,
+                monitorId);
         assertThat(nextRunAt)
                 .isBetween(
                         before.truncatedTo(java.time.temporal.ChronoUnit.MICROS).plusSeconds(intervalSeconds),
@@ -567,14 +577,21 @@ class MonitorApiIntegrationTest {
         return claimService.claimDue();
     }
 
-    private org.springframework.test.web.servlet.ResultActions putOrganization(String type, String body)
+    private org.springframework.test.web.servlet.ResultActions putOrganization(
+            String type,
+            String body
+    )
             throws Exception {
         return mockMvc.perform(put("/api/organizations/{id}/monitoring-settings/{type}", organizationId, type)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
     }
 
-    private org.springframework.test.web.servlet.ResultActions putResource(long resourceId, String type, String body)
+    private org.springframework.test.web.servlet.ResultActions putResource(
+            long resourceId,
+            String type,
+            String body
+    )
             throws Exception {
         return mockMvc.perform(put("/api/resources/{id}/monitoring-settings/{type}", resourceId, type)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -588,18 +605,19 @@ class MonitorApiIntegrationTest {
             int recovery,
             String storage,
             Integer retention,
-            Integer timeout) {
+            Integer timeout
+    ) {
         return """
                 {"enabled":%s,"intervalSeconds":%d,"failureThreshold":%d,"recoveryThreshold":%d,
                  "storageMode":"%s","retentionDays":%s,"timeoutMs":%s}
                 """.formatted(
-                        enabled,
-                        interval,
-                        failure,
-                        recovery,
-                        storage,
-                        retention == null ? "null" : retention,
-                        timeout == null ? "null" : timeout);
+                enabled,
+                interval,
+                failure,
+                recovery,
+                storage,
+                retention == null ? "null" : retention,
+                timeout == null ? "null" : timeout);
     }
 
     private void assertHttpSettings(
@@ -612,7 +630,8 @@ class MonitorApiIntegrationTest {
             String storage,
             Integer retention,
             int timeout,
-            boolean override)
+            boolean override
+    )
             throws Exception {
         var result = mockMvc.perform(get("/api/resources/{id}/monitoring-settings", resourceId))
                 .andExpect(status().isOk())

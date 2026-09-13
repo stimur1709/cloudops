@@ -12,5 +12,8 @@ public record EffectiveProbeSettings(
         StorageMode storageMode,
         Integer retentionDays,
         Integer timeoutMs,
-        SettingsSource source)
-        implements ProbeSettings {}
+        SettingsSource source
+)
+        implements
+        ProbeSettings {
+}

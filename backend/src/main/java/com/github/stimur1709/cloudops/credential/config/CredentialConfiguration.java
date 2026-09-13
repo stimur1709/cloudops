@@ -6,4 +6,5 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(CredentialCryptoProperties.class)
-public class CredentialConfiguration {}
+public class CredentialConfiguration {
+}

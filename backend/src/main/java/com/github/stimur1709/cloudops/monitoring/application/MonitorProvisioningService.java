@@ -27,7 +27,8 @@ public class MonitorProvisioningService {
             ResourceConfigMapper configMapper,
             ProbeHandlerRegistry handlerRegistry,
             MonitoringSettingsResolver settingsResolver,
-            Clock clock) {
+            Clock clock
+    ) {
         this.monitorRepository = monitorRepository;
         this.configMapper = configMapper;
         this.handlerRegistry = handlerRegistry;
@@ -50,7 +51,12 @@ public class MonitorProvisioningService {
     }
 
     private void reconcileMonitor(
-            ResourceEntity resource, ProbeType type, ResourceConfig config, MonitorEntity monitor, Instant now) {
+            ResourceEntity resource,
+            ProbeType type,
+            ResourceConfig config,
+            MonitorEntity monitor,
+            Instant now
+    ) {
         boolean compatible = handlerRegistry.supports(type, config);
         boolean enabled = settingsResolver.resolve(resource, type).enabled();
         if (monitor != null) {

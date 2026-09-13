@@ -50,7 +50,12 @@ class MonitorEntityTest {
         assertThat(monitor.nextRunAt()).isNull();
     }
 
-    private void record(MonitorEntity monitor, boolean success, int failure, int recovery) {
+    private void record(
+            MonitorEntity monitor,
+            boolean success,
+            int failure,
+            int recovery
+    ) {
         monitor.record(NOW, MAPPER.createObjectNode().put("success", success), success, failure, recovery);
     }
 }

@@ -26,7 +26,8 @@ public class MonitorExecutionService {
             MonitorExecutionPersistenceService persistenceService,
             ProbeHandlerRegistry handlerRegistry,
             ObjectMapper objectMapper,
-            Clock clock) {
+            Clock clock
+    ) {
         this.persistenceService = persistenceService;
         this.handlerRegistry = handlerRegistry;
         this.objectMapper = objectMapper;

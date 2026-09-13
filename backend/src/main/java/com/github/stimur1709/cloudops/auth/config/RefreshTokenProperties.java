@@ -9,7 +9,8 @@ public record RefreshTokenProperties(
         boolean cleanupEnabled,
         Duration cleanupInterval,
         int cleanupBatchSize,
-        Duration revokedRetention) {
+        Duration revokedRetention
+) {
 
     public RefreshTokenProperties {
         if (cookie == null) {
@@ -26,7 +27,12 @@ public record RefreshTokenProperties(
         }
     }
 
-    public record Cookie(String name, String path, boolean secure, SameSite sameSite) {
+    public record Cookie(
+            String name,
+            String path,
+            boolean secure,
+            SameSite sameSite
+    ) {
 
         public Cookie {
             if (name == null || name.isBlank()) {
@@ -42,8 +48,7 @@ public record RefreshTokenProperties(
     }
 
     public enum SameSite {
-        STRICT("Strict"),
-        LAX("Lax");
+        STRICT("Strict"), LAX("Lax");
 
         private final String value;
 

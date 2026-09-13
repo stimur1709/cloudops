@@ -50,7 +50,8 @@ public class ResourceService {
             ResourceConfigMapper configMapper,
             ResourceHealthService resourceHealthService,
             ResourceHealthJpaRepository resourceHealthRepository,
-            MonitorProvisioningService monitorProvisioningService) {
+            MonitorProvisioningService monitorProvisioningService
+    ) {
         this.resourceRepository = resourceRepository;
         this.searchService = searchService;
         this.organizationRepository = organizationRepository;
@@ -69,15 +70,16 @@ public class ResourceService {
             ResourceStatus status,
             long organizationId,
             ResourceConfig config,
-            long currentUserId) {
+            long currentUserId
+    ) {
         OrganizationEntity organization = getOrganizationForUpdate(organizationId);
         authorization.requireManager(organizationId, currentUserId);
         if (resourceRepository.existsByOrganizationIdAndName(organizationId, name)) {
             throw resourceNameConflict();
         }
         Instant now = clock.instant();
-        ResourceEntity resource =
-                ResourceEntity.create(name, type, status, organization, configMapper.toJson(config), now);
+        ResourceEntity resource = ResourceEntity.create(name, type, status, organization, configMapper.toJson(config),
+                now);
         ResourceEntity saved = save(resource);
         ResourceHealthEntity health = resourceHealthService.initialize(saved);
         monitorProvisioningService.reconcile(saved);
@@ -85,16 +87,21 @@ public class ResourceService {
     }
 
     @Transactional(readOnly = true)
-    public ResourceDetails get(long id, long currentUserId) {
-        ResourceHealthEntity resourceHealth =
-                resourceHealthRepository.findById(id).orElseThrow(NotFoundException::new);
+    public ResourceDetails get(
+            long id,
+            long currentUserId
+    ) {
+        ResourceHealthEntity resourceHealth = resourceHealthRepository.findById(id).orElseThrow(NotFoundException::new);
         ResourceEntity resource = resourceHealth.resource();
         authorization.requireMember(resource.organizationId(), currentUserId);
         return details(resourceHealth);
     }
 
     @Transactional(readOnly = true)
-    public SearchResult<ResourceDetails> search(SearchQuery search, long currentUserId) {
+    public SearchResult<ResourceDetails> search(
+            SearchQuery search,
+            long currentUserId
+    ) {
         SearchResult<ResourceHealthEntity> result = searchService.search(
                 search,
                 OrganizationMembershipScopes.visibleTo(
@@ -113,7 +120,8 @@ public class ResourceService {
             ResourceStatus status,
             long organizationId,
             ResourceConfig config,
-            long currentUserId) {
+            long currentUserId
+    ) {
         ResourceEntity resource = resourceRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
         long sourceOrganizationId = resource.organizationId();
         authorization.requireManager(sourceOrganizationId, currentUserId);
@@ -138,7 +146,10 @@ public class ResourceService {
     }
 
     @Transactional
-    public void delete(long id, long currentUserId) {
+    public void delete(
+            long id,
+            long currentUserId
+    ) {
         ResourceEntity resource = resourceRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
         getOrganizationForUpdate(resource.organizationId());
         authorization.requireManager(resource.organizationId(), currentUserId);
@@ -149,7 +160,10 @@ public class ResourceService {
         return organizationRepository.findByIdForUpdate(organizationId).orElseThrow(NotFoundException::new);
     }
 
-    private OrganizationEntity lockOrganizations(long sourceId, long targetId) {
+    private OrganizationEntity lockOrganizations(
+            long sourceId,
+            long targetId
+    ) {
         long firstId = Math.min(sourceId, targetId);
         long secondId = Math.max(sourceId, targetId);
         OrganizationEntity first = getOrganizationForUpdate(firstId);

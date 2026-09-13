@@ -19,23 +19,27 @@ public class CredentialResolver {
     public CredentialResolver(
             ResourceCredentialJpaRepository bindingRepository,
             CredentialJpaRepository credentialRepository,
-            SecretCryptoService cryptoService) {
+            SecretCryptoService cryptoService
+    ) {
         this.bindingRepository = bindingRepository;
         this.credentialRepository = credentialRepository;
         this.cryptoService = cryptoService;
     }
 
     @Transactional(readOnly = true)
-    public ResolvedCredential resolve(long resourceId, CredentialPurpose purpose) {
+    public ResolvedCredential resolve(
+            long resourceId,
+            CredentialPurpose purpose
+    ) {
         ResourceCredentialEntity binding = bindingRepository
                 .findByResourceIdAndPurpose(resourceId, purpose)
                 .orElseThrow(NotFoundException::new);
-        CredentialEntity credential =
-                credentialRepository.findById(binding.credentialId()).orElseThrow(NotFoundException::new);
+        CredentialEntity credential = credentialRepository.findById(binding.credentialId())
+                .orElseThrow(NotFoundException::new);
         String secret = cryptoService.decrypt(credential.secretEncrypted());
         return switch (credential.type()) {
-            case USERNAME_PASSWORD -> new ResolvedUsernamePassword(credential.username(), secret);
-            case SSH_PRIVATE_KEY -> new ResolvedSshPrivateKey(credential.username(), secret);
+        case USERNAME_PASSWORD -> new ResolvedUsernamePassword(credential.username(), secret);
+        case SSH_PRIVATE_KEY -> new ResolvedSshPrivateKey(credential.username(), secret);
         };
     }
 }

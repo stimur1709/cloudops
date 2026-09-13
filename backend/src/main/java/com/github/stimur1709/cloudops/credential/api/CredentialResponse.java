@@ -11,7 +11,8 @@ public record CredentialResponse(
         CredentialType type,
         String username,
         Instant createdAt,
-        Instant updatedAt) {
+        Instant updatedAt
+) {
     public static CredentialResponse from(CredentialEntity entity) {
         return new CredentialResponse(
                 entity.id(),

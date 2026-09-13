@@ -24,7 +24,7 @@ class TaskCapabilityProviderRegistryTest {
     @Test
     void rejectsDuplicateProvider() {
         assertThatThrownBy(() -> new TaskCapabilityProviderRegistry(
-                        List.of(provider(TaskType.RUN_COMMAND), provider(TaskType.RUN_COMMAND))))
+                List.of(provider(TaskType.RUN_COMMAND), provider(TaskType.RUN_COMMAND))))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Duplicate task capability provider");
     }

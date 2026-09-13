@@ -33,12 +33,14 @@ public class ResourceApiExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ApiError> handleUnreadableBody(
-            HttpMessageNotReadableException exception, HttpServletRequest request) {
+            HttpMessageNotReadableException exception,
+            HttpServletRequest request
+    ) {
         InvalidFormatException invalidFormat = findCause(exception, InvalidFormatException.class);
         InvalidTypeIdException invalidTypeId = findCause(exception, InvalidTypeIdException.class);
         MismatchedInputException mismatchedInput = findCause(exception, MismatchedInputException.class);
-        UnknownResourceConfigFieldException unknownField =
-                findCause(exception, UnknownResourceConfigFieldException.class);
+        UnknownResourceConfigFieldException unknownField = findCause(exception,
+                UnknownResourceConfigFieldException.class);
 
         List<ApiFieldError> errors;
         if (unknownField != null) {
@@ -85,7 +87,10 @@ public class ResourceApiExceptionHandler {
         return List.of(new ApiFieldError(field, displayName + " must be one of: " + allowedValues));
     }
 
-    private <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
+    private <T extends Throwable> T findCause(
+            Throwable throwable,
+            Class<T> type
+    ) {
         Throwable current = throwable;
         while (current != null) {
             if (type.isInstance(current)) {

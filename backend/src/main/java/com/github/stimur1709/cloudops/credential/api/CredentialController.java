@@ -30,9 +30,13 @@ public class CredentialController {
     @PostMapping("/organizations/{organizationId}/credentials")
     @ApiResponse(responseCode = "201", description = "Created", useReturnTypeSchema = true)
     public ResponseEntity<CredentialResponse> create(
-            @PathVariable long organizationId,
-            @Valid @RequestBody CredentialRequest request,
-            Authentication authentication) {
+            @PathVariable
+            long organizationId,
+            @Valid
+            @RequestBody
+            CredentialRequest request,
+            Authentication authentication
+    ) {
         CredentialResponse response = CredentialResponse.from(service.create(
                 organizationId,
                 request.name(),
@@ -45,20 +49,34 @@ public class CredentialController {
     }
 
     @GetMapping("/credentials/{id}")
-    public CredentialResponse get(@PathVariable long id, Authentication authentication) {
+    public CredentialResponse get(
+            @PathVariable
+            long id,
+            Authentication authentication
+    ) {
         return CredentialResponse.from(service.get(id, CurrentUser.id(authentication)));
     }
 
     @PostMapping("/credentials/search")
     public SearchResponse<CredentialResponse> search(
-            @Valid @RequestBody SearchRequest request, Authentication authentication) {
+            @Valid
+            @RequestBody
+            SearchRequest request,
+            Authentication authentication
+    ) {
         return SearchResponse.from(
                 service.search(request.toQuery(), CurrentUser.id(authentication)), CredentialResponse::from);
     }
 
     @PutMapping("/credentials/{id}")
     public CredentialResponse update(
-            @PathVariable long id, @Valid @RequestBody CredentialRequest request, Authentication authentication) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            CredentialRequest request,
+            Authentication authentication
+    ) {
         return CredentialResponse.from(service.update(
                 id,
                 request.name(),
@@ -70,7 +88,11 @@ public class CredentialController {
 
     @DeleteMapping("/credentials/{id}")
     @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
-    public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
+    public ResponseEntity<Void> delete(
+            @PathVariable
+            long id,
+            Authentication authentication
+    ) {
         service.delete(id, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();
     }

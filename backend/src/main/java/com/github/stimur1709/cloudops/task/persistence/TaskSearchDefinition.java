@@ -16,14 +16,14 @@ public final class TaskSearchDefinition {
             .field(
                     TaskEntity_.TYPE,
                     JpaSearchField.<TaskEntity, TaskType>equality(
-                                    root -> root.get(TaskEntity_.type),
-                                    SearchValueConverter.enumeration(TaskType.class))
+                            root -> root.get(TaskEntity_.type),
+                            SearchValueConverter.enumeration(TaskType.class))
                             .sortable())
             .field(
                     TaskEntity_.STATUS,
                     JpaSearchField.<TaskEntity, TaskStatus>equality(
-                                    root -> root.get(TaskEntity_.status),
-                                    SearchValueConverter.enumeration(TaskStatus.class))
+                            root -> root.get(TaskEntity_.status),
+                            SearchValueConverter.enumeration(TaskStatus.class))
                             .sortable())
             .field(TaskEntity_.CREATED_BY, comparableLong(TaskEntity_.createdBy))
             .field(TaskEntity_.CREATED_AT, comparableInstant(TaskEntity_.createdAt))
@@ -32,19 +32,22 @@ public final class TaskSearchDefinition {
             .defaultSort(TaskEntity_.ID)
             .build();
 
-    private TaskSearchDefinition() {}
+    private TaskSearchDefinition() {
+    }
 
     private static JpaSearchField<TaskEntity, Long> comparableLong(
-            jakarta.persistence.metamodel.SingularAttribute<TaskEntity, Long> attribute) {
+            jakarta.persistence.metamodel.SingularAttribute<TaskEntity, Long> attribute
+    ) {
         return JpaSearchField.<TaskEntity, Long>comparable(
-                        root -> root.get(attribute), SearchValueConverter.longInteger())
+                root -> root.get(attribute), SearchValueConverter.longInteger())
                 .sortable();
     }
 
     private static JpaSearchField<TaskEntity, Instant> comparableInstant(
-            jakarta.persistence.metamodel.SingularAttribute<TaskEntity, Instant> attribute) {
+            jakarta.persistence.metamodel.SingularAttribute<TaskEntity, Instant> attribute
+    ) {
         return JpaSearchField.<TaskEntity, Instant>comparable(
-                        root -> root.get(attribute), SearchValueConverter.instant())
+                root -> root.get(attribute), SearchValueConverter.instant())
                 .sortable();
     }
 }

@@ -10,5 +10,9 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record OutboxRelayProperties(
         boolean enabled,
-        @NotNull Duration pollInterval,
-        @Positive int batchSize) {}
+        @NotNull
+        Duration pollInterval,
+        @Positive
+        int batchSize
+) {
+}

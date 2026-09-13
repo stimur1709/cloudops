@@ -47,12 +47,12 @@ public class TlsCheckHandler implements ProbeHandler {
 
     private Endpoint endpoint(ResourceConfig resourceConfig) {
         return switch (resourceConfig) {
-            case ServerResourceConfig server when server.port() != null -> new Endpoint(server.host(), server.port());
-            case NetworkDeviceResourceConfig device
-            when device.managementPort() != null -> new Endpoint(device.host(), device.managementPort());
-            case DatabaseResourceConfig database -> new Endpoint(database.host(), database.port());
-            case ServiceResourceConfig service -> serviceEndpoint(service);
-            default -> null;
+        case ServerResourceConfig server when server.port() != null -> new Endpoint(server.host(), server.port());
+        case NetworkDeviceResourceConfig device when device.managementPort() != null ->
+            new Endpoint(device.host(), device.managementPort());
+        case DatabaseResourceConfig database -> new Endpoint(database.host(), database.port());
+        case ServiceResourceConfig service -> serviceEndpoint(service);
+        default -> null;
         };
     }
 
@@ -64,5 +64,9 @@ public class TlsCheckHandler implements ProbeHandler {
         return new Endpoint(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort());
     }
 
-    private record Endpoint(String host, int port) {}
+    private record Endpoint(
+            String host,
+            int port
+    ) {
+    }
 }

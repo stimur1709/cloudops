@@ -24,7 +24,8 @@ public final class JpaSearchField<E, V> {
             SearchValueConverter<V> converter,
             EnumSet<SearchQuery.Operation> operations,
             PredicateFactory<V> predicateFactory,
-            boolean sortable) {
+            boolean sortable
+    ) {
         this.expression = Objects.requireNonNull(expression);
         this.converter = Objects.requireNonNull(converter);
         this.operations = EnumSet.copyOf(operations);
@@ -37,31 +38,43 @@ public final class JpaSearchField<E, V> {
                 expression,
                 SearchValueConverter.stringValue(),
                 EnumSet.of(SearchQuery.Operation.EQ, SearchQuery.Operation.NE, SearchQuery.Operation.CONTAINS),
-                (builder, path, operation, value) -> switch (operation) {
-                    case EQ -> builder.equal(path, value);
-                    case NE -> builder.notEqual(path, value);
-                    case CONTAINS -> builder.like(path, "%" + escapeLike(value) + "%", '\\');
-                    default -> throw unsupportedOperation(operation);
-                },
+                (
+                        builder,
+                        path,
+                        operation,
+                        value) -> switch (operation) {
+                        case EQ -> builder.equal(path, value);
+                        case NE -> builder.notEqual(path, value);
+                        case CONTAINS -> builder.like(path, "%" + escapeLike(value) + "%", '\\');
+                        default -> throw unsupportedOperation(operation);
+                        },
                 false);
     }
 
     public static <E, V> JpaSearchField<E, V> equality(
-            Function<Root<E>, Expression<V>> expression, SearchValueConverter<V> converter) {
+            Function<Root<E>, Expression<V>> expression,
+            SearchValueConverter<V> converter
+    ) {
         return new JpaSearchField<>(
                 expression,
                 converter,
                 EnumSet.of(SearchQuery.Operation.EQ, SearchQuery.Operation.NE),
-                (builder, path, operation, value) -> switch (operation) {
-                    case EQ -> builder.equal(path, value);
-                    case NE -> builder.notEqual(path, value);
-                    default -> throw unsupportedOperation(operation);
-                },
+                (
+                        builder,
+                        path,
+                        operation,
+                        value) -> switch (operation) {
+                        case EQ -> builder.equal(path, value);
+                        case NE -> builder.notEqual(path, value);
+                        default -> throw unsupportedOperation(operation);
+                        },
                 false);
     }
 
     public static <E, V extends Comparable<? super V>> JpaSearchField<E, V> comparable(
-            Function<Root<E>, Expression<V>> expression, SearchValueConverter<V> converter) {
+            Function<Root<E>, Expression<V>> expression,
+            SearchValueConverter<V> converter
+    ) {
         return new JpaSearchField<>(
                 expression,
                 converter,
@@ -72,19 +85,26 @@ public final class JpaSearchField<E, V> {
                         SearchQuery.Operation.GE,
                         SearchQuery.Operation.LT,
                         SearchQuery.Operation.LE),
-                (builder, path, operation, value) -> switch (operation) {
-                    case EQ -> builder.equal(path, value);
-                    case NE -> builder.notEqual(path, value);
-                    case GT -> builder.greaterThan(path, value);
-                    case GE -> builder.greaterThanOrEqualTo(path, value);
-                    case LT -> builder.lessThan(path, value);
-                    case LE -> builder.lessThanOrEqualTo(path, value);
-                    case CONTAINS -> throw unsupportedOperation(operation);
-                },
+                (
+                        builder,
+                        path,
+                        operation,
+                        value) -> switch (operation) {
+                        case EQ -> builder.equal(path, value);
+                        case NE -> builder.notEqual(path, value);
+                        case GT -> builder.greaterThan(path, value);
+                        case GE -> builder.greaterThanOrEqualTo(path, value);
+                        case LT -> builder.lessThan(path, value);
+                        case LE -> builder.lessThanOrEqualTo(path, value);
+                        case CONTAINS -> throw unsupportedOperation(operation);
+                        },
                 false);
     }
 
-    public JpaSearchField<E, V> allowing(SearchQuery.Operation first, SearchQuery.Operation... additional) {
+    public JpaSearchField<E, V> allowing(
+            SearchQuery.Operation first,
+            SearchQuery.Operation... additional
+    ) {
         EnumSet<SearchQuery.Operation> allowed = EnumSet.of(first, additional);
         if (!operations.containsAll(allowed)) {
             throw new IllegalArgumentException("Operation is not supported by this field type");
@@ -108,15 +128,27 @@ public final class JpaSearchField<E, V> {
         return sortable;
     }
 
-    Object convert(String value, String fieldPath) {
+    Object convert(
+            String value,
+            String fieldPath
+    ) {
         return converter.convert(value, fieldPath);
     }
 
-    Predicate toPredicate(Root<E> root, CriteriaBuilder builder, SearchQuery.Operation operation, Object value) {
+    Predicate toPredicate(
+            Root<E> root,
+            CriteriaBuilder builder,
+            SearchQuery.Operation operation,
+            Object value
+    ) {
         return predicateFactory.create(builder, expression.apply(root), operation, cast(value));
     }
 
-    Order toOrder(Root<E> root, CriteriaBuilder builder, SearchQuery.Direction direction) {
+    Order toOrder(
+            Root<E> root,
+            CriteriaBuilder builder,
+            SearchQuery.Direction direction
+    ) {
         Expression<V> path = expression.apply(root);
         return direction == SearchQuery.Direction.ASC ? builder.asc(path) : builder.desc(path);
     }
@@ -137,6 +169,11 @@ public final class JpaSearchField<E, V> {
     @FunctionalInterface
     private interface PredicateFactory<V> {
 
-        Predicate create(CriteriaBuilder builder, Expression<V> expression, SearchQuery.Operation operation, V value);
+        Predicate create(
+                CriteriaBuilder builder,
+                Expression<V> expression,
+                SearchQuery.Operation operation,
+                V value
+        );
     }
 }

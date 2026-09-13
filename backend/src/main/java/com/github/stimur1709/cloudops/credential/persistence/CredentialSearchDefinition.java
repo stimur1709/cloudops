@@ -8,17 +8,17 @@ import java.time.Instant;
 
 public final class CredentialSearchDefinition {
     public static final JpaSearchDefinition<CredentialEntity> DEFINITION = JpaSearchDefinition.builder(
-                    CredentialEntity.class)
+            CredentialEntity.class)
             .field(
                     CredentialEntity_.ID,
                     JpaSearchField.<CredentialEntity, Long>comparable(
-                                    root -> root.get(CredentialEntity_.ID), SearchValueConverter.longInteger())
+                            root -> root.get(CredentialEntity_.ID), SearchValueConverter.longInteger())
                             .sortable())
             .field(
                     CredentialEntity_.ORGANIZATION_ID,
                     JpaSearchField.<CredentialEntity, Long>comparable(
-                                    root -> root.get(CredentialEntity_.ORGANIZATION_ID),
-                                    SearchValueConverter.longInteger())
+                            root -> root.get(CredentialEntity_.ORGANIZATION_ID),
+                            SearchValueConverter.longInteger())
                             .sortable())
             .field(
                     CredentialEntity_.NAME,
@@ -27,8 +27,8 @@ public final class CredentialSearchDefinition {
             .field(
                     CredentialEntity_.TYPE,
                     JpaSearchField.<CredentialEntity, CredentialType>equality(
-                                    root -> root.get(CredentialEntity_.TYPE),
-                                    SearchValueConverter.enumeration(CredentialType.class))
+                            root -> root.get(CredentialEntity_.TYPE),
+                            SearchValueConverter.enumeration(CredentialType.class))
                             .sortable())
             .field(
                     CredentialEntity_.USERNAME,
@@ -37,15 +37,16 @@ public final class CredentialSearchDefinition {
             .field(
                     CredentialEntity_.CREATED_AT,
                     JpaSearchField.<CredentialEntity, Instant>comparable(
-                                    root -> root.get(CredentialEntity_.CREATED_AT), SearchValueConverter.instant())
+                            root -> root.get(CredentialEntity_.CREATED_AT), SearchValueConverter.instant())
                             .sortable())
             .field(
                     CredentialEntity_.UPDATED_AT,
                     JpaSearchField.<CredentialEntity, Instant>comparable(
-                                    root -> root.get(CredentialEntity_.UPDATED_AT), SearchValueConverter.instant())
+                            root -> root.get(CredentialEntity_.UPDATED_AT), SearchValueConverter.instant())
                             .sortable())
             .defaultSort(CredentialEntity_.ID)
             .build();
 
-    private CredentialSearchDefinition() {}
+    private CredentialSearchDefinition() {
+    }
 }

@@ -13,16 +13,26 @@ public class MonitoringSettingsResolver {
     private final MonitoringSettingsIndex index;
     private final MonitoringProperties properties;
 
-    public MonitoringSettingsResolver(MonitoringSettingsIndex index, MonitoringProperties properties) {
+    public MonitoringSettingsResolver(
+            MonitoringSettingsIndex index,
+            MonitoringProperties properties
+    ) {
         this.index = index;
         this.properties = properties;
     }
 
-    public EffectiveProbeSettings resolve(ResourceEntity resource, ProbeType probeType) {
+    public EffectiveProbeSettings resolve(
+            ResourceEntity resource,
+            ProbeType probeType
+    ) {
         return resolve(resource.id(), resource.organizationId(), probeType);
     }
 
-    public EffectiveProbeSettings resolve(long resourceId, long organizationId, ProbeType probeType) {
+    public EffectiveProbeSettings resolve(
+            long resourceId,
+            long organizationId,
+            ProbeType probeType
+    ) {
         ProbeSettings settings = index.resource(resourceId, probeType);
         if (settings != null) {
             return effective(probeType, settings, SettingsSource.RESOURCE);
@@ -42,7 +52,11 @@ public class MonitoringSettingsResolver {
         return Map.copyOf(effectiveSettings);
     }
 
-    private EffectiveProbeSettings effective(ProbeType type, ProbeSettings settings, SettingsSource source) {
+    private EffectiveProbeSettings effective(
+            ProbeType type,
+            ProbeSettings settings,
+            SettingsSource source
+    ) {
         return new EffectiveProbeSettings(
                 type,
                 settings.enabled(),

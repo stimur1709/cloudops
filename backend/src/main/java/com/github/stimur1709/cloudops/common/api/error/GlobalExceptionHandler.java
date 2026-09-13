@@ -42,7 +42,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException exception, HttpServletRequest request) {
+    ResponseEntity<ApiError> handleValidation(
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request
+    ) {
         List<ApiFieldError> errors = exception.getBindingResult().getAllErrors().stream()
                 .map(error -> new ApiFieldError(
                         error instanceof FieldError fieldError ? fieldError.getField() : null,
@@ -56,7 +59,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     ResponseEntity<ApiError> handleConstraintViolation(
-            ConstraintViolationException exception, HttpServletRequest request) {
+            ConstraintViolationException exception,
+            HttpServletRequest request
+    ) {
         List<ApiFieldError> errors = exception.getConstraintViolations().stream()
                 .map(violation -> {
                     String path = violation.getPropertyPath().toString();
@@ -71,7 +76,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ApiError> handleUnreadableBody(
-            HttpMessageNotReadableException exception, HttpServletRequest request) {
+            HttpMessageNotReadableException exception,
+            HttpServletRequest request
+    ) {
         InvalidFormatException invalidFormat = findInvalidFormat(exception);
         List<ApiFieldError> errors = invalidFormat == null ? List.of() : enumFieldError(invalidFormat);
 
@@ -80,7 +87,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     ResponseEntity<ApiError> handleTypeMismatch(
-            MethodArgumentTypeMismatchException exception, HttpServletRequest request) {
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request
+    ) {
         String field = exception.getName();
         String message = isNumeric(exception.getRequiredType())
                 ? "%s must be a number".formatted(capitalize(field))
@@ -96,7 +105,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     ResponseEntity<ApiError> handleMissingRequestParameter(
-            MissingServletRequestParameterException exception, HttpServletRequest request) {
+            MissingServletRequestParameterException exception,
+            HttpServletRequest request
+    ) {
         String field = exception.getParameterName();
         return response(
                 HttpStatus.BAD_REQUEST,
@@ -108,9 +119,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     ResponseEntity<ApiError> handleMethodNotAllowed(
-            HttpRequestMethodNotSupportedException exception, HttpServletRequest request) {
-        ApiError apiError =
-                error("METHOD_NOT_ALLOWED", "HTTP method is not supported for this endpoint", request, List.of());
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+        ApiError apiError = error("METHOD_NOT_ALLOWED", "HTTP method is not supported for this endpoint", request,
+                List.of());
 
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .headers(exception.getHeaders())
@@ -119,7 +132,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     ResponseEntity<ApiError> handleUnsupportedMediaType(
-            HttpMediaTypeNotSupportedException exception, HttpServletRequest request) {
+            HttpMediaTypeNotSupportedException exception,
+            HttpServletRequest request
+    ) {
         ApiError apiError = error("UNSUPPORTED_MEDIA_TYPE", "Content-Type is not supported", request, List.of());
 
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
@@ -128,17 +143,26 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NotFoundException.class)
-    ResponseEntity<ApiError> handleNotFound(NotFoundException exception, HttpServletRequest request) {
+    ResponseEntity<ApiError> handleNotFound(
+            NotFoundException exception,
+            HttpServletRequest request
+    ) {
         return response(HttpStatus.NOT_FOUND, exception.code(), exception.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(ConflictException.class)
-    ResponseEntity<ApiError> handleConflict(ConflictException exception, HttpServletRequest request) {
+    ResponseEntity<ApiError> handleConflict(
+            ConflictException exception,
+            HttpServletRequest request
+    ) {
         return response(HttpStatus.CONFLICT, exception.code(), exception.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(BadRequestException.class)
-    ResponseEntity<ApiError> handleBadRequest(BadRequestException exception, HttpServletRequest request) {
+    ResponseEntity<ApiError> handleBadRequest(
+            BadRequestException exception,
+            HttpServletRequest request
+    ) {
         return response(HttpStatus.BAD_REQUEST, exception.code(), exception.getMessage(), request, List.of());
     }
 
@@ -148,12 +172,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    ResponseEntity<ApiError> handleForbidden(ForbiddenException exception, HttpServletRequest request) {
+    ResponseEntity<ApiError> handleForbidden(
+            ForbiddenException exception,
+            HttpServletRequest request
+    ) {
         return response(HttpStatus.FORBIDDEN, "FORBIDDEN", exception.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(InvalidSearchException.class)
-    ResponseEntity<ApiError> handleInvalidSearch(InvalidSearchException exception, HttpServletRequest request) {
+    ResponseEntity<ApiError> handleInvalidSearch(
+            InvalidSearchException exception,
+            HttpServletRequest request
+    ) {
         return response(
                 HttpStatus.BAD_REQUEST,
                 "INVALID_REQUEST",
@@ -168,18 +198,31 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    ResponseEntity<ApiError> handleUnexpected(Exception exception, HttpServletRequest request) {
+    ResponseEntity<ApiError> handleUnexpected(
+            Exception exception,
+            HttpServletRequest request
+    ) {
         LOGGER.error("Unhandled exception while processing {}", request.getRequestURI(), exception);
         return response(
                 HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "An unexpected error occurred", request, List.of());
     }
 
     private ResponseEntity<ApiError> response(
-            HttpStatus status, String code, String message, HttpServletRequest request, List<ApiFieldError> errors) {
+            HttpStatus status,
+            String code,
+            String message,
+            HttpServletRequest request,
+            List<ApiFieldError> errors
+    ) {
         return ResponseEntity.status(status).body(error(code, message, request, errors));
     }
 
-    private ApiError error(String code, String message, HttpServletRequest request, List<ApiFieldError> errors) {
+    private ApiError error(
+            String code,
+            String message,
+            HttpServletRequest request,
+            List<ApiFieldError> errors
+    ) {
         return new ApiError(code, message, clock.instant(), request.getRequestURI(), errors);
     }
 
@@ -187,7 +230,10 @@ public class GlobalExceptionHandler {
         return findCause(throwable, InvalidFormatException.class);
     }
 
-    private <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
+    private <T extends Throwable> T findCause(
+            Throwable throwable,
+            Class<T> type
+    ) {
         Throwable current = throwable;
         while (current != null) {
             if (type.isInstance(current)) {

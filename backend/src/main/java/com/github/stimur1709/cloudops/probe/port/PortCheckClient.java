@@ -24,21 +24,30 @@ public class PortCheckClient {
         this(timeout, PortCheckClient::connect);
     }
 
-    PortCheckClient(Duration timeout, Connector connector) {
+    PortCheckClient(
+            Duration timeout,
+            Connector connector
+    ) {
         this.timeout = timeout;
         this.connector = connector;
     }
 
-    PortCheckOutcome execute(String host, int port) {
+    PortCheckOutcome execute(
+            String host,
+            int port
+    ) {
         return execute(host, port, Math.toIntExact(timeout.toMillis()));
     }
 
-    PortCheckOutcome execute(String host, int port, int timeoutMs) {
+    PortCheckOutcome execute(
+            String host,
+            int port,
+            int timeoutMs
+    ) {
         long startedAt = System.nanoTime();
         try {
             connector.connect(host, port, timeoutMs);
-            long responseTimeMs =
-                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             return PortCheckOutcome.completed(new PortCheckResult(host, port, responseTimeMs));
         } catch (UnknownHostException exception) {
             return PortCheckOutcome.failed(ProbeErrorCode.DNS_ERROR, "Host name could not be resolved");
@@ -49,7 +58,11 @@ public class PortCheckClient {
         }
     }
 
-    private static void connect(String host, int port, int timeoutMs) throws IOException {
+    private static void connect(
+            String host,
+            int port,
+            int timeoutMs
+    ) throws IOException {
         InetAddress address = InetAddress.getByName(host);
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(address, port), timeoutMs);
@@ -58,6 +71,10 @@ public class PortCheckClient {
 
     @FunctionalInterface
     interface Connector {
-        void connect(String host, int port, int timeoutMs) throws IOException;
+        void connect(
+                String host,
+                int port,
+                int timeoutMs
+        ) throws IOException;
     }
 }

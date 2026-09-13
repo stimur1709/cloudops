@@ -9,11 +9,17 @@ import java.util.Objects;
 @FunctionalInterface
 public interface JpaSearchScope<E> {
 
-    Predicate toPredicate(Root<E> root, CriteriaQuery<?> query, CriteriaBuilder builder);
+    Predicate toPredicate(
+            Root<E> root,
+            CriteriaQuery<?> query,
+            CriteriaBuilder builder
+    );
 
     default JpaSearchScope<E> and(JpaSearchScope<E> other) {
         Objects.requireNonNull(other);
-        return (root, query, builder) ->
-                builder.and(toPredicate(root, query, builder), other.toPredicate(root, query, builder));
+        return (
+                root,
+                query,
+                builder) -> builder.and(toPredicate(root, query, builder), other.toPredicate(root, query, builder));
     }
 }

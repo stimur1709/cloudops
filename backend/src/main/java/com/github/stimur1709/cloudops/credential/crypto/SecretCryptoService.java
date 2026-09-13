@@ -18,7 +18,10 @@ public class SecretCryptoService {
     private final CredentialCryptoProperties properties;
     private final SecureRandom secureRandom;
 
-    public SecretCryptoService(CredentialCryptoProperties properties, SecureRandom secureRandom) {
+    public SecretCryptoService(
+            CredentialCryptoProperties properties,
+            SecureRandom secureRandom
+    ) {
         this.properties = properties;
         this.secureRandom = secureRandom;
     }

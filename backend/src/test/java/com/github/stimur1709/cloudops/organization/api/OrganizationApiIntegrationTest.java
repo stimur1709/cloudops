@@ -37,9 +37,10 @@ class OrganizationApiIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, 'test@example.com', 'Test', '{noop}unused-password', now(), now())
@@ -97,8 +98,8 @@ class OrganizationApiIntegrationTest {
                 .andExpect(jsonPath("$.name").value("Platform"));
 
         String updated = mockMvc.perform(put("/api/organizations/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Core Platform\"}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Core Platform\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Core Platform"))
                 .andReturn()
@@ -116,8 +117,8 @@ class OrganizationApiIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
         mockMvc.perform(put("/api/organizations/999999")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Missing\"}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Missing\"}"))
                 .andExpect(status().isNotFound());
     }
 
@@ -183,14 +184,14 @@ class OrganizationApiIntegrationTest {
         long resourceId = ((Number) JsonPath.read(resource, "$.id")).longValue();
 
         mockMvc.perform(post("/api/resources/search")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(filter("organizationId", "EQ", Long.toString(first))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(filter("organizationId", "EQ", Long.toString(first))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(1)));
 
         mockMvc.perform(put("/api/resources/{id}", resourceId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(resourceBody("router", second)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(resourceBody("router", second)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.organizationId").value(second));
     }
@@ -203,8 +204,8 @@ class OrganizationApiIntegrationTest {
                 .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
         long resource = insertResource("server", organization);
         mockMvc.perform(put("/api/resources/{id}", resource)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(resourceBody("server", 999999)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(resourceBody("server", 999999)))
                 .andExpect(status().isNotFound());
     }
 
@@ -219,8 +220,8 @@ class OrganizationApiIntegrationTest {
                 .andExpect(jsonPath("$.code").value("RESOURCE_NAME_CONFLICT"));
         long other = insertResource("other", first);
         mockMvc.perform(put("/api/resources/{id}", other)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(resourceBody("shared", first)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(resourceBody("shared", first)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("RESOURCE_NAME_CONFLICT"));
     }
@@ -245,7 +246,10 @@ class OrganizationApiIntegrationTest {
                 .content("{\"name\":\"%s\"}".formatted(name)));
     }
 
-    private ResultActions createResource(String name, long organizationId) throws Exception {
+    private ResultActions createResource(
+            String name,
+            long organizationId
+    ) throws Exception {
         return mockMvc.perform(post("/api/resources")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(resourceBody(name, organizationId)));
@@ -257,7 +261,11 @@ class OrganizationApiIntegrationTest {
                 .content(body));
     }
 
-    private String filter(String field, String operation, String value) {
+    private String filter(
+            String field,
+            String operation,
+            String value
+    ) {
         return """
                 {"start":0,"size":10,"filter":{"operator":"AND","conditions":[
                   {"field":"%s","operation":"%s","value":"%s"}
@@ -265,14 +273,20 @@ class OrganizationApiIntegrationTest {
                 """.formatted(field, operation, value);
     }
 
-    private String resourceBody(String name, long organizationId) {
+    private String resourceBody(
+            String name,
+            long organizationId
+    ) {
         return """
                 {"name":"%s","type":"SERVER","status":"ACTIVE","organizationId":%d,
                  "config":{"host":"server.internal"}}
                 """.formatted(name, organizationId);
     }
 
-    private long insertOrganization(String name, Instant instant) {
+    private long insertOrganization(
+            String name,
+            Instant instant
+    ) {
         long id = jdbcTemplate.queryForObject("""
                 INSERT INTO organizations (name, created_at, updated_at)
                 VALUES (?, ?, ?) RETURNING id
@@ -285,7 +299,10 @@ class OrganizationApiIntegrationTest {
         return id;
     }
 
-    private long insertResource(String name, long organizationId) {
+    private long insertResource(
+            String name,
+            long organizationId
+    ) {
         long resourceId = jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
                 VALUES (?, 'SERVER', 'ACTIVE', ?, '{"host":"server.internal"}', now(), now()) RETURNING id

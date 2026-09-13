@@ -20,7 +20,11 @@ public class ResourceMonitorController {
     }
 
     @GetMapping
-    public List<MonitorResponse> list(@PathVariable long resourceId, Authentication authentication) {
+    public List<MonitorResponse> list(
+            @PathVariable
+            long resourceId,
+            Authentication authentication
+    ) {
         return monitorService.list(resourceId, CurrentUser.id(authentication)).stream()
                 .map(MonitorResponse::from)
                 .toList();

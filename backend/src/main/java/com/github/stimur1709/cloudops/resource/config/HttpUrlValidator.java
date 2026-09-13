@@ -9,7 +9,10 @@ import java.util.Locale;
 public final class HttpUrlValidator implements ConstraintValidator<HttpUrl, String> {
 
     @Override
-    public boolean isValid(String value, ConstraintValidatorContext context) {
+    public boolean isValid(
+            String value,
+            ConstraintValidatorContext context
+    ) {
         if (value == null || value.isBlank()) {
             return true;
         }

@@ -40,7 +40,8 @@ public class OrganizationService {
             OrganizationMembershipJpaRepository membershipRepository,
             UserJpaRepository userRepository,
             OrganizationAuthorization authorization,
-            Clock clock) {
+            Clock clock
+    ) {
         this.organizationRepository = organizationRepository;
         this.searchService = searchService;
         this.resourceRepository = resourceRepository;
@@ -51,24 +52,33 @@ public class OrganizationService {
     }
 
     @Transactional
-    public OrganizationEntity create(String name, long currentUserId) {
+    public OrganizationEntity create(
+            String name,
+            long currentUserId
+    ) {
         UserEntity creator = userRepository.findById(currentUserId).orElseThrow(NotFoundException::new);
-        OrganizationEntity organization =
-                organizationRepository.saveAndFlush(OrganizationEntity.create(name, clock.instant()));
+        OrganizationEntity organization = organizationRepository
+                .saveAndFlush(OrganizationEntity.create(name, clock.instant()));
         membershipRepository.save(
                 OrganizationMembershipEntity.create(organization, creator, MembershipRole.OWNER, clock.instant()));
         return organization;
     }
 
     @Transactional(readOnly = true)
-    public OrganizationEntity get(long id, long currentUserId) {
+    public OrganizationEntity get(
+            long id,
+            long currentUserId
+    ) {
         OrganizationEntity organization = organizationRepository.findById(id).orElseThrow(NotFoundException::new);
         authorization.requireMember(id, currentUserId);
         return organization;
     }
 
     @Transactional(readOnly = true)
-    public SearchResult<OrganizationEntity> search(SearchQuery search, long currentUserId) {
+    public SearchResult<OrganizationEntity> search(
+            SearchQuery search,
+            long currentUserId
+    ) {
         return searchService.search(
                 search,
                 OrganizationMembershipScopes.visibleTo(currentUserId, OrganizationEntity_.id),
@@ -76,18 +86,25 @@ public class OrganizationService {
     }
 
     @Transactional
-    public OrganizationEntity update(long id, String name, long currentUserId) {
-        OrganizationEntity organization =
-                organizationRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
+    public OrganizationEntity update(
+            long id,
+            String name,
+            long currentUserId
+    ) {
+        OrganizationEntity organization = organizationRepository.findByIdForUpdate(id)
+                .orElseThrow(NotFoundException::new);
         authorization.requireManager(id, currentUserId);
         organization.update(name, clock.instant());
         return organization;
     }
 
     @Transactional
-    public void delete(long id, long currentUserId) {
-        OrganizationEntity organization =
-                organizationRepository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
+    public void delete(
+            long id,
+            long currentUserId
+    ) {
+        OrganizationEntity organization = organizationRepository.findByIdForUpdate(id)
+                .orElseThrow(NotFoundException::new);
         authorization.requireOwner(id, currentUserId);
         if (resourceRepository.existsByOrganizationId(id) || membershipRepository.existsByOrganizationId(id)) {
             throw organizationInUse();

@@ -16,12 +16,16 @@ public class SshCheckClient {
         this.client = client;
     }
 
-    SshCheckOutcome execute(String host, int port, ResolvedCredential credential, int timeoutMs) {
+    SshCheckOutcome execute(
+            String host,
+            int port,
+            ResolvedCredential credential,
+            int timeoutMs
+    ) {
         long startedAt = System.nanoTime();
         try {
             var connection = client.check(host, port, credential, timeoutMs);
-            long responseTimeMs =
-                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             return SshCheckOutcome.completed(new SshCheckResult(
                     host,
                     port,
@@ -36,12 +40,12 @@ public class SshCheckClient {
 
     private ProbeErrorCode errorCode(SshClientException exception) {
         return switch (exception.type()) {
-            case CONNECTION -> ProbeErrorCode.CONNECTION_ERROR;
-            case CONNECTION_TIMEOUT, COMMAND_TIMEOUT -> ProbeErrorCode.TIMEOUT;
-            case HOST_KEY -> ProbeErrorCode.SSH_HOST_KEY_ERROR;
-            case AUTHENTICATION -> ProbeErrorCode.SSH_AUTHENTICATION_ERROR;
-            case CREDENTIAL -> ProbeErrorCode.CREDENTIAL_ERROR;
-            case EXECUTION -> ProbeErrorCode.SSH_HANDSHAKE_ERROR;
+        case CONNECTION -> ProbeErrorCode.CONNECTION_ERROR;
+        case CONNECTION_TIMEOUT, COMMAND_TIMEOUT -> ProbeErrorCode.TIMEOUT;
+        case HOST_KEY -> ProbeErrorCode.SSH_HOST_KEY_ERROR;
+        case AUTHENTICATION -> ProbeErrorCode.SSH_AUTHENTICATION_ERROR;
+        case CREDENTIAL -> ProbeErrorCode.CREDENTIAL_ERROR;
+        case EXECUTION -> ProbeErrorCode.SSH_HANDSHAKE_ERROR;
         };
     }
 }

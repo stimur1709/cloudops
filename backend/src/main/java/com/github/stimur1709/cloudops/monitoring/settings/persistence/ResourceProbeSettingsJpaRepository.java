@@ -6,9 +6,15 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ResourceProbeSettingsJpaRepository extends JpaRepository<ResourceProbeSettingsEntity, Long> {
-    Optional<ResourceProbeSettingsEntity> findByResourceIdAndProbeType(long resourceId, ProbeType probeType);
+    Optional<ResourceProbeSettingsEntity> findByResourceIdAndProbeType(
+            long resourceId,
+            ProbeType probeType
+    );
 
     List<ResourceProbeSettingsEntity> findAllByResourceId(long resourceId);
 
-    void deleteByResourceIdAndProbeType(long resourceId, ProbeType probeType);
+    void deleteByResourceIdAndProbeType(
+            long resourceId,
+            ProbeType probeType
+    );
 }

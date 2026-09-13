@@ -26,9 +26,10 @@ import org.springframework.web.context.WebApplicationContext;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(
         properties = {
-            "cloudops.web.cors.allowed-origins=https://frontend.example.com",
-            "cloudops.web.cors.allow-credentials=true"
-        })
+                "cloudops.web.cors.allowed-origins=https://frontend.example.com",
+                "cloudops.web.cors.allow-credentials=true"
+        }
+)
 class WebCorsIntegrationTest {
 
     private static final String ALLOWED_ORIGIN = "https://frontend.example.com";
@@ -46,17 +47,18 @@ class WebCorsIntegrationTest {
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext)
                 .apply(springSecurity())
                 .build();
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                            TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
     }
 
     @Test
     void allowedPreflightReturnsExplicitPolicyWithoutAuthentication() throws Exception {
         mockMvc.perform(options("/api/auth/refresh")
-                        .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
-                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
-                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Authorization, Content-Type"))
+                .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Authorization, Content-Type"))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, ALLOWED_ORIGIN))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
@@ -73,8 +75,8 @@ class WebCorsIntegrationTest {
     @Test
     void deniedOriginDoesNotReceiveCorsPermission() throws Exception {
         mockMvc.perform(options("/api/auth/refresh")
-                        .header(HttpHeaders.ORIGIN, "https://attacker.example.com")
-                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .header(HttpHeaders.ORIGIN, "https://attacker.example.com")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
                 .andExpect(status().isForbidden())
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS));
@@ -88,8 +90,8 @@ class WebCorsIntegrationTest {
 
         long userId = registerUser();
         mockMvc.perform(get("/api/auth/me")
-                        .with(jwt().jwt(token -> token.subject(Long.toString(userId))))
-                        .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN))
+                .with(jwt().jwt(token -> token.subject(Long.toString(userId))))
+                .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, ALLOWED_ORIGIN));
@@ -102,11 +104,11 @@ class WebCorsIntegrationTest {
         registerUser();
 
         mockMvc.perform(post("/api/auth/login")
-                        .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"email":"user@example.com","password":"correct-horse-battery-staple"}
-                                """))
+                .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"email":"user@example.com","password":"correct-horse-battery-staple"}
+                        """))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, ALLOWED_ORIGIN))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
@@ -115,14 +117,14 @@ class WebCorsIntegrationTest {
 
     private long registerUser() throws Exception {
         return mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "email":"user@example.com",
-                                  "displayName":"User",
-                                  "password":"correct-horse-battery-staple"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email":"user@example.com",
+                          "displayName":"User",
+                          "password":"correct-horse-battery-staple"
+                        }
+                        """))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()

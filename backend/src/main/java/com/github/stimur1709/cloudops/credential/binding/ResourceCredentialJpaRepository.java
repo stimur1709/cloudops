@@ -18,11 +18,18 @@ public interface ResourceCredentialJpaRepository extends JpaRepository<ResourceC
             WHERE binding.resourceId = :resourceId
             ORDER BY binding.purpose
             """)
-    List<ResourceCredentialDetails> findDetailsByResourceIdOrderByPurpose(@Param("resourceId") long resourceId);
+    List<ResourceCredentialDetails> findDetailsByResourceIdOrderByPurpose(@Param("resourceId")
+    long resourceId);
 
-    Optional<ResourceCredentialEntity> findByResourceIdAndPurpose(long resourceId, CredentialPurpose purpose);
+    Optional<ResourceCredentialEntity> findByResourceIdAndPurpose(
+            long resourceId,
+            CredentialPurpose purpose
+    );
 
-    boolean existsByResourceIdAndPurpose(long resourceId, CredentialPurpose purpose);
+    boolean existsByResourceIdAndPurpose(
+            long resourceId,
+            CredentialPurpose purpose
+    );
 
     List<ResourceCredentialEntity> findAllByCredentialId(long credentialId);
 

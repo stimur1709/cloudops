@@ -5,8 +5,15 @@ import java.time.Instant;
 import java.util.List;
 
 public record ApiError(
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String code,
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String message,
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED) Instant timestamp,
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String path,
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED) List<ApiFieldError> errors) {}
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+        String code,
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+        String message,
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+        Instant timestamp,
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+        String path,
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+        List<ApiFieldError> errors
+) {
+}

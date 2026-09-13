@@ -32,9 +32,13 @@ public class OrganizationMembershipController {
     @PostMapping
     @ApiResponse(responseCode = "201", description = "Created", useReturnTypeSchema = true)
     public ResponseEntity<OrganizationMemberResponse> add(
-            @PathVariable long organizationId,
-            @Valid @RequestBody AddOrganizationMemberRequest request,
-            Authentication authentication) {
+            @PathVariable
+            long organizationId,
+            @Valid
+            @RequestBody
+            AddOrganizationMemberRequest request,
+            Authentication authentication
+    ) {
         OrganizationMemberResponse response = OrganizationMemberResponse.from(membershipService.add(
                 organizationId, request.userId(), request.role(), CurrentUser.id(authentication)));
         URI location = URI.create("/api/organizations/%d/members/%d".formatted(organizationId, response.userId()));
@@ -43,9 +47,13 @@ public class OrganizationMembershipController {
 
     @PostMapping("/search")
     public SearchResponse<OrganizationMemberResponse> search(
-            @PathVariable long organizationId,
-            @Valid @RequestBody SearchRequest request,
-            Authentication authentication) {
+            @PathVariable
+            long organizationId,
+            @Valid
+            @RequestBody
+            SearchRequest request,
+            Authentication authentication
+    ) {
         return SearchResponse.from(
                 membershipService.search(organizationId, request.toQuery(), CurrentUser.id(authentication)),
                 OrganizationMemberResponse::from);
@@ -53,10 +61,15 @@ public class OrganizationMembershipController {
 
     @PutMapping("/{userId}")
     public OrganizationMemberResponse updateRole(
-            @PathVariable long organizationId,
-            @PathVariable long userId,
-            @Valid @RequestBody UpdateOrganizationMemberRequest request,
-            Authentication authentication) {
+            @PathVariable
+            long organizationId,
+            @PathVariable
+            long userId,
+            @Valid
+            @RequestBody
+            UpdateOrganizationMemberRequest request,
+            Authentication authentication
+    ) {
         return OrganizationMemberResponse.from(
                 membershipService.updateRole(organizationId, userId, request.role(), CurrentUser.id(authentication)));
     }
@@ -64,7 +77,12 @@ public class OrganizationMembershipController {
     @DeleteMapping("/{userId}")
     @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> remove(
-            @PathVariable long organizationId, @PathVariable long userId, Authentication authentication) {
+            @PathVariable
+            long organizationId,
+            @PathVariable
+            long userId,
+            Authentication authentication
+    ) {
         membershipService.remove(organizationId, userId, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();
     }

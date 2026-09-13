@@ -4,7 +4,10 @@ import java.util.UUID;
 
 public class StaleTaskExecutionException extends RuntimeException {
 
-    public StaleTaskExecutionException(long taskId, UUID executionId) {
+    public StaleTaskExecutionException(
+            long taskId,
+            UUID executionId
+    ) {
         super("Task %d execution %s is stale".formatted(taskId, executionId));
     }
 }

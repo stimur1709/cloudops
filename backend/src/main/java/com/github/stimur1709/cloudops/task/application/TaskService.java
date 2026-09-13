@@ -33,7 +33,8 @@ public class TaskService {
             OrganizationAuthorization authorization,
             JpaSearchService searchService,
             TaskHandlerRegistry handlerRegistry,
-            TaskParameterCodecRegistry parameterCodecRegistry) {
+            TaskParameterCodecRegistry parameterCodecRegistry
+    ) {
         this.persistenceService = persistenceService;
         this.taskRepository = taskRepository;
         this.authorization = authorization;
@@ -42,7 +43,12 @@ public class TaskService {
         this.parameterCodecRegistry = parameterCodecRegistry;
     }
 
-    public TaskEntity create(long resourceId, TaskType type, JsonNode parameters, long currentUserId) {
+    public TaskEntity create(
+            long resourceId,
+            TaskType type,
+            JsonNode parameters,
+            long currentUserId
+    ) {
         handlerRegistry.requireSupported(type);
         var typedParameters = parameterCodecRegistry.decode(type, parameters);
         return persistenceService.create(
@@ -50,14 +56,20 @@ public class TaskService {
     }
 
     @Transactional(readOnly = true)
-    public TaskEntity get(long id, long currentUserId) {
+    public TaskEntity get(
+            long id,
+            long currentUserId
+    ) {
         TaskEntity task = taskRepository.findById(id).orElseThrow(NotFoundException::new);
         authorization.requireMember(task.organizationId(), currentUserId);
         return task;
     }
 
     @Transactional(readOnly = true)
-    public SearchResult<TaskEntity> search(SearchQuery query, long currentUserId) {
+    public SearchResult<TaskEntity> search(
+            SearchQuery query,
+            long currentUserId
+    ) {
         return searchService.search(
                 query,
                 OrganizationMembershipScopes.visibleTo(currentUserId, TaskEntity_.organizationId),
