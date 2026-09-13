@@ -22,6 +22,7 @@ import { Alert } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Separator } from "../../components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -347,111 +348,119 @@ export function ResourceForm({
 
   return (
     <form
-      className="max-w-[var(--layout-form-max)] space-y-6"
+      className="w-full max-w-[var(--layout-form-max)] space-y-6"
       noValidate
       onSubmit={form.handleSubmit(submit)}
     >
       {submitError && <Alert>{submitError}</Alert>}
-      <div className="space-y-4 rounded-panel border border-border bg-surface p-4">
-        <Field
-          id="resource-name"
-          label="Имя"
-          error={form.formState.errors.name?.message}
-        >
-          <Input
+      <div className="space-y-6 rounded-panel border border-border bg-surface p-4">
+        <section aria-labelledby="resource-main-fields" className="space-y-4">
+          <h2 id="resource-main-fields" className="text-card-title">
+            Основные параметры
+          </h2>
+          <Field
             id="resource-name"
-            autoFocus
-            aria-invalid={Boolean(form.formState.errors.name)}
-            aria-describedby={
-              form.formState.errors.name ? "resource-name-error" : undefined
-            }
-            {...form.register("name")}
-          />
-        </Field>
-        <Field
-          id="resource-type"
-          label="Тип"
-          error={form.formState.errors.type?.message}
-        >
-          <Controller
-            control={form.control}
-            name="type"
-            render={({ field }) => (
-              <Select
-                value={field.value}
-                onValueChange={(value: ResourceFormValues["type"]) => {
-                  field.onChange(value);
-                  form.setValue("config", configDefaults(value), {
-                    shouldDirty: true,
-                  });
-                  form.clearErrors("config");
-                }}
-              >
-                <SelectTrigger
-                  id="resource-type"
-                  className="w-full"
-                  aria-invalid={Boolean(form.formState.errors.type)}
-                  aria-describedby={
-                    form.formState.errors.type
-                      ? "resource-type-error"
-                      : undefined
-                  }
+            label="Имя"
+            error={form.formState.errors.name?.message}
+          >
+            <Input
+              id="resource-name"
+              autoFocus
+              aria-invalid={Boolean(form.formState.errors.name)}
+              aria-describedby={
+                form.formState.errors.name ? "resource-name-error" : undefined
+              }
+              {...form.register("name")}
+            />
+          </Field>
+          <Field
+            id="resource-type"
+            label="Тип"
+            error={form.formState.errors.type?.message}
+          >
+            <Controller
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(value: ResourceFormValues["type"]) => {
+                    field.onChange(value);
+                    form.setValue("config", configDefaults(value), {
+                      shouldDirty: true,
+                    });
+                    form.clearErrors("config");
+                  }}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {resourceTypes.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {resourceTypeLabels[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+                  <SelectTrigger
+                    id="resource-type"
+                    className="w-full"
+                    aria-invalid={Boolean(form.formState.errors.type)}
+                    aria-describedby={
+                      form.formState.errors.type
+                        ? "resource-type-error"
+                        : undefined
+                    }
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resourceTypes.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {resourceTypeLabels[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+          <Field
+            id="resource-status"
+            label="Статус"
+            error={form.formState.errors.status?.message}
+          >
+            <Controller
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger
+                    id="resource-status"
+                    className="w-full"
+                    aria-invalid={Boolean(form.formState.errors.status)}
+                    aria-describedby={
+                      form.formState.errors.status
+                        ? "resource-status-error"
+                        : undefined
+                    }
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lifecycleStatuses.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {resourceStatusLabels[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+        </section>
+        <Separator />
+        <section aria-labelledby="resource-config-fields" className="space-y-4">
+          <h2 id="resource-config-fields" className="text-card-title">
+            Параметры подключения
+          </h2>
+          <ConfigFields
+            type={type}
+            register={form.register}
+            errors={form.formState.errors}
           />
-        </Field>
-        <Field
-          id="resource-status"
-          label="Статус"
-          error={form.formState.errors.status?.message}
-        >
-          <Controller
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger
-                  id="resource-status"
-                  className="w-full"
-                  aria-invalid={Boolean(form.formState.errors.status)}
-                  aria-describedby={
-                    form.formState.errors.status
-                      ? "resource-status-error"
-                      : undefined
-                  }
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {lifecycleStatuses.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {resourceStatusLabels[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </Field>
+        </section>
       </div>
-      <fieldset className="space-y-4 rounded-panel border border-border bg-surface p-4">
-        <legend className="px-1 text-card-title">Параметры подключения</legend>
-        <ConfigFields
-          type={type}
-          register={form.register}
-          errors={form.formState.errors}
-        />
-      </fieldset>
       <div className="flex flex-wrap justify-end gap-2">
         <Button asChild variant="secondary">
           <Link to={listPath}>Отмена</Link>
@@ -459,10 +468,13 @@ export function ResourceForm({
         <Button
           type="submit"
           variant="primary"
+          className="min-w-36"
           disabled={form.formState.isSubmitting}
         >
           {form.formState.isSubmitting
-            ? "Сохранение…"
+            ? resource
+              ? "Сохранение…"
+              : "Создание…"
             : resource
               ? "Сохранить"
               : "Создать ресурс"}

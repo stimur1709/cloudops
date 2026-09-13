@@ -10,6 +10,16 @@ import {
 import { ResourceForm } from "./resource-form";
 
 describe("ResourceForm", () => {
+  it("does not show validation errors before interaction", () => {
+    render(
+      <MemoryRouter>
+        <ResourceForm organizationId={11} onSubmit={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText("Укажите имя ресурса")).toBeNull();
+    expect(screen.queryByText("Укажите хост")).toBeNull();
+  });
+
   it("serializes only the config selected by the current resource type", () => {
     expect(
       serializeResourceConfig({

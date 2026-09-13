@@ -22,7 +22,7 @@ import {
   Server,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ApiClientError, readableError } from "../../api/client/api-error";
 import type { ResourceResponse } from "../../api/generated/model";
@@ -96,19 +96,23 @@ function ResourceActions({
   resource,
   href,
   organizationId,
-  isManager,
 }: {
   resource: ResourceResponse;
   href: string;
   organizationId: number;
-  isManager: boolean;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const setDeleteDialogOpen = (open: boolean) => {
+    setDeleteOpen(open);
+    if (!open) window.requestAnimationFrame(() => triggerRef.current?.focus());
+  };
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            ref={triggerRef}
             type="button"
             variant="ghost"
             size="icon"
@@ -119,35 +123,26 @@ function ResourceActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem asChild>
-            <Link to={href}>Открыть детали</Link>
+            <Link to={`${href}/edit`}>
+              <Pencil aria-hidden="true" />
+              Редактировать
+            </Link>
           </DropdownMenuItem>
-          {isManager && (
-            <>
-              <DropdownMenuItem asChild>
-                <Link to={`${href}/edit`}>
-                  <Pencil aria-hidden="true" />
-                  Редактировать
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-status-down"
-                onSelect={() => setDeleteOpen(true)}
-              >
-                <Trash2 aria-hidden="true" />
-                Удалить
-              </DropdownMenuItem>
-            </>
-          )}
+          <DropdownMenuItem
+            className="text-status-down"
+            onSelect={() => setDeleteOpen(true)}
+          >
+            <Trash2 aria-hidden="true" />
+            Удалить
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {isManager && (
-        <ResourceDeleteDialog
-          resource={resource}
-          organizationId={organizationId}
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-        />
-      )}
+      <ResourceDeleteDialog
+        resource={resource}
+        organizationId={organizationId}
+        open={deleteOpen}
+        onOpenChange={setDeleteDialogOpen}
+      />
     </>
   );
 }
@@ -169,17 +164,17 @@ function SortHeader({
     <Button
       type="button"
       variant="ghost"
-      className="-ml-3"
+      className={direction ? "-ml-3 text-foreground" : "-ml-3"}
       onClick={column.getToggleSortingHandler()}
       aria-label={"Сортировать по " + sortLabel}
     >
       {label}
       {direction === "asc" ? (
-        <ArrowUp aria-hidden="true" />
+        <ArrowUp aria-hidden="true" className="text-foreground" />
       ) : direction === "desc" ? (
-        <ArrowDown aria-hidden="true" />
+        <ArrowDown aria-hidden="true" className="text-foreground" />
       ) : (
-        <ArrowUpDown aria-hidden="true" />
+        <ArrowUpDown aria-hidden="true" className="text-decoration-muted" />
       )}
     </Button>
   );
@@ -244,8 +239,8 @@ export function ResourcesPage() {
       updateParams({ page: String(state.page) }, false);
   }, [query.data, query.isFetching, state.page, updateParams]);
 
-  const columns = useMemo<ColumnDef<ResourceResponse>[]>(
-    () => [
+  const columns = useMemo<ColumnDef<ResourceResponse>[]>(() => {
+    const columns: ColumnDef<ResourceResponse>[] = [
       {
         accessorKey: "name",
         header: ({ column }) => (
@@ -313,14 +308,14 @@ export function ResourcesPage() {
               resource={row.original}
               href={href}
               organizationId={organizationId}
-              isManager={isManager}
             />
           );
         },
       },
-    ],
-    [isManager, organizationId],
-  );
+    ];
+    if (!isManager) columns.pop();
+    return columns;
+  }, [isManager, organizationId]);
 
   const sorting: SortingState = state.sort
     ? [{ id: state.sort, desc: state.order === "desc" }]
@@ -396,7 +391,11 @@ export function ResourcesPage() {
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 id="resources-heading" className="text-page-title">
+            <h1
+              id="resources-heading"
+              className="text-page-title"
+              tabIndex={-1}
+            >
               Ресурсы
             </h1>
             {query.isFetching && (
@@ -626,12 +625,13 @@ export function ResourcesPage() {
                   resource={resource}
                   href={href}
                   actions={
-                    <ResourceActions
-                      resource={resource}
-                      href={href}
-                      organizationId={organizationId}
-                      isManager={isManager}
-                    />
+                    isManager ? (
+                      <ResourceActions
+                        resource={resource}
+                        href={href}
+                        organizationId={organizationId}
+                      />
+                    ) : undefined
                   }
                 />
               );

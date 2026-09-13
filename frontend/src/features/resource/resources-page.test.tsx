@@ -141,6 +141,9 @@ describe("ResourcesPage", () => {
     const sortButton = screen.getByRole("button", {
       name: "Сортировать по имени",
     });
+    expect(sortButton.querySelector("svg")).toHaveClass(
+      "text-decoration-muted",
+    );
     expect(sortButton.closest("th")).not.toHaveAttribute("aria-sort");
     sortButton.focus();
     await user.keyboard("{Enter}");
@@ -153,6 +156,8 @@ describe("ResourcesPage", () => {
       ),
     );
     expect(sortButton.closest("th")).toHaveAttribute("aria-sort", "ascending");
+    expect(sortButton).toHaveClass("text-foreground");
+    expect(sortButton.querySelector("svg")).toHaveClass("text-foreground");
     expect(
       screen.getByRole("button", { name: "Сортировать по типу" }).closest("th"),
     ).not.toHaveAttribute("aria-sort");
@@ -312,9 +317,9 @@ describe("ResourcesPage", () => {
     const memberView = renderPage(undefined, false);
     await screen.findAllByText("payments-api");
     expect(screen.queryByRole("link", { name: "Добавить ресурс" })).toBeNull();
-    await user.click(
-      screen.getAllByRole("button", { name: "Действия для payments-api" })[0]!,
-    );
+    expect(
+      screen.queryByRole("button", { name: "Действия для payments-api" }),
+    ).toBeNull();
     expect(
       screen.queryByRole("menuitem", { name: "Редактировать" }),
     ).toBeNull();
@@ -335,6 +340,9 @@ describe("ResourcesPage", () => {
 
   it("requires named confirmation before deleting and refreshes the list", async () => {
     const user = userEvent.setup();
+    vi.mocked(search3)
+      .mockImplementationOnce(() => response())
+      .mockImplementationOnce(() => new Promise(() => undefined));
     renderPage();
     await screen.findAllByText("payments-api");
     await user.click(
@@ -348,7 +356,24 @@ describe("ResourcesPage", () => {
     await user.click(screen.getByRole("button", { name: "Удалить ресурс" }));
     await waitFor(() => expect(vi.mocked(delete2)).toHaveBeenCalledWith(7));
     await waitFor(() =>
-      expect(vi.mocked(search3).mock.calls.length).toBeGreaterThan(1),
+      expect(screen.queryByRole("link", { name: "payments-api" })).toBeNull(),
     );
+    expect(vi.mocked(search3).mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("restores focus to the row action after cancelling delete", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findAllByText("payments-api");
+    const trigger = screen.getAllByRole("button", {
+      name: "Действия для payments-api",
+    })[0]!;
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard("{ArrowDown}{Enter}");
+    const cancel = screen.getByRole("button", { name: "Отмена" });
+    expect(cancel).toHaveFocus();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 });

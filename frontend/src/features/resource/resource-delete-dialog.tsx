@@ -13,7 +13,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
-import { deleteResource, resourceKeys } from "./resource-api";
+import {
+  deleteResource,
+  resourceKeys,
+  type ResourcePage,
+} from "./resource-api";
 
 export function ResourceDeleteDialog({
   resource,
@@ -40,11 +44,28 @@ export function ResourceDeleteDialog({
       queryClient.removeQueries({
         queryKey: resourceKeys.detail(organizationId, resource.id),
       });
+      queryClient.setQueriesData<ResourcePage>(
+        { queryKey: resourceKeys.organization(organizationId) },
+        (current) =>
+          current
+            ? {
+                ...current,
+                items: current.items.filter((item) => item.id !== resource.id),
+                total:
+                  current.total === undefined
+                    ? undefined
+                    : Math.max(0, current.total - 1),
+              }
+            : current,
+      );
       await queryClient.invalidateQueries({
         queryKey: resourceKeys.organization(organizationId),
       });
       onOpenChange(false);
       navigate(`/organizations/${organizationId}/resources`, { replace: true });
+      window.requestAnimationFrame(() =>
+        document.getElementById("resources-heading")?.focus(),
+      );
     } catch {
       setError(
         "Не удалось удалить ресурс. Проверьте доступ и повторите попытку.",
@@ -76,7 +97,11 @@ export function ResourceDeleteDialog({
         {error && <Alert className="mt-4">{error}</Alert>}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Отмена</AlertDialogCancel>
-          <AlertDialogAction disabled={pending} onClick={remove}>
+          <AlertDialogAction
+            className="min-w-36"
+            disabled={pending}
+            onClick={remove}
+          >
             {pending ? "Удаление…" : "Удалить ресурс"}
           </AlertDialogAction>
         </AlertDialogFooter>
