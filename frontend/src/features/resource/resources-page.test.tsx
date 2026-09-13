@@ -4,12 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../api/client/api-error";
-import { search3 } from "../../api/generated/cloud-ops";
+import { delete2, search3 } from "../../api/generated/cloud-ops";
 import type { ResourceResponse } from "../../api/generated/model";
 import { OrganizationContext } from "../organization/organization-context";
 import { ResourcesPage } from "./resources-page";
 
-vi.mock("../../api/generated/cloud-ops", () => ({ search3: vi.fn() }));
+vi.mock("../../api/generated/cloud-ops", () => ({
+  delete2: vi.fn(),
+  search3: vi.fn(),
+}));
 
 const resources: ResourceResponse[] = [
   {
@@ -31,7 +34,7 @@ function response(items = resources, total = items.length) {
   });
 }
 
-function renderPage(route = "/organizations/11/resources") {
+function renderPage(route = "/organizations/11/resources", isManager = true) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -41,8 +44,8 @@ function renderPage(route = "/organizations/11/resources") {
         value={{
           organization: { id: 11, name: "Alpha" },
           organizationId: 11,
-          currentRole: "OWNER",
-          isManager: true,
+          currentRole: isManager ? "OWNER" : "MEMBER",
+          isManager,
         }}
       >
         <MemoryRouter initialEntries={[route]}>
@@ -55,7 +58,13 @@ function renderPage(route = "/organizations/11/resources") {
 
 beforeEach(() => {
   vi.mocked(search3).mockReset();
+  vi.mocked(delete2).mockReset();
   vi.mocked(search3).mockImplementation(() => response());
+  vi.mocked(delete2).mockResolvedValue({
+    data: undefined,
+    status: 204,
+    headers: new Headers(),
+  });
 });
 
 describe("ResourcesPage", () => {
@@ -132,6 +141,9 @@ describe("ResourcesPage", () => {
     const sortButton = screen.getByRole("button", {
       name: "Сортировать по имени",
     });
+    expect(sortButton.querySelector("svg")).toHaveClass(
+      "text-decoration-muted",
+    );
     expect(sortButton.closest("th")).not.toHaveAttribute("aria-sort");
     sortButton.focus();
     await user.keyboard("{Enter}");
@@ -144,6 +156,8 @@ describe("ResourcesPage", () => {
       ),
     );
     expect(sortButton.closest("th")).toHaveAttribute("aria-sort", "ascending");
+    expect(sortButton).toHaveClass("text-foreground");
+    expect(sortButton.querySelector("svg")).toHaveClass("text-foreground");
     expect(
       screen.getByRole("button", { name: "Сортировать по типу" }).closest("th"),
     ).not.toHaveAttribute("aria-sort");
@@ -296,5 +310,70 @@ describe("ResourcesPage", () => {
     expect(
       screen.getByRole("combobox", { name: "Строк на странице" }),
     ).toHaveTextContent("20");
+  });
+
+  it("shows mutation actions only to organization managers", async () => {
+    const user = userEvent.setup();
+    const memberView = renderPage(undefined, false);
+    await screen.findAllByText("payments-api");
+    expect(screen.queryByRole("link", { name: "Добавить ресурс" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Действия для payments-api" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("menuitem", { name: "Редактировать" }),
+    ).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Удалить" })).toBeNull();
+    memberView.unmount();
+
+    renderPage();
+    await screen.findAllByText("payments-api");
+    expect(screen.getByRole("link", { name: "Добавить ресурс" })).toBeVisible();
+    await user.click(
+      screen.getAllByRole("button", { name: "Действия для payments-api" })[0]!,
+    );
+    expect(
+      screen.getByRole("menuitem", { name: "Редактировать" }),
+    ).toBeVisible();
+    expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeVisible();
+  });
+
+  it("requires named confirmation before deleting and refreshes the list", async () => {
+    const user = userEvent.setup();
+    vi.mocked(search3)
+      .mockImplementationOnce(() => response())
+      .mockImplementationOnce(() => new Promise(() => undefined));
+    renderPage();
+    await screen.findAllByText("payments-api");
+    await user.click(
+      screen.getAllByRole("button", { name: "Действия для payments-api" })[0]!,
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Удалить" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "Удалить ресурс payments-api?",
+    );
+    expect(vi.mocked(delete2)).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Удалить ресурс" }));
+    await waitFor(() => expect(vi.mocked(delete2)).toHaveBeenCalledWith(7));
+    await waitFor(() =>
+      expect(screen.queryByRole("link", { name: "payments-api" })).toBeNull(),
+    );
+    expect(vi.mocked(search3).mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("restores focus to the row action after cancelling delete", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findAllByText("payments-api");
+    const trigger = screen.getAllByRole("button", {
+      name: "Действия для payments-api",
+    })[0]!;
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard("{ArrowDown}{Enter}");
+    const cancel = screen.getByRole("button", { name: "Отмена" });
+    expect(cancel).toHaveFocus();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 });

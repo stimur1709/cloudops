@@ -12,7 +12,7 @@ export function ResourceCard({
 }: {
   resource: ResourceResponse;
   href: string;
-  actions: ReactNode;
+  actions?: ReactNode;
 }) {
   const updatedAt = resource.updatedAt ? new Date(resource.updatedAt) : null;
   const hasValidUpdatedAt = updatedAt && !Number.isNaN(updatedAt.getTime());
@@ -30,12 +30,7 @@ export function ResourceCard({
             {getResourceTypeLabel(resource.type)}
           </p>
         </div>
-        <div
-          className="shrink-0"
-          aria-label={`Действия для ${resource.name ?? "ресурса"}`}
-        >
-          {actions}
-        </div>
+        {actions && <div className="shrink-0">{actions}</div>}
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <HealthStatus status={resource.healthStatus} />

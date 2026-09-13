@@ -27,6 +27,16 @@ const ResourcesPage = lazy(() =>
     default: module.ResourcesPage,
   })),
 );
+const NewResourcePage = lazy(() =>
+  import("../../features/resource/resource-form-page").then((module) => ({
+    default: module.NewResourcePage,
+  })),
+);
+const EditResourcePage = lazy(() =>
+  import("../../features/resource/resource-form-page").then((module) => ({
+    default: module.EditResourcePage,
+  })),
+);
 
 function ProtectedRoutes() {
   const { status } = useAuth();
@@ -77,6 +87,11 @@ export function AppRoutes() {
           >
             <Route index element={<Navigate to="resources" replace />} />
             <Route path="resources" element={<ResourcesPage />} />
+            <Route path="resources/new" element={<NewResourcePage />} />
+            <Route
+              path="resources/:resourceId/edit"
+              element={<EditResourcePage />}
+            />
             <Route
               path="resources/:resourceId"
               element={organizationPage(
