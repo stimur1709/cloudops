@@ -2,12 +2,16 @@ import {
   create,
   delete2,
   get1,
+  get5,
+  search2,
   search3,
   update1,
 } from "../../api/generated/cloud-ops";
 import type {
   Condition,
   CreateResourceRequest,
+  ResourceAvailabilityResponse,
+  ResourceHealthEventResponse,
   ResourceResponse,
   SearchRequest,
   UpdateResourceRequest,
@@ -70,6 +74,30 @@ export const resourceKeys = {
     ] as const,
   detail: (organizationId: number, resourceId: number) =>
     ["resources", organizationId, "detail", resourceId] as const,
+  availability: (
+    organizationId: number,
+    resourceId: number,
+    from: string,
+    to: string,
+  ) =>
+    [
+      "resources",
+      organizationId,
+      "detail",
+      resourceId,
+      "availability",
+      from,
+      to,
+    ] as const,
+  healthEvents: (organizationId: number, resourceId: number, page: number) =>
+    [
+      "resources",
+      organizationId,
+      "detail",
+      resourceId,
+      "health-events",
+      page,
+    ] as const,
 };
 
 export function buildResourceSearchRequest(
@@ -148,4 +176,38 @@ export async function updateResource(
 
 export async function deleteResource(resourceId: number): Promise<void> {
   await delete2(resourceId);
+}
+
+export async function getResourceAvailability(
+  resourceId: number,
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<ResourceAvailabilityResponse> {
+  const response = await get5(resourceId, { from, to }, { signal });
+  return response.data as ResourceAvailabilityResponse;
+}
+
+export interface ResourceHealthEventsPage {
+  items: ResourceHealthEventResponse[];
+  total?: number;
+}
+
+export async function getResourceHealthEvents(
+  resourceId: number,
+  page: number,
+  size: number,
+  signal?: AbortSignal,
+): Promise<ResourceHealthEventsPage> {
+  const response = await search2(
+    resourceId,
+    {
+      start: page * size,
+      size,
+      sort: [{ field: "changedAt", order: "DESC" }],
+      getTotal: true,
+    },
+    { signal },
+  );
+  return response.data as ResourceHealthEventsPage;
 }

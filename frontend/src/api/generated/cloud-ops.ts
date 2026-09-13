@@ -30,14 +30,17 @@ import type {
   Error403Response,
   Error404Response,
   Error409Response,
+  Get5Params,
   LoginRequest,
   OrganizationMemberResponse,
   OrganizationResponse,
   RegisterRequest,
+  ResourceAvailabilityResponse,
   ResourceResponse,
   SearchRequest,
   SearchResponseOrganizationMemberResponse,
   SearchResponseOrganizationResponse,
+  SearchResponseResourceHealthEventResponse,
   SearchResponseResourceResponse,
   TokenResponse,
   UpdateOrganizationMemberRequest,
@@ -1630,6 +1633,183 @@ export const useCreate = <
   return useMutation(getCreateMutationOptions(options), queryClient);
 };
 
+export type search2Response200 = {
+  data: SearchResponseResourceHealthEventResponse;
+  status: 200;
+};
+
+export type search2Response400 = {
+  data: Error400Response;
+  status: 400;
+};
+
+export type search2Response401 = {
+  data: Error401Response;
+  status: 401;
+};
+
+export type search2Response403 = {
+  data: Error403Response;
+  status: 403;
+};
+
+export type search2Response404 = {
+  data: Error404Response;
+  status: 404;
+};
+
+export type search2Response409 = {
+  data: Error409Response;
+  status: 409;
+};
+
+export type search2ResponseSuccess = search2Response200 & {
+  headers: Headers;
+};
+export type search2ResponseError = (
+  | search2Response400
+  | search2Response401
+  | search2Response403
+  | search2Response404
+  | search2Response409
+) & {
+  headers: Headers;
+};
+
+export type search2Response = search2ResponseSuccess | search2ResponseError;
+
+export const getSearch2Url = (resourceId: number) => {
+  return `/api/resources/${resourceId}/health/events/search`;
+};
+
+/**
+ * Allowed filter fields and operators: changedAt [EQ, GE, GT, LE, LT, NE]; fromStatus [EQ, NE]; id [EQ, GE, GT, LE, LT, NE]; toStatus [EQ, NE]. Sortable fields: changedAt, fromStatus, id, toStatus. Default sort: changedAt ASC.
+ */
+export const search2 = async (
+  resourceId: number,
+  searchRequest: SearchRequest,
+  options?: Parameters<typeof generatedRequest>[1],
+): Promise<search2Response> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return generatedRequest<search2Response>(getSearch2Url(resourceId), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(searchRequest),
+  });
+};
+
+export const getSearch2MutationKey = () => ["search2"] as const;
+
+export const getSearch2MutationOptions = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof search2>>,
+    TError,
+    Search2MutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof generatedRequest>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof search2>>,
+  TError,
+  Search2MutationVariables,
+  TContext
+> => {
+  const mutationKey = getSearch2MutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof search2>>,
+    Search2MutationVariables
+  > = (props) => {
+    const { resourceId, data } = props ?? {};
+
+    return search2(resourceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type Search2MutationResult = NonNullable<
+  Awaited<ReturnType<typeof search2>>
+>;
+export type Search2MutationBody = SearchRequest;
+export type Search2MutationError =
+  | Error400Response
+  | Error401Response
+  | Error403Response
+  | Error404Response
+  | Error409Response;
+export type Search2MutationVariables = {
+  resourceId: number;
+  data: SearchRequest;
+};
+
+export const useSearch2 = <
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof search2>>,
+      TError,
+      Search2MutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof search2>>,
+  TError,
+  Search2MutationVariables,
+  TContext
+> => {
+  return useMutation(getSearch2MutationOptions(options), queryClient);
+};
+
 export type search3Response200 = {
   data: SearchResponseResourceResponse;
   status: 200;
@@ -2947,6 +3127,241 @@ export const useLogin = <
 > => {
   return useMutation(getLoginMutationOptions(options), queryClient);
 };
+
+export type get5Response200 = {
+  data: ResourceAvailabilityResponse;
+  status: 200;
+};
+
+export type get5Response400 = {
+  data: Error400Response;
+  status: 400;
+};
+
+export type get5Response401 = {
+  data: Error401Response;
+  status: 401;
+};
+
+export type get5Response403 = {
+  data: Error403Response;
+  status: 403;
+};
+
+export type get5Response404 = {
+  data: Error404Response;
+  status: 404;
+};
+
+export type get5Response409 = {
+  data: Error409Response;
+  status: 409;
+};
+
+export type get5ResponseSuccess = get5Response200 & {
+  headers: Headers;
+};
+export type get5ResponseError = (
+  | get5Response400
+  | get5Response401
+  | get5Response403
+  | get5Response404
+  | get5Response409
+) & {
+  headers: Headers;
+};
+
+export type get5Response = get5ResponseSuccess | get5ResponseError;
+
+export const getGet5Url = (resourceId: number, params: Get5Params) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/resources/${resourceId}/health/availability?${stringifiedParams}`
+    : `/api/resources/${resourceId}/health/availability`;
+};
+
+export const get5 = async (
+  resourceId: number,
+  params: Get5Params,
+  options?: Parameters<typeof generatedRequest>[1],
+): Promise<get5Response> => {
+  return generatedRequest<get5Response>(getGet5Url(resourceId, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGet5QueryKey = (resourceId: number, params?: Get5Params) => {
+  return [
+    `/api/resources/${resourceId}/health/availability`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGet5QueryOptions = <
+  TData = Awaited<ReturnType<typeof get5>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  resourceId: number,
+  params: Get5Params,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get5>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGet5QueryKey(resourceId, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof get5>>> = ({
+    signal,
+  }) => get5(resourceId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: resourceId !== null && resourceId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof get5>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type Get5QueryResult = NonNullable<Awaited<ReturnType<typeof get5>>>;
+export type Get5QueryError =
+  | Error400Response
+  | Error401Response
+  | Error403Response
+  | Error404Response
+  | Error409Response;
+
+export function useGet5<
+  TData = Awaited<ReturnType<typeof get5>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  resourceId: number,
+  params: Get5Params,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get5>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof get5>>,
+          TError,
+          Awaited<ReturnType<typeof get5>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGet5<
+  TData = Awaited<ReturnType<typeof get5>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  resourceId: number,
+  params: Get5Params,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get5>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof get5>>,
+          TError,
+          Awaited<ReturnType<typeof get5>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGet5<
+  TData = Awaited<ReturnType<typeof get5>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  resourceId: number,
+  params: Get5Params,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get5>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGet5<
+  TData = Awaited<ReturnType<typeof get5>>,
+  TError =
+    | Error400Response
+    | Error401Response
+    | Error403Response
+    | Error404Response
+    | Error409Response,
+>(
+  resourceId: number,
+  params: Get5Params,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof get5>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof generatedRequest>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGet5QueryOptions(resourceId, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export type meResponse200 = {
   data: UserResponse;

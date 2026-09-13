@@ -20,6 +20,8 @@ export default defineConfig({
           "organization-controller",
           "organization-membership-controller",
           "resource-controller",
+          "resource-availability-controller",
+          "resource-health-event-controller",
         ],
       },
     },

@@ -204,6 +204,9 @@ export function ResourcesPage() {
     [searchParams],
   );
   const [searchDraft, setSearchDraft] = useState(state.search);
+  const resourceListSearch = searchParams.toString();
+  const resourceListSearchRef = useRef(resourceListSearch);
+  resourceListSearchRef.current = resourceListSearch;
 
   const updateParams = useCallback(
     (changes: Record<string, string | undefined>, resetPage = false) => {
@@ -249,6 +252,7 @@ export function ResourcesPage() {
         cell: ({ row }) => (
           <Link
             to={`/organizations/${organizationId}/resources/${row.original.id}`}
+            state={{ resourceListSearch: resourceListSearchRef.current }}
             className="font-medium text-product-accent underline-offset-4 hover:underline"
           >
             {row.original.name ?? "Без имени"}
@@ -624,6 +628,7 @@ export function ResourcesPage() {
                   key={resource.id ?? index}
                   resource={resource}
                   href={href}
+                  linkState={{ resourceListSearch }}
                   actions={
                     isManager ? (
                       <ResourceActions

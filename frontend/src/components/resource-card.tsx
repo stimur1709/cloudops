@@ -8,10 +8,12 @@ import { getResourceTypeLabel } from "./resource-labels";
 export function ResourceCard({
   resource,
   href,
+  linkState,
   actions,
 }: {
   resource: ResourceResponse;
   href: string;
+  linkState?: unknown;
   actions?: ReactNode;
 }) {
   const updatedAt = resource.updatedAt ? new Date(resource.updatedAt) : null;
@@ -22,6 +24,7 @@ export function ResourceCard({
         <div className="min-w-0">
           <Link
             to={href}
+            state={linkState}
             className="block truncate text-card-title text-product-accent underline-offset-4 hover:underline"
           >
             {resource.name ?? "Без имени"}
