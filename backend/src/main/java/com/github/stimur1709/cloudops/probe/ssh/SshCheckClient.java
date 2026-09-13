@@ -40,12 +40,12 @@ public class SshCheckClient {
 
     private ProbeErrorCode errorCode(SshClientException exception) {
         return switch (exception.type()) {
-        case CONNECTION -> ProbeErrorCode.CONNECTION_ERROR;
-        case CONNECTION_TIMEOUT, COMMAND_TIMEOUT -> ProbeErrorCode.TIMEOUT;
-        case HOST_KEY -> ProbeErrorCode.SSH_HOST_KEY_ERROR;
-        case AUTHENTICATION -> ProbeErrorCode.SSH_AUTHENTICATION_ERROR;
-        case CREDENTIAL -> ProbeErrorCode.CREDENTIAL_ERROR;
-        case EXECUTION -> ProbeErrorCode.SSH_HANDSHAKE_ERROR;
+            case CONNECTION -> ProbeErrorCode.CONNECTION_ERROR;
+            case CONNECTION_TIMEOUT, COMMAND_TIMEOUT -> ProbeErrorCode.TIMEOUT;
+            case HOST_KEY -> ProbeErrorCode.SSH_HOST_KEY_ERROR;
+            case AUTHENTICATION -> ProbeErrorCode.SSH_AUTHENTICATION_ERROR;
+            case CREDENTIAL -> ProbeErrorCode.CREDENTIAL_ERROR;
+            case EXECUTION -> ProbeErrorCode.SSH_HANDSHAKE_ERROR;
         };
     }
 }

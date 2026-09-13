@@ -43,10 +43,10 @@ public final class JpaSearchField<E, V> {
                         path,
                         operation,
                         value) -> switch (operation) {
-                        case EQ -> builder.equal(path, value);
-                        case NE -> builder.notEqual(path, value);
-                        case CONTAINS -> builder.like(path, "%" + escapeLike(value) + "%", '\\');
-                        default -> throw unsupportedOperation(operation);
+                            case EQ -> builder.equal(path, value);
+                            case NE -> builder.notEqual(path, value);
+                            case CONTAINS -> builder.like(path, "%" + escapeLike(value) + "%", '\\');
+                            default -> throw unsupportedOperation(operation);
                         },
                 false);
     }
@@ -64,9 +64,9 @@ public final class JpaSearchField<E, V> {
                         path,
                         operation,
                         value) -> switch (operation) {
-                        case EQ -> builder.equal(path, value);
-                        case NE -> builder.notEqual(path, value);
-                        default -> throw unsupportedOperation(operation);
+                            case EQ -> builder.equal(path, value);
+                            case NE -> builder.notEqual(path, value);
+                            default -> throw unsupportedOperation(operation);
                         },
                 false);
     }
@@ -90,13 +90,13 @@ public final class JpaSearchField<E, V> {
                         path,
                         operation,
                         value) -> switch (operation) {
-                        case EQ -> builder.equal(path, value);
-                        case NE -> builder.notEqual(path, value);
-                        case GT -> builder.greaterThan(path, value);
-                        case GE -> builder.greaterThanOrEqualTo(path, value);
-                        case LT -> builder.lessThan(path, value);
-                        case LE -> builder.lessThanOrEqualTo(path, value);
-                        case CONTAINS -> throw unsupportedOperation(operation);
+                            case EQ -> builder.equal(path, value);
+                            case NE -> builder.notEqual(path, value);
+                            case GT -> builder.greaterThan(path, value);
+                            case GE -> builder.greaterThanOrEqualTo(path, value);
+                            case LT -> builder.lessThan(path, value);
+                            case LE -> builder.lessThanOrEqualTo(path, value);
+                            case CONTAINS -> throw unsupportedOperation(operation);
                         },
                 false);
     }

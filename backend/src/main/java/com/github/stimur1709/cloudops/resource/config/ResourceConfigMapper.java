@@ -27,11 +27,11 @@ public class ResourceConfigMapper {
 
     private Class<? extends ResourceConfig> configClass(ResourceType type) {
         return switch (type) {
-        case SERVER -> ServerResourceConfig.class;
-        case NETWORK_DEVICE -> NetworkDeviceResourceConfig.class;
-        case DATABASE -> DatabaseResourceConfig.class;
-        case SERVICE -> ServiceResourceConfig.class;
-        case OTHER -> OtherResourceConfig.class;
+            case SERVER -> ServerResourceConfig.class;
+            case NETWORK_DEVICE -> NetworkDeviceResourceConfig.class;
+            case DATABASE -> DatabaseResourceConfig.class;
+            case SERVICE -> ServiceResourceConfig.class;
+            case OTHER -> OtherResourceConfig.class;
         };
     }
 }

@@ -9,8 +9,8 @@ public enum SshAuthMethod {
 
     static SshAuthMethod from(ResolvedCredential credential) {
         return switch (credential) {
-        case ResolvedUsernamePassword ignored -> PASSWORD;
-        case ResolvedSshPrivateKey ignored -> PUBLIC_KEY;
+            case ResolvedUsernamePassword ignored -> PASSWORD;
+            case ResolvedSshPrivateKey ignored -> PUBLIC_KEY;
         };
     }
 }

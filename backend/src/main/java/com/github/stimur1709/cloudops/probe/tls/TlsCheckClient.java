@@ -102,8 +102,7 @@ public class TlsCheckClient {
             String host,
             int port,
             int timeoutMs
-    )
-            throws IOException {
+    ) throws IOException {
         try (SSLSocket socket = (SSLSocket) socketFactory.createSocket()) {
             socket.connect(new InetSocketAddress(host, port), timeoutMs);
             socket.setSoTimeout(timeoutMs);

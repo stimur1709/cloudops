@@ -38,8 +38,8 @@ public class CredentialResolver {
                 .orElseThrow(NotFoundException::new);
         String secret = cryptoService.decrypt(credential.secretEncrypted());
         return switch (credential.type()) {
-        case USERNAME_PASSWORD -> new ResolvedUsernamePassword(credential.username(), secret);
-        case SSH_PRIVATE_KEY -> new ResolvedSshPrivateKey(credential.username(), secret);
+            case USERNAME_PASSWORD -> new ResolvedUsernamePassword(credential.username(), secret);
+            case SSH_PRIVATE_KEY -> new ResolvedSshPrivateKey(credential.username(), secret);
         };
     }
 }

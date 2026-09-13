@@ -103,11 +103,11 @@ public class OpenApiConfiguration {
 
     private List<String> publicErrorStatuses(String path) {
         return switch (path) {
-        case "/api/auth/register" -> List.of("400", "409");
-        case "/api/auth/login" -> List.of("400", "401");
-        case "/api/auth/refresh" -> List.of("401");
-        case "/api/auth/logout" -> List.of();
-        default -> throw new IllegalArgumentException("Unexpected public endpoint: " + path);
+            case "/api/auth/register" -> List.of("400", "409");
+            case "/api/auth/login" -> List.of("400", "401");
+            case "/api/auth/refresh" -> List.of("401");
+            case "/api/auth/logout" -> List.of();
+            default -> throw new IllegalArgumentException("Unexpected public endpoint: " + path);
         };
     }
 

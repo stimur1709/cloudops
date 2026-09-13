@@ -28,11 +28,11 @@ public final class SshEndpointResolver {
 
     public static SshEndpoint resolve(ResourceConfig resourceConfig) {
         return switch (resourceConfig) {
-        case ServerResourceConfig server -> new SshEndpoint(server.host(), server.sshPort());
-        case NetworkDeviceResourceConfig device ->
-            new SshEndpoint(
-                    device.host(), device.managementPort() == null ? DEFAULT_SSH_PORT : device.managementPort());
-        default -> throw new IllegalArgumentException("SSH requires a server or network device");
+            case ServerResourceConfig server -> new SshEndpoint(server.host(), server.sshPort());
+            case NetworkDeviceResourceConfig device ->
+                new SshEndpoint(
+                        device.host(), device.managementPort() == null ? DEFAULT_SSH_PORT : device.managementPort());
+            default -> throw new IllegalArgumentException("SSH requires a server or network device");
         };
     }
 }

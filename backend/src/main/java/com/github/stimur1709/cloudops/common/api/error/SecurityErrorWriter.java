@@ -29,8 +29,7 @@ public class SecurityErrorWriter {
             int status,
             String code,
             String message
-    )
-            throws IOException {
+    ) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(

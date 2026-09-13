@@ -14,11 +14,11 @@ public final class ResourceHostExtractor {
 
     public static String extract(ResourceConfig resourceConfig) {
         return switch (resourceConfig) {
-        case ServerResourceConfig server -> server.host();
-        case NetworkDeviceResourceConfig device -> device.host();
-        case DatabaseResourceConfig database -> database.host();
-        case ServiceResourceConfig service -> URI.create(service.url()).getHost();
-        default -> null;
+            case ServerResourceConfig server -> server.host();
+            case NetworkDeviceResourceConfig device -> device.host();
+            case DatabaseResourceConfig database -> database.host();
+            case ServiceResourceConfig service -> URI.create(service.url()).getHost();
+            default -> null;
         };
     }
 }

@@ -141,28 +141,28 @@ public class MonitorEntity {
             int recoveryThreshold
     ) {
         switch (healthStatus) {
-        case UNKNOWN -> {
-            healthStatus = success ? HealthStatus.UP : HealthStatus.DOWN;
-            resetCounters();
-        }
-        case UP -> {
-            consecutiveSuccesses = 0;
-            if (success) {
-                consecutiveFailures = 0;
-            } else if (++consecutiveFailures >= failureThreshold) {
-                healthStatus = HealthStatus.DOWN;
+            case UNKNOWN -> {
+                healthStatus = success ? HealthStatus.UP : HealthStatus.DOWN;
                 resetCounters();
             }
-        }
-        case DOWN -> {
-            consecutiveFailures = 0;
-            if (!success) {
+            case UP -> {
                 consecutiveSuccesses = 0;
-            } else if (++consecutiveSuccesses >= recoveryThreshold) {
-                healthStatus = HealthStatus.UP;
-                resetCounters();
+                if (success) {
+                    consecutiveFailures = 0;
+                } else if (++consecutiveFailures >= failureThreshold) {
+                    healthStatus = HealthStatus.DOWN;
+                    resetCounters();
+                }
             }
-        }
+            case DOWN -> {
+                consecutiveFailures = 0;
+                if (!success) {
+                    consecutiveSuccesses = 0;
+                } else if (++consecutiveSuccesses >= recoveryThreshold) {
+                    healthStatus = HealthStatus.UP;
+                    resetCounters();
+                }
+            }
         }
     }
 

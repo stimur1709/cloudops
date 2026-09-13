@@ -33,6 +33,7 @@ public record SearchRequest(
         )
         boolean getTotal
 ) {
+
     public SearchQuery toQuery() {
         SearchQuery.Filter searchFilter = filter == null ? null : filter.toQuery();
         List<SearchQuery.Sort> searchSort = sort == null ? List.of() : sort.stream().map(Sort::toQuery).toList();

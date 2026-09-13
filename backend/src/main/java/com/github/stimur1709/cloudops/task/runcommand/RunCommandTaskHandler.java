@@ -90,12 +90,12 @@ public class RunCommandTaskHandler implements TaskHandler {
 
     private TaskErrorCode errorCode(SshClientException exception) {
         return switch (exception.type()) {
-        case CONNECTION, CONNECTION_TIMEOUT -> TaskErrorCode.SSH_CONNECTION_ERROR;
-        case HOST_KEY -> TaskErrorCode.SSH_HOST_KEY_ERROR;
-        case AUTHENTICATION -> TaskErrorCode.SSH_AUTHENTICATION_ERROR;
-        case CREDENTIAL -> TaskErrorCode.SSH_CREDENTIAL_ERROR;
-        case EXECUTION -> TaskErrorCode.SSH_EXECUTION_ERROR;
-        case COMMAND_TIMEOUT -> TaskErrorCode.COMMAND_TIMEOUT;
+            case CONNECTION, CONNECTION_TIMEOUT -> TaskErrorCode.SSH_CONNECTION_ERROR;
+            case HOST_KEY -> TaskErrorCode.SSH_HOST_KEY_ERROR;
+            case AUTHENTICATION -> TaskErrorCode.SSH_AUTHENTICATION_ERROR;
+            case CREDENTIAL -> TaskErrorCode.SSH_CREDENTIAL_ERROR;
+            case EXECUTION -> TaskErrorCode.SSH_EXECUTION_ERROR;
+            case COMMAND_TIMEOUT -> TaskErrorCode.COMMAND_TIMEOUT;
         };
     }
 }
