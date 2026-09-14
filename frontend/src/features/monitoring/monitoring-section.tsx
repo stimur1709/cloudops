@@ -1,0 +1,583 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Activity,
+  ArrowLeft,
+  ArrowRight,
+  History,
+  LoaderCircle,
+  Play,
+} from "lucide-react";
+import { useState } from "react";
+import { ApiClientError, readableError } from "../../api/client/api-error";
+import type {
+  MonitorResponse,
+  MonitoringResultResponse,
+  ProbeExecutionResult,
+} from "../../api/generated/model";
+import { HealthStatus } from "../../components/health-status";
+import { Alert } from "../../components/ui/alert";
+import { Button } from "../../components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { Skeleton } from "../../components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import { cn } from "../../lib/cn";
+import { formatDateTime } from "../resource/resource-details-format";
+import {
+  getMonitorHistory,
+  getResourceMonitors,
+  monitoringKeys,
+  requestMonitorRun,
+} from "./monitoring-api";
+import { presentProbeResult } from "./monitoring-presentation";
+
+const historyPageSize = 10;
+const pollingIntervalMs = 2_000;
+const pollingLimitMs = 16_000;
+
+interface PollState {
+  monitorId: number;
+  baseline?: string | null;
+  startedAt: number;
+}
+
+type RunFeedback = "polling" | "completed" | "timeout";
+
+function controlledRunError(error: unknown) {
+  if (!(error instanceof ApiClientError)) return readableError(error);
+  if (error.code === "MONITOR_DISABLED")
+    return "Монитор отключён. Измените настройки мониторинга перед запуском.";
+  if (error.code === "MONITOR_INCOMPATIBLE")
+    return "Монитор несовместим с текущей конфигурацией ресурса.";
+  if (error.kind === "not-found")
+    return "Монитор не найден или больше недоступен.";
+  return readableError(error);
+}
+
+function ProbeResult({
+  type,
+  result,
+  emptyText = "Проверка ещё не выполнялась.",
+}: {
+  type: MonitorResponse["type"];
+  result?: ProbeExecutionResult | null;
+  emptyText?: string;
+}) {
+  if (!result)
+    return <p className="text-body text-foreground-muted">{emptyText}</p>;
+
+  const presentation = presentProbeResult(type, result);
+  const successful = presentation.outcome === "success";
+  return (
+    <div className="space-y-2">
+      <p
+        className={cn(
+          "text-body",
+          successful ? "text-status-up" : "text-status-down",
+        )}
+      >
+        {presentation.summary}
+      </p>
+      {(presentation.errorCode || presentation.fields.length > 0) && (
+        <details className="rounded-control border border-border bg-background p-3">
+          <summary className="cursor-pointer text-label text-foreground">
+            Технические детали
+          </summary>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+            {presentation.errorCode && (
+              <ResultField label="Код ошибки" value={presentation.errorCode} />
+            )}
+            {presentation.fields.map((field) => (
+              <ResultField
+                key={field.label}
+                label={field.label}
+                value={field.value}
+              />
+            ))}
+          </dl>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function ResultField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-caption text-foreground-muted">{label}</dt>
+      <dd className="mt-1 break-all font-mono text-technical text-foreground">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function RunMonitorControl({
+  monitor,
+  organizationId,
+  resourceId,
+  feedback,
+  onAccepted,
+}: {
+  monitor: MonitorResponse;
+  organizationId: number;
+  resourceId: number;
+  feedback?: RunFeedback;
+  onAccepted: (monitor: MonitorResponse) => void;
+}) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => requestMonitorRun(monitor.id!),
+    onSuccess: () => {
+      onAccepted(monitor);
+      return queryClient.invalidateQueries({
+        queryKey: monitoringKeys.resource(organizationId, resourceId),
+      });
+    },
+  });
+  const feedbackText =
+    feedback === "polling"
+      ? "Запуск запрошен, ожидаем новый результат…"
+      : feedback === "completed"
+        ? "Получен новый результат запуска."
+        : feedback === "timeout"
+          ? "Запуск принят. Новый результат пока не появился."
+          : undefined;
+
+  return (
+    <div className="space-y-2">
+      <Button
+        type="button"
+        disabled={mutation.isPending || monitor.id === undefined}
+        onClick={() => {
+          mutation.reset();
+          mutation.mutate();
+        }}
+      >
+        {mutation.isPending ? (
+          <LoaderCircle aria-hidden="true" className="animate-spin" />
+        ) : (
+          <Play aria-hidden="true" />
+        )}
+        {mutation.isPending ? "Запрашиваем…" : "Запустить сейчас"}
+      </Button>
+      {feedbackText && (
+        <p aria-live="polite" className="text-caption text-foreground-muted">
+          {feedbackText}
+        </p>
+      )}
+      {mutation.isError && <Alert>{controlledRunError(mutation.error)}</Alert>}
+    </div>
+  );
+}
+
+function MonitorCard({
+  monitor,
+  organizationId,
+  resourceId,
+  selected,
+  feedback,
+  onSelect,
+  onRunAccepted,
+}: {
+  monitor: MonitorResponse;
+  organizationId: number;
+  resourceId: number;
+  selected: boolean;
+  feedback?: RunFeedback;
+  onSelect: () => void;
+  onRunAccepted: (monitor: MonitorResponse) => void;
+}) {
+  const neverRun = !monitor.lastCheckedAt && !monitor.lastResult;
+  return (
+    <article className="rounded-panel border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h3 className="font-mono text-card-title text-foreground">
+            {monitor.type ?? "UNKNOWN_MONITOR"}
+          </h3>
+          <HealthStatus status={monitor.healthStatus} />
+          {neverRun && (
+            <p className="text-caption text-foreground-muted">
+              Проверка ещё не выполнялась.
+            </p>
+          )}
+        </div>
+        <RunMonitorControl
+          monitor={monitor}
+          organizationId={organizationId}
+          resourceId={resourceId}
+          feedback={feedback}
+          onAccepted={onRunAccepted}
+        />
+      </div>
+
+      <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+        <ResultField label="ID монитора" value={String(monitor.id ?? "—")} />
+        <ResultField
+          label="Последняя проверка"
+          value={
+            monitor.lastCheckedAt
+              ? formatDateTime(monitor.lastCheckedAt)
+              : "Ещё не выполнялась"
+          }
+        />
+        <ResultField
+          label="Следующий запуск"
+          value={
+            monitor.nextRunAt
+              ? formatDateTime(monitor.nextRunAt)
+              : "Периодический запуск не запланирован"
+          }
+        />
+      </dl>
+
+      <div className="mt-4 border-t border-border pt-4">
+        <p className="mb-2 text-label text-foreground-muted">
+          Последний результат
+        </p>
+        <ProbeResult type={monitor.type} result={monitor.lastResult} />
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          aria-pressed={selected}
+          className={cn(selected && "bg-product-accent-soft text-foreground")}
+          disabled={monitor.id === undefined}
+          onClick={onSelect}
+        >
+          <History aria-hidden="true" />
+          {selected ? "История выбрана" : "Показать историю"}
+        </Button>
+      </div>
+    </article>
+  );
+}
+
+function HistoryRow({
+  item,
+  monitor,
+}: {
+  item: MonitoringResultResponse;
+  monitor: MonitorResponse;
+}) {
+  return (
+    <TableRow>
+      <TableCell className="align-top font-mono text-technical-sm text-foreground-muted">
+        <time dateTime={item.checkedAt}>{formatDateTime(item.checkedAt)}</time>
+      </TableCell>
+      <TableCell className="align-top">
+        <ProbeResult
+          type={monitor.type}
+          result={item.result}
+          emptyText="Результат отсутствует."
+        />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function MonitorHistory({
+  monitor,
+  organizationId,
+  resourceId,
+}: {
+  monitor: MonitorResponse;
+  organizationId: number;
+  resourceId: number;
+}) {
+  const [page, setPage] = useState(0);
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const monitorId = monitor.id ?? Number.NaN;
+  const query = useQuery({
+    queryKey: monitoringKeys.history(
+      organizationId,
+      resourceId,
+      monitorId,
+      page,
+      historyPageSize,
+      order,
+    ),
+    queryFn: ({ signal }) =>
+      getMonitorHistory(monitorId, page, historyPageSize, order, signal),
+    enabled: Number.isFinite(monitorId),
+  });
+  const canGoNext =
+    query.data?.total !== undefined
+      ? (page + 1) * historyPageSize < query.data.total
+      : (query.data?.items.length ?? 0) === historyPageSize;
+  const historyUnavailable =
+    query.error instanceof ApiClientError &&
+    query.error.code === "MONITOR_HISTORY_NOT_ENABLED";
+
+  return (
+    <section
+      aria-labelledby="monitor-history-heading"
+      className="space-y-4 rounded-panel border border-border bg-surface p-4"
+    >
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h3 id="monitor-history-heading" className="text-card-title">
+            История {monitor.type ?? "монитора"}
+          </h3>
+          <p className="mt-1 text-caption text-foreground-muted">
+            Результаты загружаются и сортируются на сервере.
+          </p>
+        </div>
+        <label className="w-44">
+          <span className="mb-1 block text-label">Сортировка</span>
+          <Select
+            value={order}
+            onValueChange={(value) => {
+              setOrder(value === "asc" ? "asc" : "desc");
+              setPage(0);
+            }}
+          >
+            <SelectTrigger className="w-full" aria-label="Сортировка истории">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">Сначала новые</SelectItem>
+              <SelectItem value="asc">Сначала старые</SelectItem>
+            </SelectContent>
+          </Select>
+        </label>
+      </div>
+
+      {query.isPending ? (
+        <div
+          className="space-y-3"
+          aria-label="Загрузка истории монитора"
+          aria-busy="true"
+        >
+          <Skeleton className="h-11" />
+          <Skeleton className="h-11" />
+          <Skeleton className="h-11" />
+        </div>
+      ) : historyUnavailable ? (
+        <div className="rounded-panel border border-border bg-background p-4">
+          <p className="text-card-title">История не включена</p>
+          <p className="mt-1 text-body text-foreground-muted">
+            Для этого монитора сохраняется только последнее состояние.
+          </p>
+        </div>
+      ) : query.isError ? (
+        <div className="space-y-3">
+          <Alert>
+            {query.error instanceof ApiClientError &&
+            query.error.kind === "not-found"
+              ? "Монитор не найден или больше недоступен."
+              : "Не удалось загрузить историю этого монитора."}
+          </Alert>
+          <Button type="button" onClick={() => void query.refetch()}>
+            Повторить
+          </Button>
+        </div>
+      ) : query.data.items.length === 0 ? (
+        <div className="rounded-panel border border-border bg-background p-4 text-center">
+          <History
+            aria-hidden="true"
+            className="mx-auto size-icon-empty text-foreground-muted"
+          />
+          <p className="mt-3 text-card-title">Результатов пока нет</p>
+          <p className="mt-1 text-body text-foreground-muted">
+            История появится после выполнения монитора.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-panel border border-border">
+          <Table>
+            <caption className="sr-only">История результатов монитора</caption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Время проверки</TableHead>
+                <TableHead>Результат</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {query.data.items.map((item, index) => (
+                <HistoryRow
+                  key={item.id ?? `${item.checkedAt}-${index}`}
+                  item={item}
+                  monitor={monitor}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {!query.isPending && !query.isError && query.data.items.length > 0 && (
+        <nav
+          aria-label="Пагинация истории монитора"
+          className="flex items-center justify-between gap-3"
+        >
+          <p className="text-caption text-foreground-muted">
+            Страница {page + 1}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              disabled={page === 0}
+              onClick={() => setPage((current) => current - 1)}
+            >
+              <ArrowLeft aria-hidden="true" />
+              Назад
+            </Button>
+            <Button
+              type="button"
+              disabled={!canGoNext}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Далее
+              <ArrowRight aria-hidden="true" />
+            </Button>
+          </div>
+        </nav>
+      )}
+    </section>
+  );
+}
+
+export function MonitoringSection({
+  organizationId,
+  resourceId,
+  enabled,
+}: {
+  organizationId: number;
+  resourceId: number;
+  enabled: boolean;
+}) {
+  const [selectedMonitorId, setSelectedMonitorId] = useState<number>();
+  const [pollState, setPollState] = useState<PollState>();
+  const monitorsQuery = useQuery({
+    queryKey: monitoringKeys.resource(organizationId, resourceId),
+    queryFn: ({ signal }) => getResourceMonitors(resourceId, signal),
+    enabled,
+    refetchInterval: (query) => {
+      if (!pollState) return false;
+      const monitor = query.state.data?.find(
+        (candidate) => candidate.id === pollState.monitorId,
+      );
+      if (
+        monitor?.lastCheckedAt &&
+        monitor.lastCheckedAt !== pollState.baseline
+      )
+        return false;
+      return Date.now() - pollState.startedAt < pollingLimitMs
+        ? pollingIntervalMs
+        : false;
+    },
+  });
+
+  if (monitorsQuery.isPending)
+    return (
+      <div
+        className="grid gap-4"
+        aria-label="Загрузка мониторов"
+        aria-busy="true"
+      >
+        <Skeleton className="h-48" />
+        <Skeleton className="h-48" />
+      </div>
+    );
+  if (monitorsQuery.isError)
+    return (
+      <div className="space-y-3">
+        <Alert>
+          {monitorsQuery.error instanceof ApiClientError &&
+          monitorsQuery.error.kind === "not-found"
+            ? "Ресурс или его мониторы не найдены."
+            : "Не удалось загрузить мониторы ресурса."}
+        </Alert>
+        <Button type="button" onClick={() => void monitorsQuery.refetch()}>
+          Повторить
+        </Button>
+      </div>
+    );
+  if (monitorsQuery.data.length === 0)
+    return (
+      <div className="rounded-panel border border-border bg-surface p-6 text-center">
+        <Activity
+          aria-hidden="true"
+          className="mx-auto size-icon-empty text-foreground-muted"
+        />
+        <p className="mt-4 text-card-title">Мониторов пока нет</p>
+        <p className="mt-2 text-body text-foreground-muted">
+          Для этого ресурса ещё не настроены совместимые проверки.
+        </p>
+      </div>
+    );
+
+  const effectiveSelectedMonitorId = monitorsQuery.data.some(
+    (monitor) => monitor.id === selectedMonitorId,
+  )
+    ? selectedMonitorId
+    : monitorsQuery.data.find((monitor) => monitor.id !== undefined)?.id;
+  const selectedMonitor = monitorsQuery.data.find(
+    (monitor) => monitor.id === effectiveSelectedMonitorId,
+  );
+
+  function feedbackFor(monitor: MonitorResponse): RunFeedback | undefined {
+    if (!pollState || monitor.id !== pollState.monitorId) return undefined;
+    if (monitor.lastCheckedAt && monitor.lastCheckedAt !== pollState.baseline)
+      return "completed";
+    if (monitorsQuery.dataUpdatedAt - pollState.startedAt >= pollingLimitMs)
+      return "timeout";
+    return "polling";
+  }
+
+  return (
+    <div className="space-y-6">
+      {monitorsQuery.isFetching && (
+        <p className="flex items-center gap-2 text-caption text-foreground-muted">
+          <LoaderCircle aria-hidden="true" className="size-icon animate-spin" />
+          Обновление данных мониторов…
+        </p>
+      )}
+      <div className="grid gap-4">
+        {monitorsQuery.data.map((monitor, index) => (
+          <MonitorCard
+            key={monitor.id ?? `${monitor.type}-${index}`}
+            monitor={monitor}
+            organizationId={organizationId}
+            resourceId={resourceId}
+            selected={monitor.id === effectiveSelectedMonitorId}
+            feedback={feedbackFor(monitor)}
+            onSelect={() => setSelectedMonitorId(monitor.id)}
+            onRunAccepted={(acceptedMonitor) => {
+              if (acceptedMonitor.id === undefined) return;
+              setPollState({
+                monitorId: acceptedMonitor.id,
+                baseline: acceptedMonitor.lastCheckedAt,
+                startedAt: Date.now(),
+              });
+            }}
+          />
+        ))}
+      </div>
+      {selectedMonitor && (
+        <MonitorHistory
+          key={selectedMonitor.id}
+          monitor={selectedMonitor}
+          organizationId={organizationId}
+          resourceId={resourceId}
+        />
+      )}
+    </div>
+  );
+}

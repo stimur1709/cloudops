@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Skeleton } from "../../components/ui/skeleton";
+import { MonitoringSection } from "../monitoring/monitoring-section";
 import { useOrganization } from "../organization/organization-context";
 import {
   getResource,
@@ -464,6 +465,12 @@ export function ResourceDetailsPage() {
           >
             Здоровье
           </a>
+          <a
+            href="#monitoring"
+            className="px-1 py-2 text-label text-foreground-muted hover:text-foreground"
+          >
+            Мониторинг
+          </a>
         </nav>
       </header>
 
@@ -581,6 +588,26 @@ export function ResourceDetailsPage() {
             enabled={belongsToOrganization}
           />
         </div>
+      </section>
+
+      <section
+        id="monitoring"
+        aria-labelledby="monitoring-heading"
+        className="scroll-mt-4 space-y-6"
+      >
+        <div>
+          <h2 id="monitoring-heading" className="text-section-title">
+            Мониторинг
+          </h2>
+          <p className="mt-1 text-body text-foreground-muted">
+            Текущее состояние проверок, ручной запуск и сохранённая история.
+          </p>
+        </div>
+        <MonitoringSection
+          organizationId={organizationId}
+          resourceId={resourceId}
+          enabled={belongsToOrganization}
+        />
       </section>
 
       {isManager && (

@@ -4,7 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../api/client/api-error";
-import { delete2, get1, get5, search2 } from "../../api/generated/cloud-ops";
+import {
+  delete2,
+  get1,
+  get5,
+  list1,
+  run1,
+  search2,
+  searchResults,
+} from "../../api/generated/cloud-ops";
 import { OrganizationContext } from "../organization/organization-context";
 import { ResourceDetailsPage } from "./resource-details-page";
 
@@ -12,7 +20,10 @@ vi.mock("../../api/generated/cloud-ops", () => ({
   delete2: vi.fn(),
   get1: vi.fn(),
   get5: vi.fn(),
+  list1: vi.fn(),
+  run1: vi.fn(),
   search2: vi.fn(),
+  searchResults: vi.fn(),
 }));
 
 const resource = {
@@ -82,6 +93,9 @@ beforeEach(() => {
   vi.mocked(get1).mockReset();
   vi.mocked(get5).mockReset();
   vi.mocked(search2).mockReset();
+  vi.mocked(list1).mockReset();
+  vi.mocked(run1).mockReset();
+  vi.mocked(searchResults).mockReset();
   vi.mocked(delete2).mockReset();
   vi.mocked(get1).mockImplementation(() => ok(resource));
   vi.mocked(get5).mockImplementation(() =>
@@ -98,6 +112,10 @@ beforeEach(() => {
       availabilityPercent: null as unknown as number,
       coveragePercent: 63.66,
     }),
+  );
+  vi.mocked(list1).mockImplementation(() => ok([]));
+  vi.mocked(searchResults).mockImplementation(() =>
+    ok({ items: [], total: 0 }),
   );
   vi.mocked(search2).mockImplementation(() =>
     ok({
@@ -126,6 +144,7 @@ describe("ResourceDetailsPage", () => {
     expect(screen.queryByText("payments-api")).toBeNull();
     expect(get5).not.toHaveBeenCalled();
     expect(search2).not.toHaveBeenCalled();
+    expect(list1).not.toHaveBeenCalled();
   });
 
   it("keeps lifecycle, health and server availability semantics distinct", async () => {
@@ -140,6 +159,32 @@ describe("ResourceDetailsPage", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText("0%")).toBeNull();
     expect(screen.getByText("https://payments.example.test")).toBeVisible();
+  });
+
+  it("keeps resource and monitor health distinct and allows members to run monitors", async () => {
+    vi.mocked(list1).mockImplementation(() =>
+      ok([
+        {
+          id: 21,
+          resourceId: 7,
+          type: "HTTP_CHECK" as const,
+          healthStatus: "DOWN" as const,
+          lastCheckedAt: null,
+          lastResult: null,
+          nextRunAt: null,
+        },
+      ]),
+    );
+    renderPage({ isManager: false });
+
+    expect(
+      await screen.findByRole("heading", { name: "HTTP_CHECK" }),
+    ).toBeVisible();
+    expect(screen.getAllByText("DEGRADED").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("DOWN").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("button", { name: "Запустить сейчас" }),
+    ).toBeVisible();
   });
 
   it("uses the selected period as exact from/to request parameters", async () => {
@@ -169,6 +214,21 @@ describe("ResourceDetailsPage", () => {
         sort: [{ field: "changedAt", order: "DESC" }],
       }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it("loads monitoring only after the resource is confirmed in the organization", async () => {
+    renderPage();
+    expect(
+      await screen.findByRole("heading", { name: "Мониторинг" }),
+    ).toBeVisible();
+    expect(list1).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(screen.getByRole("link", { name: "Мониторинг" })).toHaveAttribute(
+      "href",
+      "#monitoring",
     );
   });
 
