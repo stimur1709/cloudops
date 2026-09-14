@@ -27,11 +27,15 @@ public class ResourceTaskController {
     @PostMapping
     @ApiResponse(responseCode = "202", description = "Accepted for asynchronous execution", useReturnTypeSchema = true)
     public ResponseEntity<TaskResponse> run(
-            @PathVariable long resourceId,
-            @Valid @RequestBody CreateTaskRequest request,
-            Authentication authentication) {
-        TaskEntity task =
-                taskService.create(resourceId, request.type(), request.parameters(), CurrentUser.id(authentication));
+            @PathVariable
+            long resourceId,
+            @Valid
+            @RequestBody
+            CreateTaskRequest request,
+            Authentication authentication
+    ) {
+        TaskEntity task = taskService.create(resourceId, request.type(), request.parameters(),
+                CurrentUser.id(authentication));
         return ResponseEntity.accepted()
                 .location(URI.create("/api/tasks/" + task.id()))
                 .body(TaskResponse.from(task));

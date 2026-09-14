@@ -11,7 +11,7 @@ public final class UserSearchDefinition {
             .field(
                     UserEntity_.ID,
                     JpaSearchField.<UserEntity, Long>comparable(
-                                    root -> root.get(UserEntity_.id), SearchValueConverter.longInteger())
+                            root -> root.get(UserEntity_.id), SearchValueConverter.longInteger())
                             .sortable())
             .field(
                     UserEntity_.EMAIL,
@@ -24,15 +24,16 @@ public final class UserSearchDefinition {
             .field(
                     UserEntity_.CREATED_AT,
                     JpaSearchField.<UserEntity, Instant>comparable(
-                                    root -> root.get(UserEntity_.createdAt), SearchValueConverter.instant())
+                            root -> root.get(UserEntity_.createdAt), SearchValueConverter.instant())
                             .sortable())
             .field(
                     UserEntity_.UPDATED_AT,
                     JpaSearchField.<UserEntity, Instant>comparable(
-                                    root -> root.get(UserEntity_.updatedAt), SearchValueConverter.instant())
+                            root -> root.get(UserEntity_.updatedAt), SearchValueConverter.instant())
                             .sortable())
             .defaultSort(UserEntity_.ID)
             .build();
 
-    private UserSearchDefinition() {}
+    private UserSearchDefinition() {
+    }
 }

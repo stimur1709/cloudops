@@ -30,9 +30,10 @@ class TaskClaimIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, 'claim@example.com', 'User', '{noop}unused', now(), now())
@@ -68,7 +69,7 @@ class TaskClaimIntegrationTest {
             assertThat(jdbcTemplate.queryForObject("SELECT execution_id FROM tasks WHERE id = ?", UUID.class, taskId))
                     .isNotNull();
             assertThat(jdbcTemplate.queryForObject(
-                            "SELECT lease_expires_at > started_at FROM tasks WHERE id = ?", Boolean.class, taskId))
+                    "SELECT lease_expires_at > started_at FROM tasks WHERE id = ?", Boolean.class, taskId))
                     .isTrue();
         }
     }

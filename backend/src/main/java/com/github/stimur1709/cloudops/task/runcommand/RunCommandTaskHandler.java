@@ -30,7 +30,8 @@ public class RunCommandTaskHandler implements TaskHandler {
             TaskParameterCodecRegistry parameterCodecRegistry,
             CredentialResolver credentialResolver,
             SshClient sshClient,
-            RunCommandProperties properties) {
+            RunCommandProperties properties
+    ) {
         this.parameterCodecRegistry = parameterCodecRegistry;
         this.credentialResolver = credentialResolver;
         this.sshClient = sshClient;
@@ -51,8 +52,8 @@ public class RunCommandTaskHandler implements TaskHandler {
             return TaskExecutionResult.failed(
                     TaskErrorCode.RESOURCE_UNSUPPORTED, "Resource no longer supports RUN_COMMAND");
         }
-        RunCommandParameters parameters =
-                parameterCodecRegistry.decode(context.type(), context.parameters(), RunCommandParameters.class);
+        RunCommandParameters parameters = parameterCodecRegistry.decode(context.type(), context.parameters(),
+                RunCommandParameters.class);
         final ResolvedCredential credential;
         try {
             credential = credentialResolver.resolve(context.resourceId(), CredentialPurpose.SSH);

@@ -20,7 +20,11 @@ public class ResourceTaskCapabilityController {
     }
 
     @GetMapping
-    public List<TaskCapabilityResponse> list(@PathVariable long resourceId, Authentication authentication) {
+    public List<TaskCapabilityResponse> list(
+            @PathVariable
+            long resourceId,
+            Authentication authentication
+    ) {
         return capabilityResolver.resolve(resourceId, CurrentUser.id(authentication)).stream()
                 .map(TaskCapabilityResponse::from)
                 .toList();

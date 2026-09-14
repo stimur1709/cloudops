@@ -28,28 +28,45 @@ public class TlsCheckClient {
         this(Duration.ZERO, clock, TlsCheckClient::connect);
     }
 
-    TlsCheckClient(Duration timeout, Clock clock, Connector connector) {
+    TlsCheckClient(
+            Duration timeout,
+            Clock clock,
+            Connector connector
+    ) {
         this.timeout = timeout;
         this.clock = clock;
         this.connector = connector;
     }
 
-    TlsCheckClient(Duration timeout, Clock clock, SSLSocketFactory socketFactory) {
-        this(timeout, clock, (host, port, timeoutMs) -> connect(socketFactory, host, port, timeoutMs));
+    TlsCheckClient(
+            Duration timeout,
+            Clock clock,
+            SSLSocketFactory socketFactory
+    ) {
+        this(timeout, clock, (
+                host,
+                port,
+                timeoutMs) -> connect(socketFactory, host, port, timeoutMs));
     }
 
-    TlsCheckOutcome execute(String host, int port) {
+    TlsCheckOutcome execute(
+            String host,
+            int port
+    ) {
         return execute(host, port, Math.toIntExact(timeout.toMillis()));
     }
 
-    TlsCheckOutcome execute(String host, int port, int timeoutMs) {
+    TlsCheckOutcome execute(
+            String host,
+            int port,
+            int timeoutMs
+    ) {
         long startedAt = System.nanoTime();
         try {
             X509Certificate certificate = connector.connect(host, port, timeoutMs);
-            long responseTimeMs =
-                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             long daysUntilExpiry = Duration.between(
-                            clock.instant(), certificate.getNotAfter().toInstant())
+                    clock.instant(), certificate.getNotAfter().toInstant())
                     .toDays();
             return TlsCheckOutcome.completed(new TlsCheckResult(
                     host,
@@ -71,13 +88,21 @@ public class TlsCheckClient {
         }
     }
 
-    private static X509Certificate connect(String host, int port, int timeoutMs) throws IOException {
+    private static X509Certificate connect(
+            String host,
+            int port,
+            int timeoutMs
+    ) throws IOException {
         SSLSocketFactory socketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
         return connect(socketFactory, host, port, timeoutMs);
     }
 
-    private static X509Certificate connect(SSLSocketFactory socketFactory, String host, int port, int timeoutMs)
-            throws IOException {
+    private static X509Certificate connect(
+            SSLSocketFactory socketFactory,
+            String host,
+            int port,
+            int timeoutMs
+    ) throws IOException {
         try (SSLSocket socket = (SSLSocket) socketFactory.createSocket()) {
             socket.connect(new InetSocketAddress(host, port), timeoutMs);
             socket.setSoTimeout(timeoutMs);
@@ -95,6 +120,10 @@ public class TlsCheckClient {
 
     @FunctionalInterface
     interface Connector {
-        X509Certificate connect(String host, int port, int timeoutMs) throws IOException;
+        X509Certificate connect(
+                String host,
+                int port,
+                int timeoutMs
+        ) throws IOException;
     }
 }

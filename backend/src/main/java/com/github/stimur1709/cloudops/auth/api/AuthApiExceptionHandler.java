@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = AuthController.class)
 public class AuthApiExceptionHandler {
-
     private final Clock clock;
 
     public AuthApiExceptionHandler(Clock clock) {
@@ -20,13 +19,18 @@ public class AuthApiExceptionHandler {
     }
 
     @ExceptionHandler(RefreshTokenException.class)
-    public ResponseEntity<ApiError> handleRefreshToken(RefreshTokenException exception, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ApiError(
-                        exception.error().code(),
-                        exception.getMessage(),
-                        clock.instant(),
-                        request.getRequestURI(),
-                        List.of()));
+    public ResponseEntity<ApiError> handleRefreshToken(
+            RefreshTokenException exception,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(
+                        new ApiError(
+                                exception.error().code(),
+                                exception.getMessage(),
+                                clock.instant(),
+                                request.getRequestURI(),
+                                List.of()));
     }
 }

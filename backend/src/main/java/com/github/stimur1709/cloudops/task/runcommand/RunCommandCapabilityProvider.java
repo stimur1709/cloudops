@@ -32,7 +32,10 @@ public class RunCommandCapabilityProvider implements TaskCapabilityProvider {
     }
 
     @Override
-    public TaskCapabilityAssessment assess(ResourceEntity resource, ResourceConfig config) {
+    public TaskCapabilityAssessment assess(
+            ResourceEntity resource,
+            ResourceConfig config
+    ) {
         boolean supported = SshEndpointResolver.supports(config);
         var reasons = new ArrayList<TaskCapabilityReason>();
         if (!supported) {

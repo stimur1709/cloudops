@@ -34,7 +34,8 @@ public class AuthController {
             AuthService authService,
             UserService userService,
             RefreshCookieFactory refreshCookieFactory,
-            JwtProperties jwtProperties) {
+            JwtProperties jwtProperties
+    ) {
         this.authService = authService;
         this.userService = userService;
         this.refreshCookieFactory = refreshCookieFactory;
@@ -43,14 +44,22 @@ public class AuthController {
 
     @PostMapping("/register")
     @ApiResponse(responseCode = "201", description = "Created", useReturnTypeSchema = true)
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
-        UserResponse response =
-                UserResponse.from(authService.register(request.email(), request.displayName(), request.password()));
+    public ResponseEntity<UserResponse> register(
+            @Valid
+            @RequestBody
+            RegisterRequest request
+    ) {
+        UserResponse response = UserResponse
+                .from(authService.register(request.email(), request.displayName(), request.password()));
         return ResponseEntity.created(URI.create("/api/users/" + response.id())).body(response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<TokenResponse> login(
+            @Valid
+            @RequestBody
+            LoginRequest request
+    ) {
         return session(authService.login(request.email(), request.password()));
     }
 

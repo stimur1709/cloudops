@@ -83,15 +83,15 @@ class CredentialApiIntegrationTest {
                 .andExpect(jsonPath("$.privateKey").doesNotExist())
                 .andExpect(jsonPath("$.secretEncrypted").doesNotExist());
         mockMvc.perform(post("/api/credentials/search")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"start\":0,\"size\":20,\"getTotal\":true}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"start\":0,\"size\":20,\"getTotal\":true}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].name").value("db-login"))
                 .andExpect(jsonPath("$.items[0].secretEncrypted").doesNotExist());
 
         mockMvc.perform(put("/api/credentials/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(request("db-login", "USERNAME_PASSWORD", "password", "replacement-secret")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request("db-login", "USERNAME_PASSWORD", "password", "replacement-secret")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.password").doesNotExist());
         assertThat(jdbc.queryForObject("select secret_encrypted from credentials where id=?", String.class, id))
@@ -105,8 +105,8 @@ class CredentialApiIntegrationTest {
     void bindsCompatibleCredentialAndBlocksDeletingIt() throws Exception {
         long id = create("ssh-key", "SSH_PRIVATE_KEY", "privateKey", "-----BEGIN KEY-----");
         mockMvc.perform(put("/api/resources/{id}/credentials/SSH", resourceId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"credentialId\":" + id + "}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"credentialId\":" + id + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.purpose").value("SSH"))
                 .andExpect(jsonPath("$.credential.id").value(id))
@@ -124,13 +124,13 @@ class CredentialApiIntegrationTest {
     void rejectsPrivateKeyForDatabaseAndDuplicateName() throws Exception {
         long id = create("shared", "SSH_PRIVATE_KEY", "privateKey", "key");
         mockMvc.perform(post("/api/organizations/{id}/credentials", organizationId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(request("shared", "USERNAME_PASSWORD", "password", "pw")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request("shared", "USERNAME_PASSWORD", "password", "pw")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CREDENTIAL_NAME_CONFLICT"));
         mockMvc.perform(put("/api/resources/{id}/credentials/DATABASE", resourceId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"credentialId\":" + id + "}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"credentialId\":" + id + "}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INCOMPATIBLE_CREDENTIAL"));
     }
@@ -161,10 +161,15 @@ class CredentialApiIntegrationTest {
                 .isEmpty();
     }
 
-    private long create(String name, String type, String secretField, String secret) throws Exception {
+    private long create(
+            String name,
+            String type,
+            String secretField,
+            String secret
+    ) throws Exception {
         String response = mockMvc.perform(post("/api/organizations/{id}/credentials", organizationId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(request(name, type, secretField, secret)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request(name, type, secretField, secret)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$." + secretField).doesNotExist())
                 .andReturn()
@@ -173,14 +178,22 @@ class CredentialApiIntegrationTest {
         return ((Number) JsonPath.read(response, "$.id")).longValue();
     }
 
-    private void bind(String purpose, long credentialId) throws Exception {
+    private void bind(
+            String purpose,
+            long credentialId
+    ) throws Exception {
         mockMvc.perform(put("/api/resources/{id}/credentials/{purpose}", resourceId, purpose)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"credentialId\":" + credentialId + "}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"credentialId\":" + credentialId + "}"))
                 .andExpect(status().isOk());
     }
 
-    private String request(String name, String type, String secretField, String secret) {
+    private String request(
+            String name,
+            String type,
+            String secretField,
+            String secret
+    ) {
         return "{\"name\":\""
                 + name
                 + "\",\"type\":\""

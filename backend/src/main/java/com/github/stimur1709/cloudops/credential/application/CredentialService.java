@@ -40,7 +40,8 @@ public class CredentialService {
             OrganizationAuthorization authorization,
             JpaSearchService searchService,
             SecretCryptoService cryptoService,
-            Clock clock) {
+            Clock clock
+    ) {
         this.repository = repository;
         this.bindingRepository = bindingRepository;
         this.organizationRepository = organizationRepository;
@@ -52,24 +53,37 @@ public class CredentialService {
 
     @Transactional
     public CredentialEntity create(
-            long organizationId, String name, CredentialType type, String username, String secret, long userId) {
-        OrganizationEntity organization =
-                organizationRepository.findByIdForUpdate(organizationId).orElseThrow(NotFoundException::new);
+            long organizationId,
+            String name,
+            CredentialType type,
+            String username,
+            String secret,
+            long userId
+    ) {
+        OrganizationEntity organization = organizationRepository.findByIdForUpdate(organizationId)
+                .orElseThrow(NotFoundException::new);
         authorization.requireManager(organizationId, userId);
-        if (repository.existsByOrganizationIdAndName(organizationId, name)) throw nameConflict();
+        if (repository.existsByOrganizationIdAndName(organizationId, name))
+            throw nameConflict();
         return save(CredentialEntity.create(
                 organization, name, type, username, cryptoService.encrypt(secret), clock.instant()));
     }
 
     @Transactional(readOnly = true)
-    public CredentialEntity get(long id, long userId) {
+    public CredentialEntity get(
+            long id,
+            long userId
+    ) {
         CredentialEntity entity = repository.findById(id).orElseThrow(NotFoundException::new);
         authorization.requireMember(entity.organizationId(), userId);
         return entity;
     }
 
     @Transactional(readOnly = true)
-    public SearchResult<CredentialEntity> search(SearchQuery query, long userId) {
+    public SearchResult<CredentialEntity> search(
+            SearchQuery query,
+            long userId
+    ) {
         return searchService.search(
                 query,
                 OrganizationMembershipScopes.visibleTo(userId, root -> root.get(CredentialEntity_.ORGANIZATION_ID)),
@@ -78,7 +92,13 @@ public class CredentialService {
 
     @Transactional
     public CredentialEntity update(
-            long id, String name, CredentialType type, String username, String secret, long userId) {
+            long id,
+            String name,
+            CredentialType type,
+            String username,
+            String secret,
+            long userId
+    ) {
         CredentialEntity entity = repository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
         authorization.requireManager(entity.organizationId(), userId);
         if (repository.existsByOrganizationIdAndNameAndIdNot(entity.organizationId(), name, id)) {
@@ -95,7 +115,10 @@ public class CredentialService {
     }
 
     @Transactional
-    public void delete(long id, long userId) {
+    public void delete(
+            long id,
+            long userId
+    ) {
         CredentialEntity entity = repository.findByIdForUpdate(id).orElseThrow(NotFoundException::new);
         authorization.requireManager(entity.organizationId(), userId);
         if (bindingRepository.existsByCredentialId(id)) {

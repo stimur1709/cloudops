@@ -79,19 +79,19 @@ class OpenApiIntegrationTest {
         assertThat(document.at("/components/securitySchemes/bearerAuth/scheme").asText())
                 .isEqualTo("bearer");
         assertThat(document.at("/components/securitySchemes/bearerAuth/bearerFormat")
-                        .asText())
+                .asText())
                 .isEqualTo("JWT");
-        for (String path :
-                new String[] {"/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout"}) {
+        for (String path : new String[] { "/api/auth/register", "/api/auth/login", "/api/auth/refresh",
+                "/api/auth/logout" }) {
             assertThat(operation(path, "post").path("security").isEmpty()).isTrue();
         }
-        for (String path : new String[] {"/api/resources/{id}", "/api/tasks/{id}", "/api/auth/me"}) {
+        for (String path : new String[] { "/api/resources/{id}", "/api/tasks/{id}", "/api/auth/me" }) {
             assertThat(operation(path, "get").at("/security/0/bearerAuth").isArray())
                     .isTrue();
-            for (String code : new String[] {"400", "401", "403", "404", "409"}) {
+            for (String code : new String[] { "400", "401", "403", "404", "409" }) {
                 assertThat(operation(path, "get")
-                                .at("/responses/" + code + "/$ref")
-                                .asText())
+                        .at("/responses/" + code + "/$ref")
+                        .asText())
                         .isEqualTo("#/components/responses/Error" + code);
             }
         }
@@ -106,12 +106,12 @@ class OpenApiIntegrationTest {
         assertThat(schema("Condition").at("/properties/operation/enum").toString())
                 .contains("EQ", "NE", "CONTAINS", "GT", "GE", "LT", "LE");
         assertThat(schema("SearchResponseResourceResponse")
-                        .at("/properties/items/items/$ref")
-                        .asText())
+                .at("/properties/items/items/$ref")
+                .asText())
                 .isEqualTo("#/components/schemas/ResourceResponse");
         assertThat(operation("/api/resources/search", "post")
-                        .path("description")
-                        .asText())
+                .path("description")
+                .asText())
                 .contains(
                         "healthStatus [EQ, NE]",
                         "name [CONTAINS, EQ, NE]",
@@ -119,14 +119,14 @@ class OpenApiIntegrationTest {
                         "Default sort: id ASC")
                 .doesNotContain("ResourceEntity", "resource.name");
         assertThat(operation("/api/auth/login", "post")
-                        .at("/responses/200/headers/Set-Cookie/description")
-                        .asText())
+                .at("/responses/200/headers/Set-Cookie/description")
+                .asText())
                 .contains("HttpOnly", "cloudops_refresh");
         assertThat(operation("/api/auth/refresh", "post").at("/parameters/0/in").asText())
                 .isEqualTo("cookie");
         assertThat(operation("/api/auth/logout", "post")
-                        .at("/responses/204/headers/Set-Cookie")
-                        .isObject())
+                .at("/responses/204/headers/Set-Cookie")
+                .isObject())
                 .isTrue();
     }
 
@@ -157,8 +157,8 @@ class OpenApiIntegrationTest {
         assertThat(schema("ProbeExecutionResult").path("oneOf").size()).isEqualTo(2);
         assertThat(schema("Completed").at("/properties/data/oneOf").size()).isEqualTo(6);
         assertThat(schema("MonitoringResultResponse")
-                        .at("/properties/result/$ref")
-                        .asText())
+                .at("/properties/result/$ref")
+                .asText())
                 .isEqualTo("#/components/schemas/ProbeExecutionResult");
     }
 
@@ -168,7 +168,10 @@ class OpenApiIntegrationTest {
         return schema;
     }
 
-    private JsonNode operation(String path, String method) {
+    private JsonNode operation(
+            String path,
+            String method
+    ) {
         JsonNode operation = document.path("paths").path(path).path(method);
         assertThat(operation.isObject()).as(method + " " + path).isTrue();
         return operation;

@@ -33,12 +33,12 @@ class SshClientTest {
     void executesWithPasswordAndReturnsStdoutStderrAndNonZeroExitCode() throws Exception {
         try (LocalSshServer server = server(null)) {
             SshCommandResult result = client().execute(
-                            "127.0.0.1",
-                            server.port(),
-                            new ResolvedUsernamePassword("cloudops", "correct-password"),
-                            "result",
-                            Duration.ofSeconds(3),
-                            1024);
+                    "127.0.0.1",
+                    server.port(),
+                    new ResolvedUsernamePassword("cloudops", "correct-password"),
+                    "result",
+                    Duration.ofSeconds(3),
+                    1024);
 
             assertThat(result.exitCode()).isEqualTo(7);
             assertThat(result.stdout()).isEqualTo("standard output\n");
@@ -53,12 +53,12 @@ class SshClientTest {
         String privateKey = pem(userKey);
         try (LocalSshServer server = server(userKey)) {
             SshCommandResult result = client().execute(
-                            "127.0.0.1",
-                            server.port(),
-                            new ResolvedSshPrivateKey("cloudops", privateKey),
-                            "result",
-                            Duration.ofSeconds(3),
-                            1024);
+                    "127.0.0.1",
+                    server.port(),
+                    new ResolvedSshPrivateKey("cloudops", privateKey),
+                    "result",
+                    Duration.ofSeconds(3),
+                    1024);
 
             assertThat(result.exitCode()).isEqualTo(7);
             assertThat(result.toString()).doesNotContain("PRIVATE KEY");
@@ -69,15 +69,15 @@ class SshClientTest {
     void drainsBothStreamsButLimitsStoredOutput() throws Exception {
         try (LocalSshServer server = server(null)) {
             SshCommandResult result = client().execute(
-                            "127.0.0.1",
-                            server.port(),
-                            new ResolvedUsernamePassword("cloudops", "correct-password"),
-                            "large",
-                            Duration.ofSeconds(3),
-                            64);
+                    "127.0.0.1",
+                    server.port(),
+                    new ResolvedUsernamePassword("cloudops", "correct-password"),
+                    "large",
+                    Duration.ofSeconds(3),
+                    64);
 
             assertThat(result.stdout().getBytes(StandardCharsets.UTF_8).length
-                            + result.stderr().getBytes(StandardCharsets.UTF_8).length)
+                    + result.stderr().getBytes(StandardCharsets.UTF_8).length)
                     .isEqualTo(64);
             assertThat(result.outputTruncated()).isTrue();
             assertThat(result.exitCode()).isZero();
@@ -88,12 +88,12 @@ class SshClientTest {
     void closesTimedOutCommandWithControlledError() throws Exception {
         try (LocalSshServer server = server(null)) {
             assertThatThrownBy(() -> client().execute(
-                                    "127.0.0.1",
-                                    server.port(),
-                                    new ResolvedUsernamePassword("cloudops", "correct-password"),
-                                    "slow",
-                                    Duration.ofMillis(100),
-                                    1024))
+                    "127.0.0.1",
+                    server.port(),
+                    new ResolvedUsernamePassword("cloudops", "correct-password"),
+                    "slow",
+                    Duration.ofMillis(100),
+                    1024))
                     .isInstanceOfSatisfying(SshClientException.class, exception -> {
                         assertThat(exception.type()).isEqualTo(SshErrorType.COMMAND_TIMEOUT);
                         assertThat(exception.retriable()).isFalse();
@@ -112,10 +112,18 @@ class SshClientTest {
         server.setPort(0);
         server.setKeyPairProvider(KeyPairProvider.wrap(keyPair()));
         server.setPasswordAuthenticator(
-                (username, password, session) -> username.equals("cloudops") && password.equals("correct-password"));
-        server.setPublickeyAuthenticator((username, key, session) ->
-                acceptedUserKey != null && username.equals("cloudops") && key.equals(acceptedUserKey.getPublic()));
-        server.setCommandFactory((channel, command) -> new TestCommand(command));
+                (
+                        username,
+                        password,
+                        session) -> username.equals("cloudops") && password.equals("correct-password"));
+        server.setPublickeyAuthenticator((
+                username,
+                key,
+                session) -> acceptedUserKey != null && username.equals("cloudops")
+                        && key.equals(acceptedUserKey.getPublic()));
+        server.setCommandFactory((
+                channel,
+                command) -> new TestCommand(command));
         server.start();
         return new LocalSshServer(server);
     }
@@ -127,7 +135,7 @@ class SshClientTest {
     }
 
     private String pem(KeyPair keyPair) {
-        String encoded = Base64.getMimeEncoder(64, new byte[] {'\n'})
+        String encoded = Base64.getMimeEncoder(64, new byte[] { '\n' })
                 .encodeToString(keyPair.getPrivate().getEncoded());
         return "-----BEGIN PRIVATE KEY-----\n" + encoded + "\n-----END PRIVATE KEY-----\n";
     }
@@ -144,7 +152,8 @@ class SshClientTest {
         }
 
         @Override
-        public void setInputStream(InputStream inputStream) {}
+        public void setInputStream(InputStream inputStream) {
+        }
 
         @Override
         public void setOutputStream(OutputStream outputStream) {
@@ -162,7 +171,10 @@ class SshClientTest {
         }
 
         @Override
-        public void start(ChannelSession channel, Environment environment) {
+        public void start(
+                ChannelSession channel,
+                Environment environment
+        ) {
             thread = Thread.ofVirtual().start(() -> {
                 try {
                     switch (command) {

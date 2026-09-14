@@ -14,7 +14,10 @@ public class SupportedTaskTypeValidator implements ConstraintValidator<Supported
     }
 
     @Override
-    public boolean isValid(TaskType value, ConstraintValidatorContext context) {
+    public boolean isValid(
+            TaskType value,
+            ConstraintValidatorContext context
+    ) {
         return value == null || registry.supports(value);
     }
 }

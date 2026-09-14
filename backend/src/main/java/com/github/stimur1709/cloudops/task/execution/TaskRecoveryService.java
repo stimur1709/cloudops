@@ -30,7 +30,8 @@ public class TaskRecoveryService {
             OutboxMessageJpaRepository outboxRepository,
             TaskLeaseProperties properties,
             Clock clock,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper
+    ) {
         this.taskRepository = taskRepository;
         this.outboxRepository = outboxRepository;
         this.properties = properties;
@@ -58,8 +59,8 @@ public class TaskRecoveryService {
 
         task.recover();
         var payload = objectMapper.createObjectNode().put("taskId", task.id());
-        OutboxMessageEntity message =
-                OutboxMessageEntity.taskExecutionRequested(task.id(), task.recoveryCount(), payload, clock.instant());
+        OutboxMessageEntity message = OutboxMessageEntity.taskExecutionRequested(task.id(), task.recoveryCount(),
+                payload, clock.instant());
         outboxRepository.save(message);
         log.info("event=expired_task_recovered taskId={} recoveryCount={}", task.id(), task.recoveryCount());
         log.info(

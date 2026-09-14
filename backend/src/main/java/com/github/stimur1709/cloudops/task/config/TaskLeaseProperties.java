@@ -12,12 +12,19 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record TaskLeaseProperties(
         boolean enabled,
-        @NotNull Duration duration,
-        @NotNull Duration heartbeatInterval,
-        @NotNull Duration recoveryPollInterval,
-        @Positive int recoveryBatchSize,
-        @PositiveOrZero int maxRecoveries) {
-    @AssertTrue(message = "heartbeat interval must be less than lease duration") public boolean isHeartbeatShorterThanLease() {
+        @NotNull
+        Duration duration,
+        @NotNull
+        Duration heartbeatInterval,
+        @NotNull
+        Duration recoveryPollInterval,
+        @Positive
+        int recoveryBatchSize,
+        @PositiveOrZero
+        int maxRecoveries
+) {
+    @AssertTrue(message = "heartbeat interval must be less than lease duration")
+    public boolean isHeartbeatShorterThanLease() {
         return duration != null
                 && heartbeatInterval != null
                 && duration.isPositive()
@@ -25,7 +32,8 @@ public record TaskLeaseProperties(
                 && heartbeatInterval.compareTo(duration) < 0;
     }
 
-    @AssertTrue(message = "recovery poll interval must be positive") public boolean isRecoveryPollIntervalPositive() {
+    @AssertTrue(message = "recovery poll interval must be positive")
+    public boolean isRecoveryPollIntervalPositive() {
         return recoveryPollInterval != null && recoveryPollInterval.isPositive();
     }
 }

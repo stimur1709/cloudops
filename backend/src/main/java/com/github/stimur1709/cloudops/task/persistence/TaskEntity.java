@@ -81,7 +81,8 @@ public class TaskEntity {
     @Column(name = "recovery_count", nullable = false)
     private int recoveryCount;
 
-    protected TaskEntity() {}
+    protected TaskEntity() {
+    }
 
     private TaskEntity(
             long organizationId,
@@ -89,7 +90,8 @@ public class TaskEntity {
             TaskType type,
             JsonNode parameters,
             long createdBy,
-            Instant createdAt) {
+            Instant createdAt
+    ) {
         this.organizationId = organizationId;
         this.resourceId = resourceId;
         this.type = type;
@@ -100,7 +102,13 @@ public class TaskEntity {
     }
 
     public static TaskEntity create(
-            long organizationId, long resourceId, TaskType type, JsonNode parameters, long createdBy, Instant now) {
+            long organizationId,
+            long resourceId,
+            TaskType type,
+            JsonNode parameters,
+            long createdBy,
+            Instant now
+    ) {
         return new TaskEntity(organizationId, resourceId, type, parameters, createdBy, now);
     }
 
@@ -110,7 +118,10 @@ public class TaskEntity {
         startedAt = now;
     }
 
-    public void complete(JsonNode result, Instant now) {
+    public void complete(
+            JsonNode result,
+            Instant now
+    ) {
         requireStatus(TaskStatus.RUNNING);
         this.status = TaskStatus.COMPLETED;
         this.result = result;
@@ -119,7 +130,11 @@ public class TaskEntity {
         this.leaseExpiresAt = null;
     }
 
-    public void fail(TaskErrorCode errorCode, String errorMessage, Instant now) {
+    public void fail(
+            TaskErrorCode errorCode,
+            String errorMessage,
+            Instant now
+    ) {
         requireStatus(TaskStatus.RUNNING);
         this.status = TaskStatus.FAILED;
         this.errorCode = errorCode;
@@ -138,7 +153,10 @@ public class TaskEntity {
         recoveryCount++;
     }
 
-    public void failRecovery(String message, Instant now) {
+    public void failRecovery(
+            String message,
+            Instant now
+    ) {
         requireStatus(TaskStatus.RUNNING);
         status = TaskStatus.FAILED;
         errorCode = TaskErrorCode.RECOVERY_EXHAUSTED;

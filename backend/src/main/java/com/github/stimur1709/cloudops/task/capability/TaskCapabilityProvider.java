@@ -9,7 +9,10 @@ public interface TaskCapabilityProvider {
 
     TaskType type();
 
-    TaskCapabilityAssessment assess(ResourceEntity resource, ResourceConfig config);
+    TaskCapabilityAssessment assess(
+            ResourceEntity resource,
+            ResourceConfig config
+    );
 
     boolean allowed(MembershipRole role);
 }

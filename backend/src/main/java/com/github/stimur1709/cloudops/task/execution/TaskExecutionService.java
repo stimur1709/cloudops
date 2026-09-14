@@ -32,7 +32,8 @@ public class TaskExecutionService {
             ObjectMapper objectMapper,
             RetryTemplate retryTemplate,
             TaskRetryProperties retryProperties,
-            TaskLeaseManager leaseManager) {
+            TaskLeaseManager leaseManager
+    ) {
         this.persistenceService = persistenceService;
         this.handlerRegistry = handlerRegistry;
         this.objectMapper = objectMapper;
@@ -124,7 +125,8 @@ public class TaskExecutionService {
             TaskExecutionContext executionContext,
             long taskId,
             java.util.UUID executionId,
-            int priorFailureCount) {
+            int priorFailureCount
+    ) {
         int attempt = persistenceService.recordAttempt(taskId, executionId);
         LOGGER.info(
                 "event=task_attempt_started taskId={} taskType={} attempt={}",
@@ -166,7 +168,11 @@ public class TaskExecutionService {
     }
 
     private TaskExecutionOutcome outcomeAfterFailureSave(
-            long taskId, java.util.UUID executionId, TaskErrorCode errorCode, String message) {
+            long taskId,
+            java.util.UUID executionId,
+            TaskErrorCode errorCode,
+            String message
+    ) {
         try {
             if (!persistenceService.fail(taskId, executionId, errorCode, message)) {
                 LOGGER.warn("event=stale_execution_result_ignored taskId={} executionId={}", taskId, executionId);
@@ -183,7 +189,11 @@ public class TaskExecutionService {
         }
     }
 
-    private boolean save(long taskId, java.util.UUID executionId, TaskExecutionResult result) {
+    private boolean save(
+            long taskId,
+            java.util.UUID executionId,
+            TaskExecutionResult result
+    ) {
         if (result instanceof TaskExecutionResult.Completed(Object data)) {
             JsonNode json = objectMapper.valueToTree(data);
             return persistenceService.complete(taskId, executionId, json);

@@ -7,9 +7,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OrganizationProbeSettingsJpaRepository extends JpaRepository<OrganizationProbeSettingsEntity, Long> {
     Optional<OrganizationProbeSettingsEntity> findByOrganizationIdAndProbeType(
-            long organizationId, ProbeType probeType);
+            long organizationId,
+            ProbeType probeType
+    );
 
     List<OrganizationProbeSettingsEntity> findAllByOrganizationId(long organizationId);
 
-    void deleteByOrganizationIdAndProbeType(long organizationId, ProbeType probeType);
+    void deleteByOrganizationIdAndProbeType(
+            long organizationId,
+            ProbeType probeType
+    );
 }

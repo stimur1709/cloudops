@@ -33,10 +33,15 @@ public class ResourceHealthEventEntity {
     @Column(name = "changed_at", nullable = false)
     private Instant changedAt;
 
-    protected ResourceHealthEventEntity() {}
+    protected ResourceHealthEventEntity() {
+    }
 
     private ResourceHealthEventEntity(
-            long resourceId, ResourceHealthStatus fromStatus, ResourceHealthStatus toStatus, Instant changedAt) {
+            long resourceId,
+            ResourceHealthStatus fromStatus,
+            ResourceHealthStatus toStatus,
+            Instant changedAt
+    ) {
         this.resourceId = resourceId;
         this.fromStatus = fromStatus;
         this.toStatus = toStatus;
@@ -44,7 +49,11 @@ public class ResourceHealthEventEntity {
     }
 
     public static ResourceHealthEventEntity create(
-            long resourceId, ResourceHealthStatus fromStatus, ResourceHealthStatus toStatus, Instant changedAt) {
+            long resourceId,
+            ResourceHealthStatus fromStatus,
+            ResourceHealthStatus toStatus,
+            Instant changedAt
+    ) {
         return new ResourceHealthEventEntity(resourceId, fromStatus, toStatus, changedAt);
     }
 

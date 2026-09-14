@@ -7,4 +7,6 @@ public record TokenResponse(
         String tokenType,
         long expiresIn,
         Instant accessTokenExpiresAt,
-        Instant refreshTokenExpiresAt) {}
+        Instant refreshTokenExpiresAt
+) {
+}

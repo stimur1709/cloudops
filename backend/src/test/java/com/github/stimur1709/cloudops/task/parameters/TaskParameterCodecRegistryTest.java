@@ -36,7 +36,10 @@ class TaskParameterCodecRegistryTest {
         assertInvalid(objectMapper.createObjectNode().put("command", "x".repeat(4097)), "parameters.command");
     }
 
-    private void assertInvalid(tools.jackson.databind.JsonNode parameters, String field) {
+    private void assertInvalid(
+            tools.jackson.databind.JsonNode parameters,
+            String field
+    ) {
         assertThatThrownBy(() -> registry.decode(TaskType.RUN_COMMAND, parameters))
                 .isInstanceOfSatisfying(
                         TaskParameterValidationException.class,

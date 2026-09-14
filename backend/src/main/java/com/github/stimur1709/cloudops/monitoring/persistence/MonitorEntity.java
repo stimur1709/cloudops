@@ -32,8 +32,8 @@ public class MonitorEntity {
 
     /**
      * Whether the current Resource configuration technically supports this probe type. Compatibility is independent
-     * from the monitoring policy's {@code enabled} setting: an incompatible monitor is retained with its history so
-     * the same monitor can be reactivated if the Resource configuration becomes compatible again.
+     * from the monitoring policy's {@code enabled} setting: an incompatible monitor is retained with its history so the
+     * same monitor can be reactivated if the Resource configuration becomes compatible again.
      */
     @Column(nullable = false)
     private boolean compatible;
@@ -61,9 +61,14 @@ public class MonitorEntity {
     @Column(name = "consecutive_successes", nullable = false)
     private int consecutiveSuccesses;
 
-    protected MonitorEntity() {}
+    protected MonitorEntity() {
+    }
 
-    private MonitorEntity(long resourceId, ProbeType type, Instant nextRunAt) {
+    private MonitorEntity(
+            long resourceId,
+            ProbeType type,
+            Instant nextRunAt
+    ) {
         this.resourceId = resourceId;
         this.type = type;
         this.compatible = true;
@@ -71,12 +76,21 @@ public class MonitorEntity {
         this.healthStatus = HealthStatus.UNKNOWN;
     }
 
-    public static MonitorEntity create(long resourceId, ProbeType type, Instant nextRunAt) {
+    public static MonitorEntity create(
+            long resourceId,
+            ProbeType type,
+            Instant nextRunAt
+    ) {
         return new MonitorEntity(resourceId, type, nextRunAt);
     }
 
     public void record(
-            Instant checkedAt, JsonNode result, boolean success, int failureThreshold, int recoveryThreshold) {
+            Instant checkedAt,
+            JsonNode result,
+            boolean success,
+            int failureThreshold,
+            int recoveryThreshold
+    ) {
         lastCheckedAt = checkedAt;
         lastResult = result;
         updateHealth(success, failureThreshold, recoveryThreshold);
@@ -88,7 +102,11 @@ public class MonitorEntity {
         }
     }
 
-    public void updateCompatibility(boolean compatible, boolean enabled, Instant now) {
+    public void updateCompatibility(
+            boolean compatible,
+            boolean enabled,
+            Instant now
+    ) {
         if (!compatible) {
             nextRunAt = null;
             runRequestedAt = null;
@@ -98,20 +116,30 @@ public class MonitorEntity {
         this.compatible = compatible;
     }
 
-    public void synchronizeSchedule(boolean enabled, Instant now) {
+    public void synchronizeSchedule(
+            boolean enabled,
+            Instant now
+    ) {
         nextRunAt = compatible && enabled ? now : null;
         if (nextRunAt == null) {
             runRequestedAt = null;
         }
     }
 
-    public void repairSchedule(boolean enabled, Instant now) {
+    public void repairSchedule(
+            boolean enabled,
+            Instant now
+    ) {
         if (!compatible || !enabled || nextRunAt == null) {
             synchronizeSchedule(enabled, now);
         }
     }
 
-    private void updateHealth(boolean success, int failureThreshold, int recoveryThreshold) {
+    private void updateHealth(
+            boolean success,
+            int failureThreshold,
+            int recoveryThreshold
+    ) {
         switch (healthStatus) {
             case UNKNOWN -> {
                 healthStatus = success ? HealthStatus.UP : HealthStatus.DOWN;

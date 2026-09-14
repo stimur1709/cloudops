@@ -47,7 +47,8 @@ public class TaskPersistenceService {
             OutboxMessageJpaRepository outboxRepository,
             ObjectMapper objectMapper,
             TaskLeaseProperties leaseProperties,
-            TaskCapabilityResolver capabilityResolver) {
+            TaskCapabilityResolver capabilityResolver
+    ) {
         this.taskRepository = taskRepository;
         this.resourceRepository = resourceRepository;
         this.configMapper = configMapper;
@@ -59,15 +60,20 @@ public class TaskPersistenceService {
     }
 
     @Transactional
-    public TaskEntity create(long resourceId, TaskType type, JsonNode parameters, long currentUserId) {
+    public TaskEntity create(
+            long resourceId,
+            TaskType type,
+            JsonNode parameters,
+            long currentUserId
+    ) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
         capabilityResolver.requireAvailable(resource, type, currentUserId);
         TaskEntity task = TaskEntity.create(
                 resource.organizationId(), resource.id(), type, parameters, currentUserId, clock.instant());
         taskRepository.saveAndFlush(task);
         var payload = objectMapper.createObjectNode().put("taskId", task.id());
-        OutboxMessageEntity message =
-                OutboxMessageEntity.taskExecutionRequested(task.id(), task.recoveryCount(), payload, clock.instant());
+        OutboxMessageEntity message = OutboxMessageEntity.taskExecutionRequested(task.id(), task.recoveryCount(),
+                payload, clock.instant());
         outboxRepository.saveAndFlush(message);
         log.info(
                 "Created outbox message: messageId={}, messageType={}, aggregateId={}",
@@ -99,27 +105,37 @@ public class TaskPersistenceService {
     }
 
     @Transactional
-    public boolean complete(long taskId, UUID executionId, JsonNode result) {
+    public boolean complete(
+            long taskId,
+            UUID executionId,
+            JsonNode result
+    ) {
         return taskRepository.completeRunning(
-                        taskId, executionId, result, clock.instant(), TaskStatus.RUNNING, TaskStatus.COMPLETED)
-                == 1;
+                taskId, executionId, result, clock.instant(), TaskStatus.RUNNING, TaskStatus.COMPLETED) == 1;
     }
 
     @Transactional
-    public boolean fail(long taskId, UUID executionId, TaskErrorCode errorCode, String errorMessage) {
+    public boolean fail(
+            long taskId,
+            UUID executionId,
+            TaskErrorCode errorCode,
+            String errorMessage
+    ) {
         return taskRepository.failRunning(
-                        taskId,
-                        executionId,
-                        errorCode,
-                        errorMessage,
-                        clock.instant(),
-                        TaskStatus.RUNNING,
-                        TaskStatus.FAILED)
-                == 1;
+                taskId,
+                executionId,
+                errorCode,
+                errorMessage,
+                clock.instant(),
+                TaskStatus.RUNNING,
+                TaskStatus.FAILED) == 1;
     }
 
     @Transactional
-    public int recordAttempt(long taskId, UUID executionId) {
+    public int recordAttempt(
+            long taskId,
+            UUID executionId
+    ) {
         int updated = taskRepository.recordAttempt(taskId, clock.instant(), executionId, TaskStatus.RUNNING);
         if (updated != 1) {
             throw new StaleTaskExecutionException(taskId, executionId);
@@ -136,10 +152,12 @@ public class TaskPersistenceService {
     }
 
     @Transactional
-    public boolean renewLease(long taskId, UUID executionId) {
+    public boolean renewLease(
+            long taskId,
+            UUID executionId
+    ) {
         return taskRepository.renewLease(
-                        taskId, executionId, clock.instant().plus(leaseProperties.duration()), TaskStatus.RUNNING)
-                == 1;
+                taskId, executionId, clock.instant().plus(leaseProperties.duration()), TaskStatus.RUNNING) == 1;
     }
 
     public record ClaimedTask(
@@ -149,5 +167,7 @@ public class TaskPersistenceService {
             JsonNode parameters,
             ResourceStatus resourceStatus,
             ResourceConfig resourceConfig,
-            UUID executionId) {}
+            UUID executionId
+    ) {
+    }
 }

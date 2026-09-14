@@ -40,8 +40,14 @@ class JpaSearchScopeTest {
         Predicate firstPredicate = mock(Predicate.class);
         Predicate secondPredicate = mock(Predicate.class);
         Predicate combinedPredicate = mock(Predicate.class);
-        JpaSearchScope<TestEntity> first = (ignoredRoot, ignoredQuery, ignoredBuilder) -> firstPredicate;
-        JpaSearchScope<TestEntity> second = (ignoredRoot, ignoredQuery, ignoredBuilder) -> secondPredicate;
+        JpaSearchScope<TestEntity> first = (
+                ignoredRoot,
+                ignoredQuery,
+                ignoredBuilder) -> firstPredicate;
+        JpaSearchScope<TestEntity> second = (
+                ignoredRoot,
+                ignoredQuery,
+                ignoredBuilder) -> secondPredicate;
         when(builder.and(firstPredicate, secondPredicate)).thenReturn(combinedPredicate);
 
         Predicate result = first.and(second).toPredicate(root, query, builder);
@@ -49,5 +55,6 @@ class JpaSearchScopeTest {
         assertThat(result).isSameAs(combinedPredicate);
     }
 
-    private static final class TestEntity {}
+    private static final class TestEntity {
+    }
 }

@@ -23,7 +23,10 @@ class OutboxRelay {
     private final Set<UUID> previouslyFailed = ConcurrentHashMap.newKeySet();
 
     OutboxRelay(
-            OutboxMessageJpaRepository repository, OutboxMessageProcessor processor, OutboxRelayProperties properties) {
+            OutboxMessageJpaRepository repository,
+            OutboxMessageProcessor processor,
+            OutboxRelayProperties properties
+    ) {
         this.repository = repository;
         this.processor = processor;
         this.properties = properties;

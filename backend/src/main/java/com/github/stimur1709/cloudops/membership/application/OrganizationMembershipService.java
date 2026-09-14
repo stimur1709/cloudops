@@ -36,7 +36,8 @@ public class OrganizationMembershipService {
             OrganizationJpaRepository organizationRepository,
             UserJpaRepository userRepository,
             JpaSearchService searchService,
-            Clock clock) {
+            Clock clock
+    ) {
         this.membershipRepository = membershipRepository;
         this.organizationRepository = organizationRepository;
         this.userRepository = userRepository;
@@ -45,7 +46,12 @@ public class OrganizationMembershipService {
     }
 
     @Transactional
-    public OrganizationMembershipEntity add(long organizationId, long userId, MembershipRole role, long currentUserId) {
+    public OrganizationMembershipEntity add(
+            long organizationId,
+            long userId,
+            MembershipRole role,
+            long currentUserId
+    ) {
         OrganizationEntity organization = getOrganizationForUpdate(organizationId);
         List<OrganizationMembershipEntity> memberships = membershipRepository.lockAllByOrganizationId(organizationId);
         OrganizationMembershipEntity actor = findActor(memberships, currentUserId);
@@ -64,7 +70,10 @@ public class OrganizationMembershipService {
 
     @Transactional(readOnly = true)
     public SearchResult<OrganizationMembershipEntity> search(
-            long organizationId, SearchQuery search, long currentUserId) {
+            long organizationId,
+            SearchQuery search,
+            long currentUserId
+    ) {
         checkOrganization(organizationId);
         if (!membershipRepository.existsByOrganizationIdAndUserId(organizationId, currentUserId)) {
             throw new NotFoundException();
@@ -77,7 +86,11 @@ public class OrganizationMembershipService {
 
     @Transactional
     public OrganizationMembershipEntity updateRole(
-            long organizationId, long userId, MembershipRole role, long currentUserId) {
+            long organizationId,
+            long userId,
+            MembershipRole role,
+            long currentUserId
+    ) {
         getOrganizationForUpdate(organizationId);
         List<OrganizationMembershipEntity> memberships = membershipRepository.lockAllByOrganizationId(organizationId);
         OrganizationMembershipEntity actor = findActor(memberships, currentUserId);
@@ -96,7 +109,11 @@ public class OrganizationMembershipService {
     }
 
     @Transactional
-    public void remove(long organizationId, long userId, long currentUserId) {
+    public void remove(
+            long organizationId,
+            long userId,
+            long currentUserId
+    ) {
         getOrganizationForUpdate(organizationId);
         List<OrganizationMembershipEntity> memberships = membershipRepository.lockAllByOrganizationId(organizationId);
         OrganizationMembershipEntity actor = findActor(memberships, currentUserId);
@@ -123,21 +140,30 @@ public class OrganizationMembershipService {
         return userRepository.findById(id).orElseThrow(NotFoundException::new);
     }
 
-    private OrganizationMembershipEntity find(List<OrganizationMembershipEntity> memberships, long userId) {
+    private OrganizationMembershipEntity find(
+            List<OrganizationMembershipEntity> memberships,
+            long userId
+    ) {
         return memberships.stream()
                 .filter(item -> item.userId() == userId)
                 .findFirst()
                 .orElseThrow(NotFoundException::new);
     }
 
-    private OrganizationMembershipEntity findActor(List<OrganizationMembershipEntity> memberships, long currentUserId) {
+    private OrganizationMembershipEntity findActor(
+            List<OrganizationMembershipEntity> memberships,
+            long currentUserId
+    ) {
         return memberships.stream()
                 .filter(item -> item.userId() == currentUserId)
                 .findFirst()
                 .orElseThrow(NotFoundException::new);
     }
 
-    private void requireCanAdd(MembershipRole actorRole, MembershipRole addedRole) {
+    private void requireCanAdd(
+            MembershipRole actorRole,
+            MembershipRole addedRole
+    ) {
         if (actorRole == MembershipRole.MEMBER
                 || actorRole == MembershipRole.ADMIN && addedRole != MembershipRole.MEMBER) {
             throw new ForbiddenException();

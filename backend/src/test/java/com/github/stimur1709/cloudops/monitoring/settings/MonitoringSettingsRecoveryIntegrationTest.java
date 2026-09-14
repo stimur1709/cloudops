@@ -64,11 +64,12 @@ class MonitoringSettingsRecoveryIntegrationTest {
     @BeforeEach
     void setUp() {
         recovery.retryPending();
-        jdbc.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings,
-                    monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
-                    organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbc.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings,
+                            monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
+                            organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         index.reload();
         jdbc.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
@@ -82,10 +83,12 @@ class MonitoringSettingsRecoveryIntegrationTest {
                 INSERT INTO organization_memberships (organization_id, user_id, role, created_at, updated_at)
                 VALUES (?, ?, 'OWNER', NOW(), NOW())
                 """, organizationId, TestAuthentication.USER_ID);
-        resourceId = jdbc.queryForObject("""
-                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
-                VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{"url":"https://example.com"}'::jsonb, NOW(), NOW()) RETURNING id
-                """, Long.class, organizationId);
+        resourceId = jdbc.queryForObject(
+                """
+                        INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                        VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{"url":"https://example.com"}'::jsonb, NOW(), NOW()) RETURNING id
+                        """,
+                Long.class, organizationId);
         jdbc.update("INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UP')", resourceId);
         monitorId = jdbc.queryForObject("""
                 INSERT INTO monitors (resource_id, type, next_run_at, health_status)
@@ -94,7 +97,7 @@ class MonitoringSettingsRecoveryIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
+    @ValueSource(booleans = { false, true })
     void retriesFailedPutAndDeleteFromCommittedDatabaseValues(boolean organization) {
         failSynchronization(organization, false);
         put(organization, false, 41);
@@ -112,7 +115,7 @@ class MonitoringSettingsRecoveryIntegrationTest {
         assertThat(override(organization).intervalSeconds()).isEqualTo(41);
         assertThat(nextRunAt()).isNull();
         assertThat(jdbc.queryForObject(
-                        "SELECT health_status FROM resource_health WHERE resource_id = ?", String.class, resourceId))
+                "SELECT health_status FROM resource_health WHERE resource_id = ?", String.class, resourceId))
                 .isEqualTo("UNKNOWN");
 
         if (organization) {
@@ -174,9 +177,9 @@ class MonitoringSettingsRecoveryIntegrationTest {
     void rolledBackMutationNeverUpdatesRuntimeOrSchedulesRecovery() {
         Instant scheduled = nextRunAt();
         assertThatThrownBy(() -> new TransactionTemplate(transactionManager).executeWithoutResult(_ -> {
-                    put(false, false, 41);
-                    throw new IllegalStateException("rollback");
-                }))
+            put(false, false, 41);
+            throw new IllegalStateException("rollback");
+        }))
                 .isInstanceOf(IllegalStateException.class);
         recovery.retryPending();
         assertThat(index.resource(resourceId, ProbeType.HTTP_CHECK)).isNull();
@@ -193,10 +196,10 @@ class MonitoringSettingsRecoveryIntegrationTest {
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch resume = new CountDownLatch(1);
         doAnswer(invocation -> {
-                    entered.countDown();
-                    assertThat(resume.await(10, TimeUnit.SECONDS)).isTrue();
-                    return invocation.callRealMethod();
-                })
+            entered.countDown();
+            assertThat(resume.await(10, TimeUnit.SECONDS)).isTrue();
+            return invocation.callRealMethod();
+        })
                 .when(synchronizer)
                 .synchronizeResource(resourceId, ProbeType.HTTP_CHECK, true);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -206,9 +209,9 @@ class MonitoringSettingsRecoveryIntegrationTest {
                 var mutation = executor.submit(() -> put(false, true, 52));
                 await().atMost(Duration.ofSeconds(10))
                         .untilAsserted(() -> assertThat(jdbc.queryForObject(
-                                        "SELECT interval_seconds FROM resource_probe_settings WHERE resource_id = ?",
-                                        Integer.class,
-                                        resourceId))
+                                "SELECT interval_seconds FROM resource_probe_settings WHERE resource_id = ?",
+                                Integer.class,
+                                resourceId))
                                 .isEqualTo(52));
                 resume.countDown();
                 retry.get(10, TimeUnit.SECONDS);
@@ -225,7 +228,11 @@ class MonitoringSettingsRecoveryIntegrationTest {
         assertThat(nextRunAt()).isEqualTo(scheduled);
     }
 
-    private void put(boolean organization, boolean enabled, int interval) {
+    private void put(
+            boolean organization,
+            boolean enabled,
+            int interval
+    ) {
         var request = new ProbeSettingsRequest(enabled, interval, 3, 2, StorageMode.LATEST_ONLY, null, 500);
         if (organization) {
             settingsService.putOrganization(organizationId, ProbeType.HTTP_CHECK, request, TestAuthentication.USER_ID);
@@ -234,17 +241,27 @@ class MonitoringSettingsRecoveryIntegrationTest {
         }
     }
 
-    private void failSynchronization(boolean organization, boolean retry) {
+    private void failSynchronization(
+            boolean organization,
+            boolean retry
+    ) {
         var stub = doThrow(new IllegalStateException("injected post-commit failure"))
                 .when(synchronizer);
-        if (organization) stub.synchronizeOrganization(organizationId, ProbeType.HTTP_CHECK, retry);
-        else stub.synchronizeResource(resourceId, ProbeType.HTTP_CHECK, retry);
+        if (organization)
+            stub.synchronizeOrganization(organizationId, ProbeType.HTTP_CHECK, retry);
+        else
+            stub.synchronizeResource(resourceId, ProbeType.HTTP_CHECK, retry);
     }
 
-    private void restoreSynchronization(boolean organization, boolean retry) {
+    private void restoreSynchronization(
+            boolean organization,
+            boolean retry
+    ) {
         var stub = doCallRealMethod().when(synchronizer);
-        if (organization) stub.synchronizeOrganization(organizationId, ProbeType.HTTP_CHECK, retry);
-        else stub.synchronizeResource(resourceId, ProbeType.HTTP_CHECK, retry);
+        if (organization)
+            stub.synchronizeOrganization(organizationId, ProbeType.HTTP_CHECK, retry);
+        else
+            stub.synchronizeResource(resourceId, ProbeType.HTTP_CHECK, retry);
     }
 
     private ProbeSettings override(boolean organization) {

@@ -5,7 +5,10 @@ import java.util.Map;
 import java.util.Objects;
 
 public record JpaSearchDefinition<E>(
-        Class<E> entityType, Map<String, JpaSearchField<E, ?>> fields, String defaultSortField) {
+        Class<E> entityType,
+        Map<String, JpaSearchField<E, ?>> fields,
+        String defaultSortField
+) {
 
     public JpaSearchDefinition {
         entityType = Objects.requireNonNull(entityType);
@@ -32,7 +35,10 @@ public record JpaSearchDefinition<E>(
             this.entityType = Objects.requireNonNull(entityType);
         }
 
-        public Builder<E> field(String name, JpaSearchField<E, ?> field) {
+        public Builder<E> field(
+                String name,
+                JpaSearchField<E, ?> field
+        ) {
             if (fields.putIfAbsent(Objects.requireNonNull(name), Objects.requireNonNull(field)) != null) {
                 throw new IllegalArgumentException("Search field is already configured: " + name);
             }

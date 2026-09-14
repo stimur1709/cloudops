@@ -100,14 +100,14 @@ class OutboxRelayIntegrationTest {
         CountDownLatch publishing = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         doAnswer(invocation -> {
-                    publishing.countDown();
-                    assertThat(release.await(5, TimeUnit.SECONDS)).isTrue();
-                    return true;
-                })
+            publishing.countDown();
+            assertThat(release.await(5, TimeUnit.SECONDS)).isTrue();
+            return true;
+        })
                 .when(publisher)
                 .publish(any(), any());
-        OutboxRelay secondRelay =
-                new OutboxRelay(repository, processor, new OutboxRelayProperties(false, Duration.ofSeconds(1), 2));
+        OutboxRelay secondRelay = new OutboxRelay(repository, processor,
+                new OutboxRelayProperties(false, Duration.ofSeconds(1), 2));
 
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var firstRun = executor.submit(relay::publishPending);
@@ -136,23 +136,29 @@ class OutboxRelayIntegrationTest {
                 .isFalse();
     }
 
-    private UUID insertMessage(long taskId, Instant createdAt) {
+    private UUID insertMessage(
+            long taskId,
+            Instant createdAt
+    ) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 """
-                INSERT INTO outbox_messages
-                    (id, message_type, aggregate_type, aggregate_id, payload, created_at, deduplication_key)
-                VALUES (?, 'TASK_EXECUTION_REQUESTED', 'TASK', ?, CAST(? AS jsonb), ?, ?)
-                """, id, taskId, "{\"taskId\":" + taskId + "}", java.sql.Timestamp.from(createdAt), "test:" + id);
+                        INSERT INTO outbox_messages
+                            (id, message_type, aggregate_type, aggregate_id, payload, created_at, deduplication_key)
+                        VALUES (?, 'TASK_EXECUTION_REQUESTED', 'TASK', ?, CAST(? AS jsonb), ?, ?)
+                        """, id, taskId, "{\"taskId\":" + taskId + "}", java.sql.Timestamp.from(createdAt),
+                "test:" + id);
         return id;
     }
 
     private Instant publishedAt(UUID id) {
         List<Instant> values = jdbcTemplate.query(
                 "SELECT published_at FROM outbox_messages WHERE id = ?",
-                (resultSet, row) -> resultSet.getObject(1, java.time.OffsetDateTime.class) == null
-                        ? null
-                        : resultSet.getObject(1, java.time.OffsetDateTime.class).toInstant(),
+                (
+                        resultSet,
+                        row) -> resultSet.getObject(1, java.time.OffsetDateTime.class) == null
+                                ? null
+                                : resultSet.getObject(1, java.time.OffsetDateTime.class).toInstant(),
                 id);
         return values.getFirst();
     }

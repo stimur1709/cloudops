@@ -17,30 +17,32 @@ public record TaskResponse(
         TaskType type,
 
         @Schema(
-                implementation = RunCommandParameters.class,
-                requiredMode = Schema.RequiredMode.REQUIRED,
-                description =
-                        "Parameters for RUN_COMMAND; selected by the sibling type field. No nested type discriminator.")
+                implementation = RunCommandParameters.class, requiredMode = Schema.RequiredMode.REQUIRED, description = "Parameters for RUN_COMMAND; selected by the sibling type field. No nested type discriminator."
+        )
         JsonNode parameters,
 
         TaskStatus status,
         long createdBy,
         Instant createdAt,
-        @Schema(nullable = true) Instant startedAt,
-        @Schema(nullable = true) Instant completedAt,
+        @Schema(nullable = true)
+        Instant startedAt,
+        @Schema(nullable = true)
+        Instant completedAt,
 
         @Schema(
-                implementation = RunCommandResult.class,
-                nullable = true,
-                description =
-                        "RUN_COMMAND output when execution produced a result; null before execution or on failures without output.")
+                implementation = RunCommandResult.class, nullable = true, description = "RUN_COMMAND output when execution produced a result; null before execution or on failures without output."
+        )
         JsonNode result,
 
-        @Schema(nullable = true) TaskErrorCode errorCode,
-        @Schema(nullable = true) String errorMessage,
+        @Schema(nullable = true)
+        TaskErrorCode errorCode,
+        @Schema(nullable = true)
+        String errorMessage,
         int attemptCount,
-        @Schema(nullable = true) Instant lastAttemptAt,
-        int recoveryCount) {
+        @Schema(nullable = true)
+        Instant lastAttemptAt,
+        int recoveryCount
+) {
     public static TaskResponse from(TaskEntity task) {
         return new TaskResponse(
                 task.id(),

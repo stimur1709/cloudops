@@ -6,5 +6,9 @@ import java.time.Instant;
 
 @ValidAvailabilityPeriod
 public record ResourceAvailabilityRequest(
-        @NotNull(message = "From is required") Instant from,
-        @NotNull(message = "To is required") Instant to) {}
+        @NotNull(message = "From is required")
+        Instant from,
+        @NotNull(message = "To is required")
+        Instant to
+) {
+}

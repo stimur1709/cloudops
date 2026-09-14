@@ -6,7 +6,12 @@ import com.github.stimur1709.cloudops.task.capability.TaskCapabilityReason;
 import java.util.List;
 
 public record TaskCapabilityResponse(
-        TaskType type, boolean supported, boolean available, boolean allowed, List<TaskCapabilityReason> reasons) {
+        TaskType type,
+        boolean supported,
+        boolean available,
+        boolean allowed,
+        List<TaskCapabilityReason> reasons
+) {
 
     static TaskCapabilityResponse from(TaskCapability capability) {
         return new TaskCapabilityResponse(

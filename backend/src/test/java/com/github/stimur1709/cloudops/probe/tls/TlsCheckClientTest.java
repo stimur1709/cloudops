@@ -42,8 +42,7 @@ class TlsCheckClientTest {
         KeyStore keyStore = createKeyStore();
         SSLContext serverContext = serverContext(keyStore);
         SSLContext clientContext = clientContext(keyStore);
-        try (SSLServerSocket server =
-                        (SSLServerSocket) serverContext.getServerSocketFactory().createServerSocket(0);
+        try (SSLServerSocket server = (SSLServerSocket) serverContext.getServerSocketFactory().createServerSocket(0);
                 var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             Future<?> handshake = executor.submit(() -> {
                 try (SSLSocket socket = (SSLSocket) server.accept()) {
@@ -54,7 +53,7 @@ class TlsCheckClientTest {
             });
 
             TlsCheckOutcome outcome = new TlsCheckClient(
-                            Duration.ofSeconds(2), Clock.systemUTC(), clientContext.getSocketFactory())
+                    Duration.ofSeconds(2), Clock.systemUTC(), clientContext.getSocketFactory())
                     .execute("localhost", server.getLocalPort());
 
             assertThat(outcome.completed()).isTrue();
@@ -71,7 +70,10 @@ class TlsCheckClientTest {
         when(certificate.getIssuerX500Principal()).thenReturn(new X500Principal("CN=Example CA"));
         when(certificate.getNotBefore()).thenReturn(Date.from(NOW.minus(Duration.ofDays(10))));
         when(certificate.getNotAfter()).thenReturn(Date.from(NOW.plus(Duration.ofDays(125))));
-        TlsCheckClient client = client((host, port, timeout) -> certificate);
+        TlsCheckClient client = client((
+                host,
+                port,
+                timeout) -> certificate);
 
         TlsCheckOutcome outcome = client.execute("api.example.com", 443);
 
@@ -98,10 +100,16 @@ class TlsCheckClientTest {
         return new TlsCheckClient(Duration.ofSeconds(1), Clock.fixed(NOW, ZoneOffset.UTC), connector);
     }
 
-    private void assertFailure(IOException exception, ProbeErrorCode code) {
-        TlsCheckOutcome outcome = client((host, port, timeout) -> {
-                    throw exception;
-                })
+    private void assertFailure(
+            IOException exception,
+            ProbeErrorCode code
+    ) {
+        TlsCheckOutcome outcome = client((
+                host,
+                port,
+                timeout) -> {
+            throw exception;
+        })
                 .execute("host", 443);
 
         assertThat(outcome.completed()).isFalse();
@@ -112,27 +120,27 @@ class TlsCheckClientTest {
         Path keyStorePath = temporaryDirectory.resolve("server.p12");
         Path keytool = Path.of(System.getProperty("java.home"), "bin", executable("keytool"));
         Process process = new ProcessBuilder(
-                        keytool.toString(),
-                        "-genkeypair",
-                        "-alias",
-                        "server",
-                        "-storetype",
-                        "PKCS12",
-                        "-keystore",
-                        keyStorePath.toString(),
-                        "-storepass",
-                        "changeit",
-                        "-keypass",
-                        "changeit",
-                        "-dname",
-                        "CN=localhost",
-                        "-ext",
-                        "SAN=dns:localhost,ip:127.0.0.1",
-                        "-keyalg",
-                        "RSA",
-                        "-validity",
-                        "3650",
-                        "-noprompt")
+                keytool.toString(),
+                "-genkeypair",
+                "-alias",
+                "server",
+                "-storetype",
+                "PKCS12",
+                "-keystore",
+                keyStorePath.toString(),
+                "-storepass",
+                "changeit",
+                "-keypass",
+                "changeit",
+                "-dname",
+                "CN=localhost",
+                "-ext",
+                "SAN=dns:localhost,ip:127.0.0.1",
+                "-keyalg",
+                "RSA",
+                "-validity",
+                "3650",
+                "-noprompt")
                 .redirectErrorStream(true)
                 .start();
         String output = new String(process.getInputStream().readAllBytes());

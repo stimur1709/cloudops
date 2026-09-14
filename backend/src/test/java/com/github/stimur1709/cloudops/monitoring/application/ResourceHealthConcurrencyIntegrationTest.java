@@ -33,10 +33,11 @@ class ResourceHealthConcurrencyIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
-                    organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
+                            organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
     }
 
     @Test
@@ -45,10 +46,12 @@ class ResourceHealthConcurrencyIntegrationTest {
                 INSERT INTO organizations (name, created_at, updated_at)
                 VALUES ('Concurrent monitoring', now(), now()) RETURNING id
                 """, Long.class);
-        long resourceId = jdbcTemplate.queryForObject("""
-                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
-                VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{"url":"https://example.com"}'::jsonb, now(), now()) RETURNING id
-                """, Long.class, organizationId);
+        long resourceId = jdbcTemplate.queryForObject(
+                """
+                        INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                        VALUES ('api', 'SERVICE', 'ACTIVE', ?, '{"url":"https://example.com"}'::jsonb, now(), now()) RETURNING id
+                        """,
+                Long.class, organizationId);
         jdbcTemplate.update(
                 "INSERT INTO resource_health (resource_id, health_status) VALUES (?, 'UNKNOWN')", resourceId);
 
@@ -73,9 +76,9 @@ class ResourceHealthConcurrencyIntegrationTest {
             }
 
             assertThat(jdbcTemplate.queryForObject(
-                            "SELECT health_status FROM resource_health WHERE resource_id = ?",
-                            String.class,
-                            resourceId))
+                    "SELECT health_status FROM resource_health WHERE resource_id = ?",
+                    String.class,
+                    resourceId))
                     .isEqualTo("DEGRADED");
             assertThat(jdbcTemplate.queryForList("""
                     SELECT from_status || '->' || to_status FROM resource_health_events

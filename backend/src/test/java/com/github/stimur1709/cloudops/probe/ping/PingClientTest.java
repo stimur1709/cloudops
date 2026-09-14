@@ -12,7 +12,9 @@ class PingClientTest {
 
     @Test
     void reachesLocalHostAndReportsResponseTime() {
-        PingOutcome outcome = new PingClient(Duration.ofSeconds(1), (host, timeout) -> true).execute("127.0.0.1");
+        PingOutcome outcome = new PingClient(Duration.ofSeconds(1), (
+                host,
+                timeout) -> true).execute("127.0.0.1");
 
         assertThat(outcome.completed()).isTrue();
         assertThat(outcome.result().host()).isEqualTo("127.0.0.1");
@@ -21,20 +23,29 @@ class PingClientTest {
 
     @Test
     void classifiesTimeoutDnsAndConnectionFailures() {
-        assertFailure((host, timeout) -> false, ProbeErrorCode.TIMEOUT);
+        assertFailure((
+                host,
+                timeout) -> false, ProbeErrorCode.TIMEOUT);
         assertFailure(
-                (host, timeout) -> {
+                (
+                        host,
+                        timeout) -> {
                     throw new UnknownHostException(host);
                 },
                 ProbeErrorCode.DNS_ERROR);
         assertFailure(
-                (host, timeout) -> {
+                (
+                        host,
+                        timeout) -> {
                     throw new IOException("network");
                 },
                 ProbeErrorCode.CONNECTION_ERROR);
     }
 
-    private void assertFailure(PingClient.Reachability reachability, ProbeErrorCode code) {
+    private void assertFailure(
+            PingClient.Reachability reachability,
+            ProbeErrorCode code
+    ) {
         PingOutcome outcome = new PingClient(Duration.ofMillis(10), reachability).execute("host");
 
         assertThat(outcome.completed()).isFalse();

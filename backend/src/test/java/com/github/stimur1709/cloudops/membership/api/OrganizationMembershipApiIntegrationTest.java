@@ -48,9 +48,10 @@ class OrganizationMembershipApiIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         insertUser(TestAuthentication.USER_ID, "owner@example.com");
         insertUser(ADMIN_ID, "admin@example.com");
         insertUser(MEMBER_ID, "member@example.com");
@@ -67,14 +68,14 @@ class OrganizationMembershipApiIntegrationTest {
     @Test
     void memberCanListMembersAndServerScopeCannotBeBypassed() throws Exception {
         mockMvc.perform(post("/api/organizations/{id}/members/search", organizationId)
-                        .with(as(MEMBER_ID))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"start":0,"size":10,"filter":{"operator":"OR","conditions":[
-                                  {"field":"organizationId","operation":"EQ","value":"999999"},
-                                  {"field":"role","operation":"EQ","value":"OWNER"}
-                                ]},"sort":[{"field":"userId","order":"ASC"}],"getTotal":true}
-                                """))
+                .with(as(MEMBER_ID))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"start":0,"size":10,"filter":{"operator":"OR","conditions":[
+                          {"field":"organizationId","operation":"EQ","value":"999999"},
+                          {"field":"role","operation":"EQ","value":"OWNER"}
+                        ]},"sort":[{"field":"userId","order":"ASC"}],"getTotal":true}
+                        """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(1)))
                 .andExpect(jsonPath("$.items[0].userId").value(TestAuthentication.USER_ID))
@@ -85,8 +86,8 @@ class OrganizationMembershipApiIntegrationTest {
     void ownerCanAddChangeAndRemoveMembers() throws Exception {
         add(OTHER_ID, "ADMIN", TestAuthentication.USER_ID).andExpect(status().isCreated());
         mockMvc.perform(put("/api/organizations/{id}/members/{userId}", organizationId, OTHER_ID)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"role\":\"MEMBER\"}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"MEMBER\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("MEMBER"));
         mockMvc.perform(delete("/api/organizations/{id}/members/{userId}", organizationId, OTHER_ID))
@@ -97,18 +98,18 @@ class OrganizationMembershipApiIntegrationTest {
     void adminCanManageOnlyMembers() throws Exception {
         add(OTHER_ID, "MEMBER", ADMIN_ID).andExpect(status().isCreated());
         mockMvc.perform(delete("/api/organizations/{id}/members/{userId}", organizationId, OTHER_ID)
-                        .with(as(ADMIN_ID)))
+                .with(as(ADMIN_ID)))
                 .andExpect(status().isNoContent());
 
         add(OTHER_ID, "ADMIN", ADMIN_ID).andExpect(status().isForbidden());
         add(OTHER_ID, "OWNER", ADMIN_ID).andExpect(status().isForbidden());
         mockMvc.perform(delete("/api/organizations/{id}/members/{userId}", organizationId, TestAuthentication.USER_ID)
-                        .with(as(ADMIN_ID)))
+                .with(as(ADMIN_ID)))
                 .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/organizations/{id}/members/{userId}", organizationId, MEMBER_ID)
-                        .with(as(ADMIN_ID))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"role\":\"ADMIN\"}"))
+                .with(as(ADMIN_ID))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"ADMIN\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -116,20 +117,20 @@ class OrganizationMembershipApiIntegrationTest {
     void memberCannotChangeCompositionOrPromoteSelf() throws Exception {
         add(OTHER_ID, "MEMBER", MEMBER_ID).andExpect(status().isForbidden());
         mockMvc.perform(put("/api/organizations/{id}/members/{userId}", organizationId, MEMBER_ID)
-                        .with(as(MEMBER_ID))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"role\":\"ADMIN\"}"))
+                .with(as(MEMBER_ID))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"ADMIN\"}"))
                 .andExpect(status().isForbidden());
         mockMvc.perform(delete("/api/organizations/{id}/members/{userId}", organizationId, ADMIN_ID)
-                        .with(as(MEMBER_ID)))
+                .with(as(MEMBER_ID)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void lastOwnerCannotBeDemotedOrRemoved() throws Exception {
         mockMvc.perform(put("/api/organizations/{id}/members/{userId}", organizationId, TestAuthentication.USER_ID)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"role\":\"ADMIN\"}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"ADMIN\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LAST_OWNER_REQUIRED"));
         mockMvc.perform(delete("/api/organizations/{id}/members/{userId}", organizationId, TestAuthentication.USER_ID))
@@ -139,9 +140,9 @@ class OrganizationMembershipApiIntegrationTest {
     @Test
     void nonMemberCannotDiscoverOrganizationThroughMembersApi() throws Exception {
         mockMvc.perform(post("/api/organizations/{id}/members/search", organizationId)
-                        .with(as(OTHER_ID))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"start\":0,\"size\":10,\"getTotal\":false}"))
+                .with(as(OTHER_ID))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"start\":0,\"size\":10,\"getTotal\":false}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
     }
@@ -170,22 +171,31 @@ class OrganizationMembershipApiIntegrationTest {
         }
     }
 
-    private org.springframework.test.web.servlet.ResultActions add(long userId, String role, long actorId)
-            throws Exception {
+    private org.springframework.test.web.servlet.ResultActions add(
+            long userId,
+            String role,
+            long actorId
+    ) throws Exception {
         return mockMvc.perform(post("/api/organizations/{id}/members", organizationId)
                 .with(as(actorId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"userId\":%d,\"role\":\"%s\"}".formatted(userId, role)));
     }
 
-    private void insertUser(long id, String email) {
+    private void insertUser(
+            long id,
+            String email
+    ) {
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, ?, 'Test', '{noop}unused-password', now(), now())
                 """, id, email);
     }
 
-    private void insertMembership(long userId, String role) {
+    private void insertMembership(
+            long userId,
+            String role
+    ) {
         jdbcTemplate.update("""
                 INSERT INTO organization_memberships
                     (organization_id, user_id, role, created_at, updated_at)
@@ -197,7 +207,11 @@ class OrganizationMembershipApiIntegrationTest {
         return jwt().jwt(token -> token.subject(Long.toString(userId)));
     }
 
-    private boolean removeAfter(CountDownLatch start, long targetUserId, long actorUserId) {
+    private boolean removeAfter(
+            CountDownLatch start,
+            long targetUserId,
+            long actorUserId
+    ) {
         try {
             start.await();
             membershipService.remove(organizationId, targetUserId, actorUserId);

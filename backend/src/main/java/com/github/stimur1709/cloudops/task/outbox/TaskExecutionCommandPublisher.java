@@ -5,5 +5,8 @@ import java.util.UUID;
 
 public interface TaskExecutionCommandPublisher {
 
-    boolean publish(UUID outboxMessageId, TaskExecutionCommand command) throws Exception;
+    boolean publish(
+            UUID outboxMessageId,
+            TaskExecutionCommand command
+    ) throws Exception;
 }

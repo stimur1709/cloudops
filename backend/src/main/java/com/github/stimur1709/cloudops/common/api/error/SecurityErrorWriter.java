@@ -15,13 +15,21 @@ public class SecurityErrorWriter {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    public SecurityErrorWriter(ObjectMapper objectMapper, Clock clock) {
+    public SecurityErrorWriter(
+            ObjectMapper objectMapper,
+            Clock clock
+    ) {
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
 
-    public void write(HttpServletRequest request, HttpServletResponse response, int status, String code, String message)
-            throws IOException {
+    public void write(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            int status,
+            String code,
+            String message
+    ) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(

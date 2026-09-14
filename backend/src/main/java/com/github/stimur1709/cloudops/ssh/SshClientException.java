@@ -7,7 +7,11 @@ public final class SshClientException extends IOException {
     private final SshErrorType type;
     private final String safeMessage;
 
-    public SshClientException(SshErrorType type, String safeMessage, Throwable cause) {
+    public SshClientException(
+            SshErrorType type,
+            String safeMessage,
+            Throwable cause
+    ) {
         super(safeMessage, cause);
         this.type = type;
         this.safeMessage = safeMessage;

@@ -57,15 +57,18 @@ public class OpenApiConfiguration {
                                 .bearerFormat("JWT")
                                 .description("Access token: Authorization: Bearer <access token>"));
         ModelConverters.getInstance().readAll(ApiError.class).forEach(components::addSchemas);
-        ERRORS.forEach((status, description) -> components.addResponses(
-                "Error" + status,
-                new ApiResponse()
-                        .description(description)
-                        .content(new Content()
-                                .addMediaType(
-                                        "application/json",
-                                        new MediaType()
-                                                .schema(new Schema<>().$ref("#/components/schemas/ApiError"))))));
+        ERRORS.forEach((
+                status,
+                description) -> components.addResponses(
+                        "Error" + status,
+                        new ApiResponse()
+                                .description(description)
+                                .content(new Content()
+                                        .addMediaType(
+                                                "application/json",
+                                                new MediaType()
+                                                        .schema(new Schema<>()
+                                                                .$ref("#/components/schemas/ApiError"))))));
         return new OpenAPI()
                 .info(
                         new Info()
@@ -80,15 +83,22 @@ public class OpenApiConfiguration {
     @Bean
     OpenApiCustomizer securityAndErrors() {
         return api -> api.getPaths()
-                .forEach((path, item) -> item.readOperations().forEach(operation -> {
-                    boolean publicEndpoint = SecurityConfiguration.PUBLIC_ENDPOINTS.contains(path);
-                    operation.setSecurity(
-                            publicEndpoint ? List.of() : List.of(new SecurityRequirement().addList("bearerAuth")));
-                    List<String> statuses = publicEndpoint ? publicErrorStatuses(path) : List.copyOf(ERRORS.keySet());
-                    statuses.forEach(status -> operation
-                            .getResponses()
-                            .putIfAbsent(status, new ApiResponse().$ref("#/components/responses/Error" + status)));
-                }));
+                .forEach((
+                        path,
+                        item) -> item.readOperations().forEach(operation -> {
+                            boolean publicEndpoint = SecurityConfiguration.PUBLIC_ENDPOINTS.contains(path);
+                            operation.setSecurity(
+                                    publicEndpoint
+                                            ? List.of()
+                                            : List.of(new SecurityRequirement().addList("bearerAuth")));
+                            List<String> statuses = publicEndpoint
+                                    ? publicErrorStatuses(path)
+                                    : List.copyOf(ERRORS.keySet());
+                            statuses.forEach(status -> operation
+                                    .getResponses()
+                                    .putIfAbsent(status,
+                                            new ApiResponse().$ref("#/components/responses/Error" + status)));
+                        }));
     }
 
     private List<String> publicErrorStatuses(String path) {
@@ -105,13 +115,13 @@ public class OpenApiConfiguration {
     OpenApiCustomizer flattenPolymorphicSubtypes() {
         return api -> {
             List.of(
-                            "ServerResourceConfig",
-                            "NetworkDeviceResourceConfig",
-                            "DatabaseResourceConfig",
-                            "ServiceResourceConfig",
-                            "OtherResourceConfig",
-                            "UsernamePasswordCredentialRequest",
-                            "SshPrivateKeyCredentialRequest")
+                    "ServerResourceConfig",
+                    "NetworkDeviceResourceConfig",
+                    "DatabaseResourceConfig",
+                    "ServiceResourceConfig",
+                    "OtherResourceConfig",
+                    "UsernamePasswordCredentialRequest",
+                    "SshPrivateKeyCredentialRequest")
                     .forEach(name -> {
                         Schema<?> composed = api.getComponents().getSchemas().get(name);
                         if (composed.getAllOf() == null || composed.getAllOf().size() != 2) {
@@ -138,7 +148,10 @@ public class OpenApiConfiguration {
                 "/api/resources/{resourceId}/health/events/search", ResourceHealthEventSearchDefinition.DEFINITION,
                 "/api/tasks/search", TaskSearchDefinition.DEFINITION);
         return api -> searches.forEach(
-                (path, definition) -> api.getPaths().get(path).getPost().setDescription(searchDescription(definition)));
+                (
+                        path,
+                        definition) -> api.getPaths().get(path).getPost()
+                                .setDescription(searchDescription(definition)));
     }
 
     private String searchDescription(JpaSearchDefinition<?> definition) {
@@ -160,7 +173,12 @@ public class OpenApiConfiguration {
                 + definition.defaultSortField() + " ASC.";
     }
 
-    private void nullableReference(OpenAPI api, String schemaName, String propertyName, String targetSchema) {
+    private void nullableReference(
+            OpenAPI api,
+            String schemaName,
+            String propertyName,
+            String targetSchema
+    ) {
         Schema<?> property = new ComposedSchema()
                 .addAllOfItem(new Schema<>().$ref("#/components/schemas/" + targetSchema))
                 .nullable(true);

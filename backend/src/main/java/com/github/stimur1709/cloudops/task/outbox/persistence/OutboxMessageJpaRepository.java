@@ -23,5 +23,6 @@ public interface OutboxMessageJpaRepository extends JpaRepository<OutboxMessageE
              WHERE id = :id AND published_at IS NULL
              FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)
-    Optional<OutboxMessageEntity> lockUnpublished(@Param("id") UUID id);
+    Optional<OutboxMessageEntity> lockUnpublished(@Param("id")
+    UUID id);
 }

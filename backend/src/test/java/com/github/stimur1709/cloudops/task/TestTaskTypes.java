@@ -4,5 +4,6 @@ public final class TestTaskTypes {
 
     public static final TaskType TYPE = TaskType.RUN_COMMAND;
 
-    private TestTaskTypes() {}
+    private TestTaskTypes() {
+    }
 }

@@ -67,7 +67,10 @@ class MonitoringSettingsIndexTest {
         assertThat(resolver.resolve(20, 10, ProbeType.PING).source()).isEqualTo(SettingsSource.APPLICATION);
     }
 
-    private ProbeSettingsValues values(boolean enabled, int interval) {
+    private ProbeSettingsValues values(
+            boolean enabled,
+            int interval
+    ) {
         return new ProbeSettingsValues(enabled, interval, 3, 2, StorageMode.LATEST_ONLY, null, 500);
     }
 

@@ -17,10 +17,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class HttpCheckClient {
 
-    private final HttpClient client =
-            HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
+    private final HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
 
-    public HttpCheckOutcome execute(ServiceResourceConfig config, int timeoutMs) {
+    public HttpCheckOutcome execute(
+            ServiceResourceConfig config,
+            int timeoutMs
+    ) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(config.url()))
                 .timeout(Duration.ofMillis(timeoutMs))
                 .GET()
@@ -28,8 +30,7 @@ public class HttpCheckClient {
         long startedAt = System.nanoTime();
         try {
             HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
-            long responseTimeMs =
-                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             return HttpCheckOutcome.completed(new HttpCheckResult(
                     config.url(),
                     response.statusCode(),
@@ -59,7 +60,10 @@ public class HttpCheckClient {
         return failure(ProbeErrorCode.HTTP_CLIENT_ERROR, "HTTP check could not be completed");
     }
 
-    private boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {
+    private boolean hasCause(
+            Throwable throwable,
+            Class<? extends Throwable> type
+    ) {
         Throwable current = throwable;
         while (current != null) {
             if (type.isInstance(current)) {
@@ -70,7 +74,10 @@ public class HttpCheckClient {
         return false;
     }
 
-    private HttpCheckOutcome failure(ProbeErrorCode code, String message) {
+    private HttpCheckOutcome failure(
+            ProbeErrorCode code,
+            String message
+    ) {
         return HttpCheckOutcome.failed(code, message);
     }
 }

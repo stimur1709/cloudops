@@ -9,7 +9,8 @@ import java.net.URI;
 
 public final class ResourceHostExtractor {
 
-    private ResourceHostExtractor() {}
+    private ResourceHostExtractor() {
+    }
 
     public static String extract(ResourceConfig resourceConfig) {
         return switch (resourceConfig) {

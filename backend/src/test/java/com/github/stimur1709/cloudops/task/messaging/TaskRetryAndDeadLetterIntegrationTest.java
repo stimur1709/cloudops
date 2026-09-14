@@ -64,10 +64,11 @@ class TaskRetryAndDeadLetterIntegrationTest {
             channel.queuePurge(messagingProperties.deadLetterQueue());
             return null;
         });
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations
-                RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations
+                        RESTART IDENTITY
+                        """);
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, 'retry@example.com', 'Retry User', '{noop}unused', now(), now())
@@ -98,7 +99,7 @@ class TaskRetryAndDeadLetterIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("SELECT attempt_count FROM tasks WHERE id = ?", Integer.class, taskId))
                 .isEqualTo(2);
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT last_attempt_at IS NOT NULL FROM tasks WHERE id = ?", Boolean.class, taskId))
+                "SELECT last_attempt_at IS NOT NULL FROM tasks WHERE id = ?", Boolean.class, taskId))
                 .isTrue();
         verify(handler, times(2)).execute(org.mockito.ArgumentMatchers.any(TaskExecutionContext.class));
         assertThat(rabbitTemplate.receive(messagingProperties.deadLetterQueue()))
@@ -218,10 +219,13 @@ class TaskRetryAndDeadLetterIntegrationTest {
                 .isTrue();
     }
 
-    private void awaitStatus(long taskId, String expectedStatus) {
+    private void awaitStatus(
+            long taskId,
+            String expectedStatus
+    ) {
         await().atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(jdbcTemplate.queryForObject(
-                                "SELECT status FROM tasks WHERE id = ?", String.class, taskId))
+                        "SELECT status FROM tasks WHERE id = ?", String.class, taskId))
                         .isEqualTo(expectedStatus));
     }
 

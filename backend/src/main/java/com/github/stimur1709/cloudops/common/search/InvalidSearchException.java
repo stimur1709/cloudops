@@ -4,12 +4,19 @@ public final class InvalidSearchException extends RuntimeException {
 
     private final String field;
 
-    public InvalidSearchException(String field, String message) {
+    public InvalidSearchException(
+            String field,
+            String message
+    ) {
         super(message);
         this.field = field;
     }
 
-    public InvalidSearchException(String field, String message, Throwable cause) {
+    public InvalidSearchException(
+            String field,
+            String message,
+            Throwable cause
+    ) {
         super(message, cause);
         this.field = field;
     }

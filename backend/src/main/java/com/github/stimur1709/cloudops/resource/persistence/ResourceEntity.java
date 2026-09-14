@@ -55,7 +55,8 @@ public class ResourceEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected ResourceEntity() {}
+    protected ResourceEntity() {
+    }
 
     private ResourceEntity(
             String name,
@@ -64,7 +65,8 @@ public class ResourceEntity {
             OrganizationEntity organization,
             JsonNode config,
             Instant createdAt,
-            Instant updatedAt) {
+            Instant updatedAt
+    ) {
         this.name = name;
         this.type = type;
         this.status = status;
@@ -81,7 +83,8 @@ public class ResourceEntity {
             ResourceStatus status,
             OrganizationEntity organization,
             JsonNode config,
-            Instant createdAt) {
+            Instant createdAt
+    ) {
         return new ResourceEntity(name, type, status, organization, config, createdAt, createdAt);
     }
 
@@ -91,7 +94,8 @@ public class ResourceEntity {
             ResourceStatus status,
             OrganizationEntity organization,
             JsonNode config,
-            Instant updatedAt) {
+            Instant updatedAt
+    ) {
         this.name = name;
         this.type = type;
         this.status = status;

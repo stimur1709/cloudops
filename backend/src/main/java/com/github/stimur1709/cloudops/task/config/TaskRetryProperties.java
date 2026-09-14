@@ -12,11 +12,17 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("cloudops.task.retry")
 public record TaskRetryProperties(
         boolean enabled,
-        @Min(1) int maxAttempts,
-        @NotNull Duration initialInterval,
-        @DecimalMin("1.0") double multiplier,
-        @NotNull Duration maxInterval) {
-    @AssertTrue(message = "retry intervals must be positive and max interval must not be less than initial interval") public boolean isBackoffValid() {
+        @Min(1)
+        int maxAttempts,
+        @NotNull
+        Duration initialInterval,
+        @DecimalMin("1.0")
+        double multiplier,
+        @NotNull
+        Duration maxInterval
+) {
+    @AssertTrue(message = "retry intervals must be positive and max interval must not be less than initial interval")
+    public boolean isBackoffValid() {
         return initialInterval != null
                 && maxInterval != null
                 && initialInterval.isPositive()

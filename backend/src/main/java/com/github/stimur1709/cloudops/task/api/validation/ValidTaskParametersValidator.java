@@ -15,7 +15,10 @@ public class ValidTaskParametersValidator implements ConstraintValidator<ValidTa
     }
 
     @Override
-    public boolean isValid(CreateTaskRequest request, ConstraintValidatorContext context) {
+    public boolean isValid(
+            CreateTaskRequest request,
+            ConstraintValidatorContext context
+    ) {
         if (request == null || request.type() == null) {
             return true;
         }

@@ -23,8 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
-    private static final String DUMMY_PASSWORD_HASH =
-            "{bcrypt}$2a$10$7EqJtq98hPqEX7fNZaFWoO5Cqyn3fJuV2ZRqtdSwd8kA9Q6ZFIQ1a";
+    private static final String DUMMY_PASSWORD_HASH = "{bcrypt}$2a$10$7EqJtq98hPqEX7fNZaFWoO5Cqyn3fJuV2ZRqtdSwd8kA9Q6ZFIQ1a";
 
     private final UserService userService;
     private final UserJpaRepository userRepository;
@@ -43,7 +42,8 @@ public class AuthService {
             RefreshTokenCodec refreshTokenCodec,
             JwtEncoder jwtEncoder,
             JwtProperties jwtProperties,
-            Clock clock) {
+            Clock clock
+    ) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -55,14 +55,20 @@ public class AuthService {
     }
 
     @Transactional
-    public UserEntity register(String email, String displayName, String password) {
+    public UserEntity register(
+            String email,
+            String displayName,
+            String password
+    ) {
         return userService.register(email, displayName, passwordEncoder.encode(password));
     }
 
     @Transactional
-    public AuthSession login(String email, String password) {
-        UserEntity user =
-                userRepository.findByEmail(UserEntity.normalizeEmail(email)).orElse(null);
+    public AuthSession login(
+            String email,
+            String password
+    ) {
+        UserEntity user = userRepository.findByEmail(UserEntity.normalizeEmail(email)).orElse(null);
         String storedHash = user == null ? DUMMY_PASSWORD_HASH : user.passwordHash();
         if (!passwordEncoder.matches(password, storedHash) || user == null) {
             throw new BadCredentialsException("Invalid credentials");
@@ -103,7 +109,10 @@ public class AuthService {
                 .ifPresent(token -> token.revoke(clock.instant()));
     }
 
-    private CreatedSession createSession(long userId, Instant issuedAt) {
+    private CreatedSession createSession(
+            long userId,
+            Instant issuedAt
+    ) {
         Instant accessExpiresAt = issuedAt.plus(jwtProperties.accessTokenTtl());
         Instant refreshExpiresAt = issuedAt.plus(jwtProperties.refreshTokenTtl());
         JwtClaimsSet claims = JwtClaimsSet.builder()
@@ -114,8 +123,7 @@ public class AuthService {
                 .id(UUID.randomUUID().toString())
                 .build();
         JwsHeader headers = JwsHeader.with(MacAlgorithm.HS256).build();
-        String accessToken =
-                jwtEncoder.encode(JwtEncoderParameters.from(headers, claims)).getTokenValue();
+        String accessToken = jwtEncoder.encode(JwtEncoderParameters.from(headers, claims)).getTokenValue();
         String rawRefreshToken = refreshTokenCodec.generate();
         RefreshTokenEntity entity = refreshTokenRepository.saveAndFlush(
                 RefreshTokenEntity.create(userId, refreshTokenCodec.hash(rawRefreshToken), refreshExpiresAt, issuedAt));
@@ -125,5 +133,9 @@ public class AuthService {
         return new CreatedSession(session, entity.id());
     }
 
-    private record CreatedSession(AuthSession session, long refreshTokenId) {}
+    private record CreatedSession(
+            AuthSession session,
+            long refreshTokenId
+    ) {
+    }
 }

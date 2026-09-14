@@ -7,7 +7,12 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("cloudops.security.jwt")
-public record JwtProperties(String secret, String issuer, Duration accessTokenTtl, Duration refreshTokenTtl) {
+public record JwtProperties(
+        String secret,
+        String issuer,
+        Duration accessTokenTtl,
+        Duration refreshTokenTtl
+) {
 
     public JwtProperties {
         if (secret == null || secret.isBlank()) {

@@ -13,7 +13,10 @@ public class MonitoringRetentionService {
     private final Clock clock;
 
     public MonitoringRetentionService(
-            MonitoringResultRetentionRepository retentionRepository, MonitoringProperties properties, Clock clock) {
+            MonitoringResultRetentionRepository retentionRepository,
+            MonitoringProperties properties,
+            Clock clock
+    ) {
         this.retentionRepository = retentionRepository;
         this.properties = properties;
         this.clock = clock;

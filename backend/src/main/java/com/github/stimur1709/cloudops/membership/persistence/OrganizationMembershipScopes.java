@@ -9,16 +9,24 @@ import java.util.function.Function;
 
 public final class OrganizationMembershipScopes {
 
-    private OrganizationMembershipScopes() {}
+    private OrganizationMembershipScopes() {
+    }
 
     public static <E> JpaSearchScope<E> visibleTo(
-            long userId, SingularAttribute<? super E, Long> organizationIdAttribute) {
+            long userId,
+            SingularAttribute<? super E, Long> organizationIdAttribute
+    ) {
         return visibleTo(userId, root -> root.get(organizationIdAttribute));
     }
 
     public static <E> JpaSearchScope<E> visibleTo(
-            long userId, Function<Root<E>, Expression<Long>> organizationIdExpression) {
-        return (root, query, builder) -> {
+            long userId,
+            Function<Root<E>, Expression<Long>> organizationIdExpression
+    ) {
+        return (
+                root,
+                query,
+                builder) -> {
             Subquery<Long> memberships = query.subquery(Long.class);
             Root<OrganizationMembershipEntity> membership = memberships.from(OrganizationMembershipEntity.class);
             memberships.select(membership.get(OrganizationMembershipEntity_.organizationId));

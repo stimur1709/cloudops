@@ -10,9 +10,16 @@ import org.springframework.data.repository.query.Param;
 
 public interface ResourceJpaRepository extends JpaRepository<ResourceEntity, Long> {
 
-    boolean existsByOrganizationIdAndName(long organizationId, String name);
+    boolean existsByOrganizationIdAndName(
+            long organizationId,
+            String name
+    );
 
-    boolean existsByOrganizationIdAndNameAndIdNot(long organizationId, String name, long id);
+    boolean existsByOrganizationIdAndNameAndIdNot(
+            long organizationId,
+            String name,
+            long id
+    );
 
     boolean existsByOrganizationId(long organizationId);
 
@@ -20,5 +27,6 @@ public interface ResourceJpaRepository extends JpaRepository<ResourceEntity, Lon
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT resource FROM ResourceEntity resource WHERE resource.id = :id")
-    Optional<ResourceEntity> findByIdForUpdate(@Param("id") long id);
+    Optional<ResourceEntity> findByIdForUpdate(@Param("id")
+    long id);
 }

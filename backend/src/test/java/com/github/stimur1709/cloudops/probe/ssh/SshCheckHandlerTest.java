@@ -100,8 +100,8 @@ class SshCheckHandlerTest {
 
     @Test
     void rejectsUnsupportedConfigAtExecutionBoundary() {
-        assertThatThrownBy(() ->
-                        handler.execute(new ProbeExecutionContext(1, ProbeType.SSH_CHECK, new OtherResourceConfig())))
+        assertThatThrownBy(
+                () -> handler.execute(new ProbeExecutionContext(1, ProbeType.SSH_CHECK, new OtherResourceConfig())))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

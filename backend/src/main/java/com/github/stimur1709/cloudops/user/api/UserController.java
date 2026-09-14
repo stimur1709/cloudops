@@ -28,27 +28,45 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public UserResponse get(@PathVariable long id, Authentication authentication) {
+    public UserResponse get(
+            @PathVariable
+            long id,
+            Authentication authentication
+    ) {
         return UserResponse.from(userService.getOwn(id, CurrentUser.id(authentication)));
     }
 
     @PostMapping("/search")
     public SearchResponse<UserResponse> search(
-            @Valid @RequestBody SearchRequest request, Authentication authentication) {
+            @Valid
+            @RequestBody
+            SearchRequest request,
+            Authentication authentication
+    ) {
         return SearchResponse.from(
                 userService.search(request.toQuery(), CurrentUser.id(authentication)), UserResponse::from);
     }
 
     @PutMapping("/{id}")
     public UserResponse update(
-            @PathVariable long id, @Valid @RequestBody UpdateUserRequest request, Authentication authentication) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            UpdateUserRequest request,
+            Authentication authentication
+    ) {
         return UserResponse.from(
                 userService.update(id, request.email(), request.displayName(), CurrentUser.id(authentication)));
     }
 
     @DeleteMapping("/{id}")
     @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
-    public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
+    public ResponseEntity<Void> delete(
+            @PathVariable
+            long id,
+            Authentication authentication
+    ) {
         userService.delete(id, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();
     }

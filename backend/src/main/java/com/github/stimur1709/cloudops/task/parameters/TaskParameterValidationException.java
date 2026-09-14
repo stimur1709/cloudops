@@ -15,5 +15,9 @@ public final class TaskParameterValidationException extends RuntimeException {
         return errors;
     }
 
-    public record ParameterError(String field, String message) {}
+    public record ParameterError(
+            String field,
+            String message
+    ) {
+    }
 }

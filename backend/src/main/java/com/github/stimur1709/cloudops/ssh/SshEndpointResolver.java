@@ -8,7 +8,8 @@ public final class SshEndpointResolver {
 
     private static final int DEFAULT_SSH_PORT = 22;
 
-    private SshEndpointResolver() {}
+    private SshEndpointResolver() {
+    }
 
     public static boolean supports(ResourceConfig resourceConfig) {
         return resourceConfig instanceof ServerResourceConfig || resourceConfig instanceof NetworkDeviceResourceConfig;

@@ -1,9 +1,7 @@
 package com.github.stimur1709.cloudops.auth.application;
 
 public enum RefreshTokenError {
-    INVALID("REFRESH_TOKEN_INVALID"),
-    EXPIRED("REFRESH_TOKEN_EXPIRED"),
-    REVOKED("REFRESH_TOKEN_REVOKED");
+    INVALID("REFRESH_TOKEN_INVALID"), EXPIRED("REFRESH_TOKEN_EXPIRED"), REVOKED("REFRESH_TOKEN_REVOKED");
 
     private final String code;
 

@@ -34,7 +34,8 @@ public class MonitoringSettingsSynchronizer {
             ResourceHealthService resourceHealthService,
             Clock clock,
             OrganizationProbeSettingsJpaRepository organizationSettings,
-            ResourceProbeSettingsJpaRepository resourceSettings) {
+            ResourceProbeSettingsJpaRepository resourceSettings
+    ) {
         this.index = index;
         this.resolver = resolver;
         this.resourceRepository = resourceRepository;
@@ -46,7 +47,11 @@ public class MonitoringSettingsSynchronizer {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void synchronizeOrganization(long organizationId, ProbeType type, boolean recovery) {
+    public void synchronizeOrganization(
+            long organizationId,
+            ProbeType type,
+            boolean recovery
+    ) {
         organizationSettings
                 .findByOrganizationIdAndProbeType(organizationId, type)
                 .ifPresentOrElse(
@@ -58,7 +63,11 @@ public class MonitoringSettingsSynchronizer {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void synchronizeResource(long resourceId, ProbeType type, boolean recovery) {
+    public void synchronizeResource(
+            long resourceId,
+            ProbeType type,
+            boolean recovery
+    ) {
         resourceSettings
                 .findByResourceIdAndProbeType(resourceId, type)
                 .ifPresentOrElse(
@@ -67,7 +76,11 @@ public class MonitoringSettingsSynchronizer {
         resourceRepository.findById(resourceId).ifPresent(resource -> reconcile(resource, type, recovery));
     }
 
-    private void reconcile(ResourceEntity resource, ProbeType type, boolean recovery) {
+    private void reconcile(
+            ResourceEntity resource,
+            ProbeType type,
+            boolean recovery
+    ) {
         boolean enabled = resolver.resolve(resource, type).enabled();
         monitorRepository.findByResourceIdAndTypeForUpdate(resource.id(), type).ifPresent(monitor -> {
             if (recovery) {

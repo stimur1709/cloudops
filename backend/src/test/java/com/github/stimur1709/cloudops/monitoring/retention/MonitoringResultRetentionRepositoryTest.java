@@ -23,8 +23,8 @@ class MonitoringResultRetentionRepositoryTest {
                         type,
                         new DefaultProbeSettings(
                                 true, 30, 3, 2, StorageMode.HISTORY, 7, type == ProbeType.DNS_CHECK ? null : 500)));
-        var properties =
-                new MonitoringProperties(false, Duration.ofSeconds(1), 10, 30, Duration.ofHours(1), 10, defaults);
+        var properties = new MonitoringProperties(false, Duration.ofSeconds(1), 10, 30, Duration.ofHours(1), 10,
+                defaults);
         var repository = new MonitoringResultRetentionRepository(mock(JdbcTemplate.class), properties);
 
         var parameters = repository.applicationDefaultParameters();

@@ -25,19 +25,29 @@ public class OrganizationEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected OrganizationEntity() {}
+    protected OrganizationEntity() {
+    }
 
-    private OrganizationEntity(String name, Instant createdAt) {
+    private OrganizationEntity(
+            String name,
+            Instant createdAt
+    ) {
         this.name = name;
         this.createdAt = createdAt;
         this.updatedAt = createdAt;
     }
 
-    public static OrganizationEntity create(String name, Instant createdAt) {
+    public static OrganizationEntity create(
+            String name,
+            Instant createdAt
+    ) {
         return new OrganizationEntity(name, createdAt);
     }
 
-    public void update(String name, Instant updatedAt) {
+    public void update(
+            String name,
+            Instant updatedAt
+    ) {
         this.name = name;
         this.updatedAt = updatedAt;
     }

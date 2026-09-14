@@ -14,7 +14,8 @@ public record WebCorsProperties(
         List<String> allowedHeaders,
         List<String> exposedHeaders,
         boolean allowCredentials,
-        Duration maxAge) {
+        Duration maxAge
+) {
 
     public WebCorsProperties {
         allowedOrigins = immutableList(allowedOrigins, "Allowed origins");
@@ -31,7 +32,10 @@ public record WebCorsProperties(
         rejectWildcard(exposedHeaders, "Exposed headers");
     }
 
-    private static List<String> immutableNonEmptyList(List<String> values, String name) {
+    private static List<String> immutableNonEmptyList(
+            List<String> values,
+            String name
+    ) {
         List<String> result = immutableList(values, name);
         if (result.isEmpty()) {
             throw new IllegalArgumentException(name + " must not be empty");
@@ -39,7 +43,10 @@ public record WebCorsProperties(
         return result;
     }
 
-    private static List<String> immutableList(List<String> values, String name) {
+    private static List<String> immutableList(
+            List<String> values,
+            String name
+    ) {
         if (values == null) {
             throw new IllegalArgumentException(name + " must be configured");
         }
@@ -70,7 +77,10 @@ public record WebCorsProperties(
         }
     }
 
-    private static void rejectWildcard(List<String> values, String name) {
+    private static void rejectWildcard(
+            List<String> values,
+            String name
+    ) {
         if (values.contains("*")) {
             throw new IllegalArgumentException(name + " must not contain a wildcard");
         }

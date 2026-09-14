@@ -42,11 +42,12 @@ class TaskApiIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings,
-                    monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
-                    organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings,
+                            monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks,
+                            organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         insertUser(TestAuthentication.USER_ID, "current@example.com");
         insertUser(OTHER_USER_ID, "other@example.com");
         organizationId = insertOrganization("Current organization");
@@ -56,11 +57,11 @@ class TaskApiIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"HTTP_CHECK", "PORT_CHECK", "DNS_CHECK", "PING", "TLS_CHECK", "SSH_CHECK"})
+    @ValueSource(strings = { "HTTP_CHECK", "PORT_CHECK", "DNS_CHECK", "PING", "TLS_CHECK", "SSH_CHECK" })
     void rejectsProbeTypesWithoutCreatingTaskOrOutbox(String type) throws Exception {
         mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":\"%s\",\"parameters\":{}}".formatted(type)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":\"%s\",\"parameters\":{}}".formatted(type)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.errors[0].field").value("type"));
@@ -82,7 +83,7 @@ class TaskApiIntegrationTest {
         long taskId = ((Number) JsonPath.read(response, "$.id")).longValue();
 
         assertThat(jdbcTemplate.queryForObject(
-                        "SELECT parameters ->> 'command' FROM tasks WHERE id = ?", String.class, taskId))
+                "SELECT parameters ->> 'command' FROM tasks WHERE id = ?", String.class, taskId))
                 .isEqualTo("uname -a");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_messages", Integer.class))
                 .isOne();
@@ -90,8 +91,8 @@ class TaskApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.parameters.command").value("uname -a"));
         mockMvc.perform(post("/api/tasks/search")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"start\":0,\"size\":10,\"getTotal\":true}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"start\":0,\"size\":10,\"getTotal\":true}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].parameters.command").value("uname -a"));
     }
@@ -263,11 +264,12 @@ class TaskApiIntegrationTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                "{\"type\":\"RUN_COMMAND\"}",
-                "{\"type\":\"RUN_COMMAND\",\"parameters\":{}}",
-                "{\"type\":\"RUN_COMMAND\",\"parameters\":{\"command\":\"   \"}}",
-                "{\"type\":\"RUN_COMMAND\",\"parameters\":{\"command\":\"true\",\"unknown\":1}}"
-            })
+                    "{\"type\":\"RUN_COMMAND\"}",
+                    "{\"type\":\"RUN_COMMAND\",\"parameters\":{}}",
+                    "{\"type\":\"RUN_COMMAND\",\"parameters\":{\"command\":\"   \"}}",
+                    "{\"type\":\"RUN_COMMAND\",\"parameters\":{\"command\":\"true\",\"unknown\":1}}"
+            }
+    )
     void invalidParametersDoNotCreateTaskOrOutbox(String request) throws Exception {
         createTask(request).andExpect(status().isBadRequest());
         assertNothingCreated();
@@ -290,8 +292,10 @@ class TaskApiIntegrationTest {
                 .with(jwt().jwt(token -> token.subject(Long.toString(userId)))));
     }
 
-    private org.springframework.test.web.servlet.ResultActions createTask(String request, long userId)
-            throws Exception {
+    private org.springframework.test.web.servlet.ResultActions createTask(
+            String request,
+            long userId
+    ) throws Exception {
         return mockMvc.perform(post("/api/resources/{id}/tasks", resourceId)
                 .with(jwt().jwt(token -> token.subject(Long.toString(userId))))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -309,7 +313,10 @@ class TaskApiIntegrationTest {
                 .isZero();
     }
 
-    private void insertUser(long id, String email) {
+    private void insertUser(
+            long id,
+            String email
+    ) {
         jdbcTemplate.update("""
                 INSERT INTO users (id, email, display_name, password_hash, created_at, updated_at)
                 VALUES (?, ?, 'User', '{noop}unused', now(), now())
@@ -322,21 +329,33 @@ class TaskApiIntegrationTest {
                 """, Long.class, name);
     }
 
-    private void addMember(long organization, long user, String role) {
+    private void addMember(
+            long organization,
+            long user,
+            String role
+    ) {
         jdbcTemplate.update("""
                 INSERT INTO organization_memberships (organization_id, user_id, role, created_at, updated_at)
                 VALUES (?, ?, ?, now(), now())
                 """, organization, user, role);
     }
 
-    private long insertResource(long organization, String type, String statusValue, String config) {
+    private long insertResource(
+            long organization,
+            String type,
+            String statusValue,
+            String config
+    ) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
                 VALUES ('resource', ?, ?, ?, CAST(? AS jsonb), now(), now()) RETURNING id
                 """, Long.class, type, statusValue, organization, config);
     }
 
-    private void bindSshCredential(long organization, long resource) {
+    private void bindSshCredential(
+            long organization,
+            long resource
+    ) {
         long credentialId = jdbcTemplate.queryForObject("""
                 INSERT INTO credentials
                     (organization_id, name, type, username, secret_encrypted, created_at, updated_at)

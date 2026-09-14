@@ -28,7 +28,8 @@ public class UserService {
             UserJpaRepository userRepository,
             OrganizationMembershipJpaRepository membershipRepository,
             JpaSearchService searchService,
-            Clock clock) {
+            Clock clock
+    ) {
         this.userRepository = userRepository;
         this.membershipRepository = membershipRepository;
         this.searchService = searchService;
@@ -36,7 +37,11 @@ public class UserService {
     }
 
     @Transactional
-    public UserEntity register(String email, String displayName, String passwordHash) {
+    public UserEntity register(
+            String email,
+            String displayName,
+            String passwordHash
+    ) {
         return save(UserEntity.create(email, displayName, passwordHash, clock.instant()));
     }
 
@@ -46,13 +51,19 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserEntity getOwn(long id, long currentUserId) {
+    public UserEntity getOwn(
+            long id,
+            long currentUserId
+    ) {
         requireSelf(id, currentUserId);
         return get(id);
     }
 
     @Transactional(readOnly = true)
-    public SearchResult<UserEntity> search(SearchQuery search, long currentUserId) {
+    public SearchResult<UserEntity> search(
+            SearchQuery search,
+            long currentUserId
+    ) {
         if (!membershipRepository.existsByUserIdAndRoleIn(
                 currentUserId, java.util.List.of(MembershipRole.OWNER, MembershipRole.ADMIN))) {
             throw new ForbiddenException();
@@ -61,7 +72,12 @@ public class UserService {
     }
 
     @Transactional
-    public UserEntity update(long id, String email, String displayName, long currentUserId) {
+    public UserEntity update(
+            long id,
+            String email,
+            String displayName,
+            long currentUserId
+    ) {
         requireSelf(id, currentUserId);
         UserEntity user = userRepository.findById(id).orElseThrow(NotFoundException::new);
         user.update(email, displayName, clock.instant());
@@ -69,7 +85,10 @@ public class UserService {
     }
 
     @Transactional
-    public void delete(long id, long currentUserId) {
+    public void delete(
+            long id,
+            long currentUserId
+    ) {
         requireSelf(id, currentUserId);
         UserEntity user = userRepository.findById(id).orElseThrow(NotFoundException::new);
         if (membershipRepository.existsByUserId(id)) {
@@ -95,7 +114,10 @@ public class UserService {
         return new ConflictException("USER_IN_USE", "User cannot be deleted while they belong to an organization");
     }
 
-    private void requireSelf(long id, long currentUserId) {
+    private void requireSelf(
+            long id,
+            long currentUserId
+    ) {
         if (id != currentUserId) {
             throw new ForbiddenException();
         }

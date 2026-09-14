@@ -31,7 +31,10 @@ public class ProbeHandlerRegistry {
         return handler;
     }
 
-    public boolean supports(ProbeType type, ResourceConfig resourceConfig) {
+    public boolean supports(
+            ProbeType type,
+            ResourceConfig resourceConfig
+    ) {
         return get(type).isCompatibleWith(resourceConfig);
     }
 }

@@ -8,7 +8,10 @@ public final class RetryableTaskExecutionException extends RuntimeException {
     private final TaskErrorCode errorCode;
     private final String safeMessage;
 
-    public RetryableTaskExecutionException(String message, Throwable cause) {
+    public RetryableTaskExecutionException(
+            String message,
+            Throwable cause
+    ) {
         this(TaskErrorCode.RETRY_EXHAUSTED, message, cause);
     }
 
@@ -16,7 +19,11 @@ public final class RetryableTaskExecutionException extends RuntimeException {
         this(TaskErrorCode.RETRY_EXHAUSTED, message, null);
     }
 
-    public RetryableTaskExecutionException(TaskErrorCode errorCode, String safeMessage, Throwable cause) {
+    public RetryableTaskExecutionException(
+            TaskErrorCode errorCode,
+            String safeMessage,
+            Throwable cause
+    ) {
         super(safeMessage, cause);
         this.errorCode = errorCode;
         this.safeMessage = safeMessage;

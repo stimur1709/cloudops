@@ -56,12 +56,18 @@ public class MonitoringResultRetentionRepository {
     private final JdbcTemplate jdbcTemplate;
     private final MonitoringProperties properties;
 
-    public MonitoringResultRetentionRepository(JdbcTemplate jdbcTemplate, MonitoringProperties properties) {
+    public MonitoringResultRetentionRepository(
+            JdbcTemplate jdbcTemplate,
+            MonitoringProperties properties
+    ) {
         this.jdbcTemplate = jdbcTemplate;
         this.properties = properties;
     }
 
-    public int deleteExpired(Instant now, int batchSize) {
+    public int deleteExpired(
+            Instant now,
+            int batchSize
+    ) {
         List<Object> parameters = applicationDefaultParameters();
         parameters.add(Timestamp.from(now));
         parameters.add(batchSize);
@@ -72,7 +78,9 @@ public class MonitoringResultRetentionRepository {
         return jdbcTemplate
                 .query(
                         DELETE_EXPIRED_SQL.formatted(values),
-                        (resultSet, _) -> resultSet.getLong("id"),
+                        (
+                                resultSet,
+                                _) -> resultSet.getLong("id"),
                         parameters.toArray())
                 .size();
     }

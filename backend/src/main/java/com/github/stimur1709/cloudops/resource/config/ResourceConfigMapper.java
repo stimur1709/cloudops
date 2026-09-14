@@ -18,7 +18,10 @@ public class ResourceConfigMapper {
         return objectMapper.valueToTree(config);
     }
 
-    public ResourceConfig fromJson(ResourceType type, JsonNode config) {
+    public ResourceConfig fromJson(
+            ResourceType type,
+            JsonNode config
+    ) {
         return objectMapper.treeToValue(config, configClass(type));
     }
 

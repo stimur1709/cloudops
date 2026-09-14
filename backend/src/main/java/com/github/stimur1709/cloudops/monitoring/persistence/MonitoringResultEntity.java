@@ -29,15 +29,24 @@ public class MonitoringResultEntity {
     @Column(nullable = false, columnDefinition = "jsonb")
     private JsonNode result;
 
-    protected MonitoringResultEntity() {}
+    protected MonitoringResultEntity() {
+    }
 
-    private MonitoringResultEntity(long monitorId, Instant checkedAt, JsonNode result) {
+    private MonitoringResultEntity(
+            long monitorId,
+            Instant checkedAt,
+            JsonNode result
+    ) {
         this.monitorId = monitorId;
         this.checkedAt = checkedAt;
         this.result = result;
     }
 
-    public static MonitoringResultEntity create(long monitorId, Instant checkedAt, JsonNode result) {
+    public static MonitoringResultEntity create(
+            long monitorId,
+            Instant checkedAt,
+            JsonNode result
+    ) {
         return new MonitoringResultEntity(monitorId, checkedAt, result);
     }
 

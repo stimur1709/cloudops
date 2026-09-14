@@ -7,4 +7,5 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(MonitoringProperties.class)
 @EnableScheduling
-public class MonitoringConfiguration {}
+public class MonitoringConfiguration {
+}

@@ -22,12 +22,19 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
                AND task.status = :pending
             """)
     int claimPending(
-            @Param("taskId") long taskId,
-            @Param("startedAt") Instant startedAt,
-            @Param("executionId") UUID executionId,
-            @Param("leaseExpiresAt") Instant leaseExpiresAt,
-            @Param("pending") TaskStatus pending,
-            @Param("running") TaskStatus running);
+            @Param("taskId")
+            long taskId,
+            @Param("startedAt")
+            Instant startedAt,
+            @Param("executionId")
+            UUID executionId,
+            @Param("leaseExpiresAt")
+            Instant leaseExpiresAt,
+            @Param("pending")
+            TaskStatus pending,
+            @Param("running")
+            TaskStatus running
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -38,10 +45,15 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
                AND task.executionId = :executionId
             """)
     int recordAttempt(
-            @Param("taskId") long taskId,
-            @Param("attemptedAt") Instant attemptedAt,
-            @Param("executionId") UUID executionId,
-            @Param("running") TaskStatus running);
+            @Param("taskId")
+            long taskId,
+            @Param("attemptedAt")
+            Instant attemptedAt,
+            @Param("executionId")
+            UUID executionId,
+            @Param("running")
+            TaskStatus running
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -52,10 +64,15 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
                AND task.executionId = :executionId
             """)
     int renewLease(
-            @Param("taskId") long taskId,
-            @Param("executionId") UUID executionId,
-            @Param("leaseExpiresAt") Instant leaseExpiresAt,
-            @Param("running") TaskStatus running);
+            @Param("taskId")
+            long taskId,
+            @Param("executionId")
+            UUID executionId,
+            @Param("leaseExpiresAt")
+            Instant leaseExpiresAt,
+            @Param("running")
+            TaskStatus running
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -67,12 +84,19 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
                AND task.executionId = :executionId
             """)
     int completeRunning(
-            @Param("taskId") long taskId,
-            @Param("executionId") UUID executionId,
-            @Param("result") tools.jackson.databind.JsonNode result,
-            @Param("completedAt") Instant completedAt,
-            @Param("running") TaskStatus running,
-            @Param("completed") TaskStatus completed);
+            @Param("taskId")
+            long taskId,
+            @Param("executionId")
+            UUID executionId,
+            @Param("result")
+            tools.jackson.databind.JsonNode result,
+            @Param("completedAt")
+            Instant completedAt,
+            @Param("running")
+            TaskStatus running,
+            @Param("completed")
+            TaskStatus completed
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -84,13 +108,21 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
                AND task.executionId = :executionId
             """)
     int failRunning(
-            @Param("taskId") long taskId,
-            @Param("executionId") UUID executionId,
-            @Param("errorCode") TaskErrorCode errorCode,
-            @Param("errorMessage") String errorMessage,
-            @Param("completedAt") Instant completedAt,
-            @Param("running") TaskStatus running,
-            @Param("failed") TaskStatus failed);
+            @Param("taskId")
+            long taskId,
+            @Param("executionId")
+            UUID executionId,
+            @Param("errorCode")
+            TaskErrorCode errorCode,
+            @Param("errorMessage")
+            String errorMessage,
+            @Param("completedAt")
+            Instant completedAt,
+            @Param("running")
+            TaskStatus running,
+            @Param("failed")
+            TaskStatus failed
+    );
 
     @Query(value = """
             SELECT *
@@ -99,8 +131,13 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, Long> {
              ORDER BY lease_expires_at, id
              FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)
-    List<TaskEntity> lockExpired(@Param("now") Instant now, Pageable pageable);
+    List<TaskEntity> lockExpired(
+            @Param("now")
+            Instant now,
+            Pageable pageable
+    );
 
     @Query("SELECT task.status FROM TaskEntity task WHERE task.id = :taskId")
-    TaskStatus findStatus(@Param("taskId") long taskId);
+    TaskStatus findStatus(@Param("taskId")
+    long taskId);
 }

@@ -30,14 +30,20 @@ public class ResourceAvailabilityService {
     public ResourceAvailabilityService(
             ResourceJpaRepository resourceRepository,
             ResourceHealthEventJpaRepository eventRepository,
-            OrganizationAuthorization authorization) {
+            OrganizationAuthorization authorization
+    ) {
         this.resourceRepository = resourceRepository;
         this.eventRepository = eventRepository;
         this.authorization = authorization;
     }
 
     @Transactional(readOnly = true)
-    public ResourceAvailability get(long resourceId, Instant from, Instant to, long currentUserId) {
+    public ResourceAvailability get(
+            long resourceId,
+            Instant from,
+            Instant to,
+            long currentUserId
+    ) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
         authorization.requireMember(resource.organizationId(), currentUserId);
 
@@ -45,14 +51,18 @@ public class ResourceAvailabilityService {
                 .findFirstByResourceIdAndChangedAtLessThanEqualOrderByChangedAtDescIdDesc(resourceId, from)
                 .map(ResourceHealthEventEntity::toStatus)
                 .orElse(ResourceHealthStatus.UNKNOWN);
-        List<ResourceHealthEventEntity> events =
-                eventRepository.findAllByResourceIdAndChangedAtGreaterThanAndChangedAtLessThanOrderByChangedAtAscIdAsc(
+        List<ResourceHealthEventEntity> events = eventRepository
+                .findAllByResourceIdAndChangedAtGreaterThanAndChangedAtLessThanOrderByChangedAtAscIdAsc(
                         resourceId, from, to);
         return calculate(from, to, initialStatus, events);
     }
 
     static ResourceAvailability calculate(
-            Instant from, Instant to, ResourceHealthStatus initialStatus, List<ResourceHealthEventEntity> events) {
+            Instant from,
+            Instant to,
+            ResourceHealthStatus initialStatus,
+            List<ResourceHealthEventEntity> events
+    ) {
         EnumMap<ResourceHealthStatus, Duration> durations = new EnumMap<>(ResourceHealthStatus.class);
         for (ResourceHealthStatus status : ResourceHealthStatus.values()) {
             durations.put(status, Duration.ZERO);
@@ -90,7 +100,9 @@ public class ResourceAvailabilityService {
     }
 
     private static EnumMap<ResourceHealthStatus, Long> roundedSeconds(
-            EnumMap<ResourceHealthStatus, Duration> durations, long periodSeconds) {
+            EnumMap<ResourceHealthStatus, Duration> durations,
+            long periodSeconds
+    ) {
         EnumMap<ResourceHealthStatus, Long> seconds = new EnumMap<>(ResourceHealthStatus.class);
         long allocatedSeconds = 0;
         for (ResourceHealthStatus status : ResourceHealthStatus.values()) {
@@ -101,8 +113,8 @@ public class ResourceAvailabilityService {
 
         long remainder = periodSeconds - allocatedSeconds;
         List<ResourceHealthStatus> byLargestFraction = Arrays.stream(ResourceHealthStatus.values())
-                .sorted(Comparator.comparingInt((ResourceHealthStatus status) ->
-                                durations.get(status).getNano())
+                .sorted(Comparator.comparingInt((
+                        ResourceHealthStatus status) -> durations.get(status).getNano())
                         .reversed())
                 .toList();
         for (int index = 0; index < remainder; index++) {
@@ -111,7 +123,10 @@ public class ResourceAvailabilityService {
         return seconds;
     }
 
-    private static BigDecimal percentage(long value, long total) {
+    private static BigDecimal percentage(
+            long value,
+            long total
+    ) {
         if (total == 0) {
             return null;
         }

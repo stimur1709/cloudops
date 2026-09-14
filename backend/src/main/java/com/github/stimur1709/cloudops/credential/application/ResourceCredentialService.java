@@ -28,7 +28,8 @@ public class ResourceCredentialService {
             ResourceCredentialJpaRepository repository,
             ResourceJpaRepository resourceRepository,
             CredentialJpaRepository credentialRepository,
-            OrganizationAuthorization authorization) {
+            OrganizationAuthorization authorization
+    ) {
         this.repository = repository;
         this.resourceRepository = resourceRepository;
         this.credentialRepository = credentialRepository;
@@ -36,7 +37,10 @@ public class ResourceCredentialService {
     }
 
     @Transactional(readOnly = true)
-    public List<ResourceCredentialResponse> getAll(long resourceId, long userId) {
+    public List<ResourceCredentialResponse> getAll(
+            long resourceId,
+            long userId
+    ) {
         accessibleResource(resourceId, userId, false);
         return repository.findDetailsByResourceIdOrderByPurpose(resourceId).stream()
                 .map(details -> new ResourceCredentialResponse(
@@ -53,11 +57,16 @@ public class ResourceCredentialService {
     }
 
     @Transactional
-    public ResourceCredentialResponse bind(long resourceId, CredentialPurpose purpose, long credentialId, long userId) {
+    public ResourceCredentialResponse bind(
+            long resourceId,
+            CredentialPurpose purpose,
+            long credentialId,
+            long userId
+    ) {
         ResourceEntity resource = accessibleResource(resourceId, userId, true);
-        CredentialEntity credential =
-                credentialRepository.findById(credentialId).orElseThrow(NotFoundException::new);
-        if (!resource.organizationId().equals(credential.organizationId())) throw new NotFoundException();
+        CredentialEntity credential = credentialRepository.findById(credentialId).orElseThrow(NotFoundException::new);
+        if (!resource.organizationId().equals(credential.organizationId()))
+            throw new NotFoundException();
         requireCompatible(purpose, credential.type());
         ResourceCredentialEntity binding = repository
                 .findByResourceIdAndPurpose(resourceId, purpose)
@@ -68,19 +77,32 @@ public class ResourceCredentialService {
     }
 
     @Transactional
-    public void unbind(long resourceId, CredentialPurpose purpose, long userId) {
+    public void unbind(
+            long resourceId,
+            CredentialPurpose purpose,
+            long userId
+    ) {
         accessibleResource(resourceId, userId, true);
         repository.findByResourceIdAndPurpose(resourceId, purpose).ifPresent(repository::delete);
     }
 
-    private ResourceEntity accessibleResource(long resourceId, long userId, boolean manager) {
+    private ResourceEntity accessibleResource(
+            long resourceId,
+            long userId,
+            boolean manager
+    ) {
         ResourceEntity resource = resourceRepository.findById(resourceId).orElseThrow(NotFoundException::new);
-        if (manager) authorization.requireManager(resource.organizationId(), userId);
-        else authorization.requireMember(resource.organizationId(), userId);
+        if (manager)
+            authorization.requireManager(resource.organizationId(), userId);
+        else
+            authorization.requireMember(resource.organizationId(), userId);
         return resource;
     }
 
-    private void requireCompatible(CredentialPurpose purpose, CredentialType type) {
+    private void requireCompatible(
+            CredentialPurpose purpose,
+            CredentialType type
+    ) {
         boolean compatible = purpose == CredentialPurpose.SSH || type == CredentialType.USERNAME_PASSWORD;
         if (!compatible) {
             throw new BadRequestException(

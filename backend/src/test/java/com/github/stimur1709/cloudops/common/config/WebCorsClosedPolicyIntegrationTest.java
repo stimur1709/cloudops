@@ -35,8 +35,8 @@ class WebCorsClosedPolicyIntegrationTest {
     @Test
     void emptyOriginsKeepCrossOriginAccessClosed() throws Exception {
         mockMvc.perform(options("/api/auth/refresh")
-                        .header(HttpHeaders.ORIGIN, "https://frontend.example.com")
-                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .header(HttpHeaders.ORIGIN, "https://frontend.example.com")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
                 .andExpect(status().isForbidden())
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS));

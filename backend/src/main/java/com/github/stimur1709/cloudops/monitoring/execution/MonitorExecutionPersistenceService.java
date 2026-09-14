@@ -36,7 +36,8 @@ public class MonitorExecutionPersistenceService {
             ResourceJpaRepository resourceRepository,
             ResourceConfigMapper configMapper,
             ResourceHealthService resourceHealthService,
-            MonitoringSettingsResolver settingsResolver) {
+            MonitoringSettingsResolver settingsResolver
+    ) {
         this.monitorRepository = monitorRepository;
         this.resultRepository = resultRepository;
         this.resourceRepository = resourceRepository;
@@ -51,8 +52,7 @@ public class MonitorExecutionPersistenceService {
         if (monitor == null || !monitor.compatible()) {
             return null;
         }
-        ResourceEntity resource =
-                resourceRepository.findById(monitor.resourceId()).orElse(null);
+        ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElse(null);
         if (resource == null) {
             return null;
         }
@@ -65,13 +65,17 @@ public class MonitorExecutionPersistenceService {
     }
 
     @Transactional
-    public void saveResult(long monitorId, Instant checkedAt, JsonNode result, boolean success) {
+    public void saveResult(
+            long monitorId,
+            Instant checkedAt,
+            JsonNode result,
+            boolean success
+    ) {
         MonitorEntity monitor = monitorRepository.findByIdForUpdate(monitorId).orElseThrow(NotFoundException::new);
         if (!monitor.compatible()) {
             return;
         }
-        ResourceEntity resource =
-                resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
+        ResourceEntity resource = resourceRepository.findById(monitor.resourceId()).orElseThrow(NotFoundException::new);
         EffectiveProbeSettings settings = settingsResolver.resolve(resource, monitor.type());
         if (!settings.enabled()) {
             return;

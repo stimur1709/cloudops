@@ -15,9 +15,15 @@ public interface OrganizationMembershipJpaRepository extends JpaRepository<Organ
 
     boolean existsByUserId(long userId);
 
-    boolean existsByOrganizationIdAndUserId(long organizationId, long userId);
+    boolean existsByOrganizationIdAndUserId(
+            long organizationId,
+            long userId
+    );
 
-    Optional<OrganizationMembershipEntity> findByOrganizationIdAndUserId(long organizationId, long userId);
+    Optional<OrganizationMembershipEntity> findByOrganizationIdAndUserId(
+            long organizationId,
+            long userId
+    );
 
     @Query("""
             SELECT membership.role
@@ -25,9 +31,17 @@ public interface OrganizationMembershipJpaRepository extends JpaRepository<Organ
             WHERE membership.organizationId = :organizationId
               AND membership.userId = :userId
             """)
-    Optional<MembershipRole> findRole(@Param("organizationId") long organizationId, @Param("userId") long userId);
+    Optional<MembershipRole> findRole(
+            @Param("organizationId")
+            long organizationId,
+            @Param("userId")
+            long userId
+    );
 
-    boolean existsByUserIdAndRoleIn(long userId, List<MembershipRole> roles);
+    boolean existsByUserIdAndRoleIn(
+            long userId,
+            List<MembershipRole> roles
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -36,5 +50,6 @@ public interface OrganizationMembershipJpaRepository extends JpaRepository<Organ
             WHERE membership.organizationId = :organizationId
             ORDER BY membership.id
             """)
-    List<OrganizationMembershipEntity> lockAllByOrganizationId(@Param("organizationId") long organizationId);
+    List<OrganizationMembershipEntity> lockAllByOrganizationId(@Param("organizationId")
+    long organizationId);
 }

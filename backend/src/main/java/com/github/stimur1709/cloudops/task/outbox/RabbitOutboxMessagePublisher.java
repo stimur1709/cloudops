@@ -17,13 +17,19 @@ public class RabbitOutboxMessagePublisher implements TaskExecutionCommandPublish
     private final RabbitTemplate rabbitTemplate;
     private final TaskMessagingProperties properties;
 
-    public RabbitOutboxMessagePublisher(RabbitTemplate rabbitTemplate, TaskMessagingProperties properties) {
+    public RabbitOutboxMessagePublisher(
+            RabbitTemplate rabbitTemplate,
+            TaskMessagingProperties properties
+    ) {
         this.rabbitTemplate = rabbitTemplate;
         this.properties = properties;
     }
 
     @Override
-    public boolean publish(UUID outboxMessageId, TaskExecutionCommand command) throws Exception {
+    public boolean publish(
+            UUID outboxMessageId,
+            TaskExecutionCommand command
+    ) throws Exception {
         CorrelationData correlation = new CorrelationData(outboxMessageId.toString());
         rabbitTemplate.convertAndSend(
                 properties.exchange(),
@@ -35,8 +41,8 @@ public class RabbitOutboxMessagePublisher implements TaskExecutionCommandPublish
                 },
                 correlation);
 
-        CorrelationData.Confirm confirm =
-                correlation.getFuture().get(CONFIRM_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+        CorrelationData.Confirm confirm = correlation.getFuture().get(CONFIRM_TIMEOUT.toMillis(),
+                TimeUnit.MILLISECONDS);
         return confirm.ack() && correlation.getReturned() == null;
     }
 }

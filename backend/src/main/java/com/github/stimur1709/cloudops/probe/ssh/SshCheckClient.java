@@ -16,12 +16,16 @@ public class SshCheckClient {
         this.client = client;
     }
 
-    SshCheckOutcome execute(String host, int port, ResolvedCredential credential, int timeoutMs) {
+    SshCheckOutcome execute(
+            String host,
+            int port,
+            ResolvedCredential credential,
+            int timeoutMs
+    ) {
         long startedAt = System.nanoTime();
         try {
             var connection = client.check(host, port, credential, timeoutMs);
-            long responseTimeMs =
-                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+            long responseTimeMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
             return SshCheckOutcome.completed(new SshCheckResult(
                     host,
                     port,

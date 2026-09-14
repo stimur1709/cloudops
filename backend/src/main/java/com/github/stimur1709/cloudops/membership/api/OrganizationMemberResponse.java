@@ -5,7 +5,13 @@ import com.github.stimur1709.cloudops.membership.persistence.OrganizationMembers
 import java.time.Instant;
 
 public record OrganizationMemberResponse(
-        long id, long organizationId, long userId, MembershipRole role, Instant createdAt, Instant updatedAt) {
+        long id,
+        long organizationId,
+        long userId,
+        MembershipRole role,
+        Instant createdAt,
+        Instant updatedAt
+) {
     public static OrganizationMemberResponse from(OrganizationMembershipEntity membership) {
         return new OrganizationMemberResponse(
                 membership.id(),

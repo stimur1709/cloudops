@@ -9,4 +9,6 @@ public record MonitorExecutionContext(
         long resourceId,
         ProbeType type,
         ResourceConfig resourceConfig,
-        EffectiveProbeSettings settings) {}
+        EffectiveProbeSettings settings
+) {
+}

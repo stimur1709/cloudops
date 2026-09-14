@@ -10,12 +10,13 @@ import tools.jackson.databind.JsonNode;
 
 @ValidTaskParameters
 public record CreateTaskRequest(
-        @NotNull(message = "Type is required") @SupportedTaskType
+        @NotNull(message = "Type is required")
+        @SupportedTaskType
         TaskType type,
 
         @Schema(
-                implementation = RunCommandParameters.class,
-                requiredMode = Schema.RequiredMode.REQUIRED,
-                description =
-                        "Parameters for RUN_COMMAND; selected by the sibling type field. No nested type discriminator.")
-        JsonNode parameters) {}
+                implementation = RunCommandParameters.class, requiredMode = Schema.RequiredMode.REQUIRED, description = "Parameters for RUN_COMMAND; selected by the sibling type field. No nested type discriminator."
+        )
+        JsonNode parameters
+) {
+}

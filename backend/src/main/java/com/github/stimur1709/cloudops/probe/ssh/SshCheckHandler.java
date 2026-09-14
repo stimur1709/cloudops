@@ -20,7 +20,10 @@ public class SshCheckHandler implements ProbeHandler {
     private final CredentialResolver credentialResolver;
     private final SshCheckClient client;
 
-    public SshCheckHandler(CredentialResolver credentialResolver, SshCheckClient client) {
+    public SshCheckHandler(
+            CredentialResolver credentialResolver,
+            SshCheckClient client
+    ) {
         this.credentialResolver = credentialResolver;
         this.client = client;
     }

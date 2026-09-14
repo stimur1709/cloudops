@@ -10,4 +10,6 @@ public record TaskExecutionContext(
         TaskType type,
         JsonNode parameters,
         ResourceStatus resourceStatus,
-        ResourceConfig resourceConfig) {}
+        ResourceConfig resourceConfig
+) {
+}

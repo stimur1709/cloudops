@@ -8,25 +8,28 @@ import java.time.Instant;
 public final class MonitoringResultSearchDefinition {
 
     public static final JpaSearchDefinition<MonitoringResultEntity> DEFINITION = JpaSearchDefinition.builder(
-                    MonitoringResultEntity.class)
+            MonitoringResultEntity.class)
             .field(MonitoringResultEntity_.ID, comparableLong(MonitoringResultEntity_.id))
             .field(MonitoringResultEntity_.CHECKED_AT, comparableInstant(MonitoringResultEntity_.checkedAt))
             .defaultSort(MonitoringResultEntity_.CHECKED_AT)
             .build();
 
-    private MonitoringResultSearchDefinition() {}
+    private MonitoringResultSearchDefinition() {
+    }
 
     private static JpaSearchField<MonitoringResultEntity, Long> comparableLong(
-            jakarta.persistence.metamodel.SingularAttribute<MonitoringResultEntity, Long> attribute) {
+            jakarta.persistence.metamodel.SingularAttribute<MonitoringResultEntity, Long> attribute
+    ) {
         return JpaSearchField.<MonitoringResultEntity, Long>comparable(
-                        root -> root.get(attribute), SearchValueConverter.longInteger())
+                root -> root.get(attribute), SearchValueConverter.longInteger())
                 .sortable();
     }
 
     private static JpaSearchField<MonitoringResultEntity, Instant> comparableInstant(
-            jakarta.persistence.metamodel.SingularAttribute<MonitoringResultEntity, Instant> attribute) {
+            jakarta.persistence.metamodel.SingularAttribute<MonitoringResultEntity, Instant> attribute
+    ) {
         return JpaSearchField.<MonitoringResultEntity, Instant>comparable(
-                        root -> root.get(attribute), SearchValueConverter.instant())
+                root -> root.get(attribute), SearchValueConverter.instant())
                 .sortable();
     }
 }

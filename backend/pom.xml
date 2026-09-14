@@ -143,12 +143,11 @@
                 <version>${spotless-maven-plugin.version}</version>
                 <configuration>
                     <java>
-                        <palantirJavaFormat>
-                            <version>2.96.0</version>
-                            <style>PALANTIR</style>
-                        </palantirJavaFormat>
+                        <eclipse>
+                            <version>4.38</version>
+                            <file>${project.basedir}/config/formatter/eclipse-java.xml</file>
+                        </eclipse>
                         <removeUnusedImports/>
-                        <formatAnnotations/>
                     </java>
                 </configuration>
                 <executions>

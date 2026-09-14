@@ -4,7 +4,8 @@ import org.springframework.security.core.Authentication;
 
 public final class CurrentUser {
 
-    private CurrentUser() {}
+    private CurrentUser() {
+    }
 
     public static long id(Authentication authentication) {
         try {

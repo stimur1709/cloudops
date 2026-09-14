@@ -56,9 +56,10 @@ class ResourceSearchApiIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = TestAuthentication.authenticatedMockMvc(applicationContext);
-        jdbcTemplate.execute("""
-                TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
-                """);
+        jdbcTemplate.execute(
+                """
+                        TRUNCATE TABLE refresh_tokens, resource_credentials, credentials, resource_probe_settings, organization_probe_settings, monitoring_results, monitors, resource_health_events, resource_health, outbox_messages, tasks, organization_memberships, resources, users, organizations RESTART IDENTITY
+                        """);
         insertCurrentUser();
         organizationId = insertOrganization("Test organization");
         sqlStatementRecorder.clear();
@@ -179,7 +180,11 @@ class ResourceSearchApiIntegrationTest {
             LT;3;first|second
             LE;2;first|second
             """)
-    void supportsComparisonOperations(String operation, String value, String expectedNames) throws Exception {
+    void supportsComparisonOperations(
+            String operation,
+            String value,
+            String expectedNames
+    ) throws Exception {
         insertThreeResources();
 
         String request = filterRequest("AND", """
@@ -318,16 +323,16 @@ class ResourceSearchApiIntegrationTest {
                 .toInstant();
 
         String response = mockMvc.perform(put("/api/resources/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "router-core-01",
-                                  "type": "NETWORK_DEVICE",
-                                  "status": "INACTIVE"
-                                  ,"organizationId": %d,
-                                  "config": {"host": "10.0.0.1"}
-                                }
-                                """.formatted(organizationId)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": "router-core-01",
+                          "type": "NETWORK_DEVICE",
+                          "status": "INACTIVE"
+                          ,"organizationId": %d,
+                          "config": {"host": "10.0.0.1"}
+                        }
+                        """.formatted(organizationId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.name").value("router-core-01"))
@@ -348,16 +353,16 @@ class ResourceSearchApiIntegrationTest {
         long id = insertResource("old-name", "SERVER", "ACTIVE", FIRST_CREATED_AT);
 
         mockMvc.perform(put("/api/resources/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "  ",
-                                  "type": null,
-                                  "status": null
-                                  ,"organizationId": %d,
-                                  "config": null
-                                }
-                                """.formatted(organizationId)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": "  ",
+                          "type": null,
+                          "status": null
+                          ,"organizationId": %d,
+                          "config": null
+                        }
+                        """.formatted(organizationId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.errors[*].field", containsInAnyOrder("name", "type", "status", "config")));
@@ -366,16 +371,16 @@ class ResourceSearchApiIntegrationTest {
     @Test
     void returnsNotFoundWhenUpdatingUnknownResource() throws Exception {
         mockMvc.perform(put("/api/resources/{id}", 999_999L)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "router-core-01",
-                                  "type": "NETWORK_DEVICE",
-                                  "status": "INACTIVE"
-                                  ,"organizationId": %d,
-                                  "config": {"host": "10.0.0.1"}
-                                }
-                                """.formatted(organizationId)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "name": "router-core-01",
+                          "type": "NETWORK_DEVICE",
+                          "status": "INACTIVE"
+                          ,"organizationId": %d,
+                          "config": {"host": "10.0.0.1"}
+                        }
+                        """.formatted(organizationId)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND"));
     }
@@ -405,13 +410,18 @@ class ResourceSearchApiIntegrationTest {
         insertResource("third", "SERVER", "INACTIVE", THIRD_CREATED_AT);
     }
 
-    private long insertResource(String name, String type, String status, Instant createdAt) {
+    private long insertResource(
+            String name,
+            String type,
+            String status,
+            Instant createdAt
+    ) {
         long resourceId = jdbcTemplate.queryForObject(
                 """
-                INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?::jsonb, ?, ?)
-                RETURNING id
-                """,
+                        INSERT INTO resources (name, type, status, organization_id, config, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?::jsonb, ?, ?)
+                        RETURNING id
+                        """,
                 Long.class,
                 name,
                 type,
@@ -461,7 +471,10 @@ class ResourceSearchApiIntegrationTest {
                 .content(request));
     }
 
-    private String filterRequest(String operator, String conditions) {
+    private String filterRequest(
+            String operator,
+            String conditions
+    ) {
         return """
                 {
                   "start": 0,
@@ -490,8 +503,12 @@ class ResourceSearchApiIntegrationTest {
                 """.formatted(sort);
     }
 
-    private void assertInvalidFilterValue(String field, String operation, String value, String expectedMessage)
-            throws Exception {
+    private void assertInvalidFilterValue(
+            String field,
+            String operation,
+            String value,
+            String expectedMessage
+    ) throws Exception {
         search(filterRequest("AND", """
                 {"field": "%s", "operation": "%s", "value": "%s"}
                 """.formatted(field, operation, value)))

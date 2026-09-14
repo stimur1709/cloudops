@@ -14,7 +14,10 @@ class TaskRecoveryScheduler {
     private final TaskRecoveryService recoveryService;
     private final TaskLeaseProperties properties;
 
-    TaskRecoveryScheduler(TaskRecoveryService recoveryService, TaskLeaseProperties properties) {
+    TaskRecoveryScheduler(
+            TaskRecoveryService recoveryService,
+            TaskLeaseProperties properties
+    ) {
         this.recoveryService = recoveryService;
         this.properties = properties;
     }

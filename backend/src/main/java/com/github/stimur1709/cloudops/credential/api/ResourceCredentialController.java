@@ -27,23 +27,37 @@ public class ResourceCredentialController {
     }
 
     @GetMapping
-    public List<ResourceCredentialResponse> getAll(@PathVariable long resourceId, Authentication authentication) {
+    public List<ResourceCredentialResponse> getAll(
+            @PathVariable
+            long resourceId,
+            Authentication authentication
+    ) {
         return service.getAll(resourceId, CurrentUser.id(authentication));
     }
 
     @PutMapping("/{purpose}")
     public ResourceCredentialResponse bind(
-            @PathVariable long resourceId,
-            @PathVariable CredentialPurpose purpose,
-            @Valid @RequestBody BindCredentialRequest request,
-            Authentication authentication) {
+            @PathVariable
+            long resourceId,
+            @PathVariable
+            CredentialPurpose purpose,
+            @Valid
+            @RequestBody
+            BindCredentialRequest request,
+            Authentication authentication
+    ) {
         return service.bind(resourceId, purpose, request.credentialId(), CurrentUser.id(authentication));
     }
 
     @DeleteMapping("/{purpose}")
     @ApiResponse(responseCode = "204", description = "Completed without a response body", useReturnTypeSchema = true)
     public ResponseEntity<Void> unbind(
-            @PathVariable long resourceId, @PathVariable CredentialPurpose purpose, Authentication authentication) {
+            @PathVariable
+            long resourceId,
+            @PathVariable
+            CredentialPurpose purpose,
+            Authentication authentication
+    ) {
         service.unbind(resourceId, purpose, CurrentUser.id(authentication));
         return ResponseEntity.noContent().build();
     }

@@ -22,7 +22,8 @@ public class MonitoringSettingsIndex implements ApplicationRunner {
 
     public MonitoringSettingsIndex(
             OrganizationProbeSettingsJpaRepository organizationRepository,
-            ResourceProbeSettingsJpaRepository resourceRepository) {
+            ResourceProbeSettingsJpaRepository resourceRepository
+    ) {
         this.organizationRepository = organizationRepository;
         this.resourceRepository = resourceRepository;
     }
@@ -41,31 +42,51 @@ public class MonitoringSettingsIndex implements ApplicationRunner {
         resourceOverrides.clear();
         resourceRepository
                 .findAll()
-                .forEach(settings ->
-                        putResource(settings.resourceId(), settings.probeType(), ProbeSettingsValues.from(settings)));
+                .forEach(settings -> putResource(settings.resourceId(), settings.probeType(),
+                        ProbeSettingsValues.from(settings)));
     }
 
-    public ProbeSettings organization(long organizationId, ProbeType type) {
+    public ProbeSettings organization(
+            long organizationId,
+            ProbeType type
+    ) {
         return organizationOverrides.get(new OrganizationKey(organizationId, type));
     }
 
-    public ProbeSettings resource(long resourceId, ProbeType type) {
+    public ProbeSettings resource(
+            long resourceId,
+            ProbeType type
+    ) {
         return resourceOverrides.get(new ResourceKey(resourceId, type));
     }
 
-    public void putOrganization(long organizationId, ProbeType type, ProbeSettings settings) {
+    public void putOrganization(
+            long organizationId,
+            ProbeType type,
+            ProbeSettings settings
+    ) {
         organizationOverrides.put(new OrganizationKey(organizationId, type), ProbeSettingsValues.from(settings));
     }
 
-    public void removeOrganization(long organizationId, ProbeType type) {
+    public void removeOrganization(
+            long organizationId,
+            ProbeType type
+    ) {
         organizationOverrides.remove(new OrganizationKey(organizationId, type));
     }
 
-    public void putResource(long resourceId, ProbeType type, ProbeSettings settings) {
+    public void putResource(
+            long resourceId,
+            ProbeType type,
+            ProbeSettings settings
+    ) {
         resourceOverrides.put(new ResourceKey(resourceId, type), ProbeSettingsValues.from(settings));
     }
 
-    public void removeResource(long resourceId, ProbeType type) {
+    public void removeResource(
+            long resourceId,
+            ProbeType type
+    ) {
         resourceOverrides.remove(new ResourceKey(resourceId, type));
     }
 
@@ -77,7 +98,15 @@ public class MonitoringSettingsIndex implements ApplicationRunner {
         return resourceOverrides.size();
     }
 
-    private record OrganizationKey(long organizationId, ProbeType type) {}
+    private record OrganizationKey(
+            long organizationId,
+            ProbeType type
+    ) {
+    }
 
-    private record ResourceKey(long resourceId, ProbeType type) {}
+    private record ResourceKey(
+            long resourceId,
+            ProbeType type
+    ) {
+    }
 }

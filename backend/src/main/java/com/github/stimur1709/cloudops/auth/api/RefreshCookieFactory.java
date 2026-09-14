@@ -18,7 +18,10 @@ public class RefreshCookieFactory {
         return properties.cookie().name();
     }
 
-    public ResponseCookie create(String token, Duration maxAge) {
+    public ResponseCookie create(
+            String token,
+            Duration maxAge
+    ) {
         return cookie(token).maxAge(maxAge).build();
     }
 

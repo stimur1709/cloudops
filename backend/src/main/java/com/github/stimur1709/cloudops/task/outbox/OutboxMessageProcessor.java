@@ -20,7 +20,10 @@ class OutboxMessageProcessor {
     private final Clock clock;
 
     OutboxMessageProcessor(
-            OutboxMessageJpaRepository repository, TaskExecutionCommandPublisher publisher, Clock clock) {
+            OutboxMessageJpaRepository repository,
+            TaskExecutionCommandPublisher publisher,
+            Clock clock
+    ) {
         this.repository = repository;
         this.publisher = publisher;
         this.clock = clock;
