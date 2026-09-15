@@ -5,7 +5,7 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Ellipsis,
   FolderSearch,
-  LoaderCircle,
   LockKeyhole,
   Pencil,
   Plus,
@@ -44,6 +43,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { Input } from "../../components/ui/input";
+import { PageRefreshStatus } from "../../components/ui/page-refresh-status";
 import {
   Select,
   SelectContent,
@@ -52,6 +52,7 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Skeleton } from "../../components/ui/skeleton";
+import { scopedPreviousData } from "../../lib/scoped-previous-data";
 import {
   Table,
   TableBody,
@@ -68,6 +69,7 @@ import {
   pageSizes,
   resourceKeys,
   resourceTypes,
+  type ResourceListState,
 } from "./resource-api";
 import { parseResourceListState } from "./resource-list-state";
 import { ResourceDeleteDialog } from "./resource-delete-dialog";
@@ -231,11 +233,23 @@ export function ResourcesPage() {
     return () => window.clearTimeout(timeout);
   }, [searchDraft, state.search, updateParams]);
 
-  const query = useQuery({
+  const query = useQuery<
+    Awaited<ReturnType<typeof getResources>> & {
+      requestedState: ResourceListState;
+    }
+  >({
     queryKey: resourceKeys.list(organizationId, state),
-    queryFn: ({ signal }) => getResources(organizationId, state, signal),
-    placeholderData: keepPreviousData,
+    queryFn: async ({ signal }) => ({
+      ...(await getResources(organizationId, state, signal)),
+      requestedState: state,
+    }),
+    placeholderData: scopedPreviousData<
+      Awaited<ReturnType<typeof getResources>> & {
+        requestedState: ResourceListState;
+      }
+    >(resourceKeys.organization(organizationId)),
   });
+  const displayState = query.data?.requestedState ?? state;
 
   useEffect(() => {
     if (!query.isFetching && query.data?.items.length === 0 && state.page > 0)
@@ -321,8 +335,8 @@ export function ResourcesPage() {
     return columns;
   }, [isManager, organizationId]);
 
-  const sorting: SortingState = state.sort
-    ? [{ id: state.sort, desc: state.order === "desc" }]
+  const sorting: SortingState = displayState.sort
+    ? [{ id: displayState.sort, desc: displayState.order === "desc" }]
     : [];
   // TanStack Table exposes stateful functions that React Compiler intentionally skips.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -336,7 +350,10 @@ export function ResourcesPage() {
     rowCount: query.data?.total,
     state: {
       sorting,
-      pagination: { pageIndex: state.page, pageSize: state.size },
+      pagination: {
+        pageIndex: displayState.page,
+        pageSize: displayState.size,
+      },
     },
     onSortingChange: (updater) => {
       const next = typeof updater === "function" ? updater(sorting) : updater;
@@ -357,8 +374,8 @@ export function ResourcesPage() {
   const total = query.data?.total;
   const canGoNext =
     total !== undefined
-      ? (state.page + 1) * state.size < total
-      : (query.data?.items.length ?? 0) === state.size;
+      ? (displayState.page + 1) * displayState.size < total
+      : (query.data?.items.length ?? 0) === displayState.size;
 
   if (query.isPending) return <LoadingTable />;
   if (query.isError) {
@@ -403,16 +420,7 @@ export function ResourcesPage() {
               Ресурсы
             </h1>
             {query.isFetching && (
-              <span
-                className="inline-flex items-center gap-2 text-caption text-foreground-muted"
-                role="status"
-              >
-                <LoaderCircle
-                  aria-hidden="true"
-                  className="size-icon animate-spin"
-                />
-                Обновление данных
-              </span>
+              <PageRefreshStatus label="Обновление данных" />
             )}
           </div>
           <p className="mt-1 text-body text-foreground-muted">
@@ -547,7 +555,11 @@ export function ResourcesPage() {
         )}
       </div>
 
-      {query.data.items.length === 0 ? (
+      {query.isPlaceholderData && query.data.items.length === 0 ? (
+        <div className="rounded-panel border border-border bg-surface p-4 text-body text-foreground-muted">
+          Обновление результатов…
+        </div>
+      ) : query.data.items.length === 0 ? (
         <EmptyState
           icon={hasFilters ? Search : Server}
           title={hasFilters ? "Ничего не найдено" : "Ресурсов ещё нет"}
@@ -572,7 +584,10 @@ export function ResourcesPage() {
         />
       ) : (
         <>
-          <div className="hidden overflow-hidden rounded-panel border border-border bg-surface md:block">
+          <div
+            aria-busy={query.isPlaceholderData}
+            className="hidden overflow-hidden rounded-panel border border-border bg-surface md:block"
+          >
             <Table>
               <caption className="sr-only">Ресурсы организации</caption>
               <TableHeader>
@@ -620,7 +635,10 @@ export function ResourcesPage() {
               </TableBody>
             </Table>
           </div>
-          <div className="grid gap-3 md:hidden">
+          <div
+            aria-busy={query.isPlaceholderData}
+            className="grid gap-3 md:hidden"
+          >
             {query.data.items.map((resource, index) => {
               const href = `/organizations/${organizationId}/resources/${resource.id}`;
               return (
@@ -652,14 +670,15 @@ export function ResourcesPage() {
         >
           <p className="text-caption text-foreground-muted">
             {total !== undefined
-              ? `${state.page * state.size + 1}–${Math.min(state.page * state.size + query.data.items.length, total)} из ${total}`
-              : `Страница ${state.page + 1}`}
+              ? `${displayState.page * displayState.size + 1}–${Math.min(displayState.page * displayState.size + query.data.items.length, total)} из ${total}`
+              : `Страница ${displayState.page + 1}`}
           </p>
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-2 text-label">
               Строк на странице
               <Select
                 value={String(state.size)}
+                disabled={query.isPlaceholderData}
                 onValueChange={(value) =>
                   updateParams(
                     {
@@ -684,7 +703,7 @@ export function ResourcesPage() {
             <Button
               type="button"
               size="icon"
-              disabled={state.page === 0}
+              disabled={displayState.page === 0 || query.isPlaceholderData}
               aria-label="Предыдущая страница"
               onClick={() =>
                 updateParams({
@@ -697,7 +716,7 @@ export function ResourcesPage() {
             <Button
               type="button"
               size="icon"
-              disabled={!canGoNext}
+              disabled={!canGoNext || query.isPlaceholderData}
               aria-label="Следующая страница"
               onClick={() => updateParams({ page: String(state.page + 2) })}
             >

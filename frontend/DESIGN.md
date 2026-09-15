@@ -654,6 +654,8 @@ React Query хранит server state; RHF — ввод формы; TanStack Tab
 
 Query keys включают organization/resource scope и параметры запроса. Использовать cancel/AbortSignal при смене фильтра/организации, не подменять новый результат запоздавшим старым. Не сохранять access token в localStorage: текущий backend ожидает memory access token и HttpOnly refresh cookie. После logout очищать чувствительный query cache. Mutation запуска инфраструктурной операции не повторяется автоматически без гарантии идемпотентности.
 
+Для серверных таблиц и историй смена page/sort/filter не заменяет уже показанные строки skeleton: прежний результат остаётся как временный placeholder только в пределах того же organization/resource/entity scope. В это время показывать тихое «Обновление…», отмечать регион `aria-busy`, не выдавать старые строки и диапазон за новую страницу или сортировку и блокировать переходы pagination до подтверждённого ответа. Initial loading без данных по-прежнему показывает skeleton; смена scope не переносит placeholder, чтобы данные другой организации или ресурса не появились даже на мгновение. Не задавать `keepPreviousData` без scope guard как глобальный default всего QueryClient.
+
 ### Tailwind CSS v4 и shadcn mapping
 
 Vite использует `@tailwindcss/vite`; CSS подключает `@import "tailwindcss"`. Для theme variables и aliases применять CSS-first конфигурацию v4, без копирования инструкций `@tailwind base/components/utilities` из v3. [Tailwind with Vite](https://tailwindcss.com/docs/installation/using-vite).

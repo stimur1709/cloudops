@@ -226,6 +226,51 @@ describe("ResourceDetailsPage", () => {
     );
   });
 
+  it("keeps confirmed health transitions visible while changing page", async () => {
+    const user = userEvent.setup();
+    const firstItems = Array.from({ length: 10 }, (_, index) => ({
+      id: index + 41,
+      fromStatus: "UP" as const,
+      toStatus: "DEGRADED" as const,
+      changedAt: `2026-09-13T11:${String(index).padStart(2, "0")}:00Z`,
+    }));
+    type SearchResult = Awaited<ReturnType<typeof search2>>;
+    let resolveNext: ((value: SearchResult) => void) | undefined;
+    vi.mocked(search2)
+      .mockImplementationOnce(() => ok({ items: firstItems, total: 21 }))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNext = resolve;
+          }),
+      );
+    renderPage();
+    await user.click(await screen.findByRole("tab", { name: "Здоровье" }));
+    expect(await screen.findByText("1–10 из 21")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    expect(screen.getByText("Обновление переходов…")).toBeVisible();
+    expect(screen.getByText("1–10 из 21")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Далее" })).toBeDisabled();
+    expect(screen.queryByLabelText("Загрузка истории")).toBeNull();
+
+    resolveNext?.(
+      (await ok({
+        items: [
+          {
+            id: 99,
+            fromStatus: "DEGRADED" as const,
+            toStatus: "UP" as const,
+            changedAt: "2026-09-12T11:00:00Z",
+          },
+        ],
+        total: 21,
+      })) as SearchResult,
+    );
+    expect(await screen.findByText("11–11 из 21")).toBeVisible();
+    expect(screen.queryByText("Обновление переходов…")).toBeNull();
+  });
+
   it("loads monitoring only after the resource is confirmed in the organization", async () => {
     const user = userEvent.setup();
     renderPage();

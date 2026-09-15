@@ -17,6 +17,7 @@ import type {
 import { HealthStatus } from "../../components/health-status";
 import { Alert } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
+import { PageRefreshStatus } from "../../components/ui/page-refresh-status";
 import {
   Select,
   SelectContent,
@@ -38,6 +39,7 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { cn } from "../../lib/cn";
+import { scopedPreviousData } from "../../lib/scoped-previous-data";
 import { formatDateTime } from "../resource/resource-details-format";
 import {
   getMonitorHistory,
@@ -382,7 +384,9 @@ function MonitorHistory({
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const monitorId = monitor.id ?? Number.NaN;
-  const query = useQuery({
+  const query = useQuery<
+    Awaited<ReturnType<typeof getMonitorHistory>> & { requestedPage: number }
+  >({
     queryKey: monitoringKeys.history(
       organizationId,
       resourceId,
@@ -391,18 +395,30 @@ function MonitorHistory({
       historyPageSize,
       order,
     ),
-    queryFn: ({ signal }) =>
-      getMonitorHistory(monitorId, page, historyPageSize, order, signal),
+    queryFn: async ({ signal }) => ({
+      ...(await getMonitorHistory(
+        monitorId,
+        page,
+        historyPageSize,
+        order,
+        signal,
+      )),
+      requestedPage: page,
+    }),
     enabled: Number.isFinite(monitorId),
+    placeholderData: scopedPreviousData<
+      Awaited<ReturnType<typeof getMonitorHistory>> & { requestedPage: number }
+    >(monitoringKeys.historyScope(organizationId, resourceId, monitorId)),
   });
+  const displayPage = query.data?.requestedPage ?? page;
   const canGoNext =
     query.data?.total !== undefined
-      ? (page + 1) * historyPageSize < query.data.total
+      ? (displayPage + 1) * historyPageSize < query.data.total
       : (query.data?.items.length ?? 0) === historyPageSize;
   const historyUnavailable =
     query.error instanceof ApiClientError &&
     query.error.code === "MONITOR_HISTORY_NOT_ENABLED";
-  const rangeStart = page * historyPageSize + 1;
+  const rangeStart = displayPage * historyPageSize + 1;
   const rangeEnd = rangeStart + (query.data?.items.length ?? 0) - 1;
 
   return (
@@ -418,11 +434,15 @@ function MonitorHistory({
           <p className="mt-1 text-caption text-foreground-muted">
             Результаты выбранной проверки.
           </p>
+          {query.isPlaceholderData && (
+            <PageRefreshStatus label="Обновление истории…" />
+          )}
         </div>
         {!query.isError && (
           <div className="w-44">
             <Select
               value={order}
+              disabled={query.isPlaceholderData}
               onValueChange={(value) => {
                 setOrder(value === "asc" ? "asc" : "desc");
                 setPage(0);
@@ -481,7 +501,10 @@ function MonitorHistory({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-panel border border-border">
+        <div
+          aria-busy={query.isPlaceholderData}
+          className="overflow-x-auto rounded-panel border border-border"
+        >
           <Table>
             <caption className="sr-only">История результатов монитора</caption>
             <TableHeader>
@@ -513,14 +536,14 @@ function MonitorHistory({
           <p className="text-caption text-foreground-muted">
             {query.data.total !== undefined
               ? `${rangeStart}–${rangeEnd} из ${query.data.total}`
-              : `Страница ${page + 1}`}
+              : `Страница ${displayPage + 1}`}
           </p>
           {(query.data.total === undefined ||
             query.data.total > historyPageSize) && (
             <div className="flex gap-2">
               <Button
                 type="button"
-                disabled={page === 0}
+                disabled={displayPage === 0 || query.isPlaceholderData}
                 onClick={() => setPage((current) => current - 1)}
               >
                 <ArrowLeft aria-hidden="true" />
@@ -528,7 +551,7 @@ function MonitorHistory({
               </Button>
               <Button
                 type="button"
-                disabled={!canGoNext}
+                disabled={!canGoNext || query.isPlaceholderData}
                 onClick={() => setPage((current) => current + 1)}
               >
                 Далее

@@ -163,6 +163,103 @@ describe("MonitoringSection", () => {
     expect(screen.queryByText("503")).toBeNull();
   });
 
+  it("keeps the confirmed history page visible until the next page arrives", async () => {
+    const user = userEvent.setup();
+    const firstItems = Array.from({ length: 10 }, (_, index) => ({
+      id: index + 101,
+      monitorId: 21,
+      checkedAt: `2026-09-14T10:${String(index).padStart(2, "0")}:00Z`,
+      result: monitor.lastResult,
+    }));
+    type SearchResult = Awaited<ReturnType<typeof searchResults>>;
+    let resolveNext: ((value: SearchResult) => void) | undefined;
+    vi.mocked(searchResults)
+      .mockImplementationOnce(() => ok({ items: firstItems, total: 21 }))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNext = resolve;
+          }),
+      );
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Показать историю HTTP" }),
+    );
+    expect(await screen.findByText("1–10 из 21")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    expect(screen.getByText("Обновление истории…")).toBeVisible();
+    expect(screen.getByText("1–10 из 21")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Далее" })).toBeDisabled();
+    expect(screen.queryByLabelText("Загрузка истории монитора")).toBeNull();
+    expect(
+      screen.getAllByTitle(formatDateTime(firstItems[0]!.checkedAt))[0],
+    ).toBeVisible();
+
+    resolveNext?.(
+      (await ok({
+        items: [
+          {
+            id: 201,
+            monitorId: 21,
+            checkedAt: "2026-09-13T10:00:00Z",
+            result: monitor.lastResult,
+          },
+        ],
+        total: 21,
+      })) as SearchResult,
+    );
+    expect(await screen.findByText("11–11 из 21")).toBeVisible();
+    expect(screen.queryByText("Обновление истории…")).toBeNull();
+  });
+
+  it("keeps history rows during a server-side sort transition", async () => {
+    const user = userEvent.setup();
+    type SearchResult = Awaited<ReturnType<typeof searchResults>>;
+    let resolveNext: ((value: SearchResult) => void) | undefined;
+    vi.mocked(searchResults)
+      .mockImplementationOnce(() =>
+        ok({
+          items: [
+            {
+              id: 301,
+              monitorId: 21,
+              checkedAt: "2026-09-14T10:00:00Z",
+              result: monitor.lastResult,
+            },
+          ],
+          total: 1,
+        }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNext = resolve;
+          }),
+      );
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Показать историю HTTP" }),
+    );
+    await screen.findByText("1–1 из 1");
+    await user.click(
+      screen.getByRole("combobox", { name: "Сортировка истории" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Сначала старые" }));
+
+    expect(screen.getByText("Обновление истории…")).toBeVisible();
+    expect(screen.getByText("1–1 из 1")).toBeVisible();
+    expect(screen.queryByLabelText("Загрузка истории монитора")).toBeNull();
+    expect(searchResults).toHaveBeenLastCalledWith(
+      21,
+      expect.objectContaining({
+        sort: [{ field: "checkedAt", order: "ASC" }],
+      }),
+      expect.anything(),
+    );
+    resolveNext?.((await ok({ items: [], total: 0 })) as SearchResult);
+  });
+
   it("requests a manual run, keeps the periodic schedule and refetches", async () => {
     const user = userEvent.setup();
     renderSection();

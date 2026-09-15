@@ -29,6 +29,20 @@ export const monitoringKeys = {
       size,
       order,
     ] as const,
+  historyScope: (
+    organizationId: number,
+    resourceId: number,
+    monitorId: number,
+  ) =>
+    [
+      "monitoring",
+      organizationId,
+      "resource",
+      resourceId,
+      "monitor",
+      monitorId,
+      "history",
+    ] as const,
 };
 
 export interface MonitoringResultsPage {

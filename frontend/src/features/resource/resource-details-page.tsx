@@ -31,6 +31,7 @@ import {
 } from "../../components/resource-labels";
 import { Alert } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
+import { PageRefreshStatus } from "../../components/ui/page-refresh-status";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,7 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Skeleton } from "../../components/ui/skeleton";
+import { scopedPreviousData } from "../../lib/scoped-previous-data";
 import {
   Tabs,
   TabsContent,
@@ -225,17 +227,34 @@ function HealthEvents({
   enabled: boolean;
 }) {
   const [page, setPage] = useState(0);
-  const query = useQuery({
+  const query = useQuery<
+    Awaited<ReturnType<typeof getResourceHealthEvents>> & {
+      requestedPage: number;
+    }
+  >({
     queryKey: resourceKeys.healthEvents(organizationId, resourceId, page),
-    queryFn: ({ signal }) =>
-      getResourceHealthEvents(resourceId, page, eventPageSize, signal),
+    queryFn: async ({ signal }) => ({
+      ...(await getResourceHealthEvents(
+        resourceId,
+        page,
+        eventPageSize,
+        signal,
+      )),
+      requestedPage: page,
+    }),
     enabled,
+    placeholderData: scopedPreviousData<
+      Awaited<ReturnType<typeof getResourceHealthEvents>> & {
+        requestedPage: number;
+      }
+    >(resourceKeys.healthEventsScope(organizationId, resourceId)),
   });
+  const displayPage = query.data?.requestedPage ?? page;
   const canGoNext =
     query.data?.total !== undefined
-      ? (page + 1) * eventPageSize < query.data.total
+      ? (displayPage + 1) * eventPageSize < query.data.total
       : (query.data?.items.length ?? 0) === eventPageSize;
-  const rangeStart = page * eventPageSize + 1;
+  const rangeStart = displayPage * eventPageSize + 1;
   const rangeEnd = rangeStart + (query.data?.items.length ?? 0) - 1;
 
   if (query.isPending)
@@ -266,7 +285,13 @@ function HealthEvents({
 
   return (
     <div className="space-y-4">
-      <ol className="divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface">
+      {query.isPlaceholderData && (
+        <PageRefreshStatus label="Обновление переходов…" />
+      )}
+      <ol
+        aria-busy={query.isPlaceholderData}
+        className="divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface"
+      >
         {query.data.items.map((event, index) => (
           <HealthEventRow
             key={event.id ?? `${event.changedAt}-${index}`}
@@ -281,19 +306,19 @@ function HealthEvents({
         <p className="text-caption text-foreground-muted">
           {query.data.total !== undefined
             ? `${rangeStart}–${rangeEnd} из ${query.data.total}`
-            : `Страница ${page + 1}`}
+            : `Страница ${displayPage + 1}`}
         </p>
         <div className="flex gap-2">
           <Button
             type="button"
-            disabled={page === 0}
+            disabled={displayPage === 0 || query.isPlaceholderData}
             onClick={() => setPage(page - 1)}
           >
             Назад
           </Button>
           <Button
             type="button"
-            disabled={!canGoNext}
+            disabled={!canGoNext || query.isPlaceholderData}
             onClick={() => setPage(page + 1)}
           >
             Далее
