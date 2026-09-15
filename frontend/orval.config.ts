@@ -24,6 +24,8 @@ export default defineConfig({
           "resource-health-event-controller",
           "resource-monitor-controller",
           "monitor-controller",
+          "organization-probe-settings-controller",
+          "resource-probe-settings-controller",
         ],
       },
     },

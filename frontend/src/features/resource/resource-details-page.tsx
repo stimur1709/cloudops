@@ -54,6 +54,7 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { MonitoringSection } from "../monitoring/monitoring-section";
+import { SettingsSection } from "../monitoring/settings-section";
 import { useOrganization } from "../organization/organization-context";
 import {
   getResource,
@@ -666,6 +667,29 @@ export function ResourceDetailsPage() {
               resourceId={resourceId}
               enabled={belongsToOrganization}
             />
+            <section
+              aria-labelledby="resource-monitoring-settings"
+              className="space-y-3 border-t border-border pt-6"
+            >
+              <div>
+                <h3
+                  id="resource-monitoring-settings"
+                  className="text-card-title"
+                >
+                  Настройки проверок
+                </h3>
+                <p className="mt-1 text-body text-foreground-muted">
+                  Эффективные значения и наследование для этого ресурса.
+                </p>
+              </div>
+              <SettingsSection
+                scope="resource"
+                organizationId={organizationId}
+                resourceId={resourceId}
+                isManager={isManager}
+                enabled={belongsToOrganization}
+              />
+            </section>
           </section>
         </TabsContent>
       </Tabs>

@@ -42,6 +42,13 @@ const ResourceDetailsPage = lazy(() =>
     default: module.ResourceDetailsPage,
   })),
 );
+const OrganizationSettingsPage = lazy(() =>
+  import("../../features/organization/organization-settings-page").then(
+    (module) => ({
+      default: module.OrganizationSettingsPage,
+    }),
+  ),
+);
 
 function ProtectedRoutes() {
   const { status } = useAuth();
@@ -122,13 +129,7 @@ export function AppRoutes() {
                 "Безопасное управление учётными данными будет добавлено отдельно.",
               )}
             />
-            <Route
-              path="settings"
-              element={organizationPage(
-                "Настройки",
-                "Настройки workspace появятся в следующих задачах.",
-              )}
-            />
+            <Route path="settings" element={<OrganizationSettingsPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>
