@@ -168,7 +168,7 @@ function Metric({
 function AvailabilitySummary({ data }: { data: ResourceAvailabilityResponse }) {
   return (
     <div className="space-y-4">
-      <div className="grid divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      <div className="grid divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface md:grid-cols-3 md:divide-x md:divide-y-0">
         <Metric
           label="Доступность"
           value={formatPercent(data.availabilityPercent)}
@@ -510,7 +510,7 @@ export function ResourceDetailsPage() {
             <h2 id="overview-heading" className="sr-only">
               Обзор
             </h2>
-            <dl className="grid gap-4 sm:grid-cols-2">
+            <dl className="grid gap-4 md:grid-cols-2">
               <DefinitionItem label="Имя">
                 {resource.name ?? "—"}
               </DefinitionItem>
@@ -591,7 +591,7 @@ export function ResourceDetailsPage() {
             </div>
             {availabilityQuery.isPending ? (
               <div
-                className="grid gap-3 sm:grid-cols-3"
+                className="grid gap-3 md:grid-cols-3"
                 aria-label="Загрузка доступности"
                 aria-busy="true"
               >

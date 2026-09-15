@@ -76,7 +76,11 @@ describe("MonitoringSection", () => {
     expect(await screen.findByText("HTTP")).toBeVisible();
     expect(screen.getByText("DOWN")).toBeVisible();
     expect(screen.getByText("Неуспешно")).toBeVisible();
-    await user.click(screen.getByText("Технические детали"));
+    expect(screen.queryByText("HTTP_CHECK")).toBeNull();
+    expect(screen.queryByText("503")).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Технические детали" }),
+    );
     expect(screen.getByText("HTTP_CHECK")).toBeVisible();
     expect(screen.getByText("503")).toBeVisible();
     expect(screen.queryByText("История HTTP")).toBeNull();
@@ -90,6 +94,22 @@ describe("MonitoringSection", () => {
       "true",
     );
     expect(await screen.findByText("История HTTP")).toBeVisible();
+    expect(screen.getAllByText("42 мс").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Подробнее" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.queryByRole("button", { name: "Назад" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Далее" })).toBeNull();
+    expect(screen.getByText("1–1 из 1")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Подробнее" }));
+    expect(screen.getAllByText("503")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Скрыть детали" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getAllByTitle(formatDateTime(monitor.lastCheckedAt))[0],
+    ).toHaveTextContent(/^(Сегодня|\d)/);
     expect(searchResults).toHaveBeenCalledWith(
       21,
       {
@@ -125,6 +145,22 @@ describe("MonitoringSection", () => {
     expect(screen.getByText("Не выполнялась")).toBeInTheDocument();
     expect(screen.getByText("Не запланирован")).toBeInTheDocument();
     expect(screen.getByText("UNKNOWN")).toBeVisible();
+  });
+
+  it("keeps historical technical fields closed until that result is expanded", async () => {
+    const user = userEvent.setup();
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Показать историю HTTP" }),
+    );
+
+    expect(await screen.findByText("История HTTP")).toBeVisible();
+    expect(screen.getByText("42 мс")).toBeVisible();
+    expect(screen.queryByText("503")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Подробнее" }));
+    expect(screen.getByText("503")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Скрыть детали" }));
+    expect(screen.queryByText("503")).toBeNull();
   });
 
   it("requests a manual run, keeps the periodic schedule and refetches", async () => {
@@ -166,6 +202,35 @@ describe("MonitoringSection", () => {
     await user.click(runButtons[0]!);
     await waitFor(() => expect(run1).toHaveBeenCalledWith(21));
     expect(runButtons[1]).toBeEnabled();
+  });
+
+  it("removes completion feedback when a confirmed new result updates the row", async () => {
+    const user = userEvent.setup();
+    vi.mocked(list1)
+      .mockImplementationOnce(() => ok([monitor]))
+      .mockImplementation(() =>
+        ok([
+          {
+            ...monitor,
+            healthStatus: "UP" as const,
+            lastCheckedAt: "2026-09-14T10:01:00Z",
+            lastResult: { success: true, data: monitor.lastResult.data },
+          },
+        ]),
+      );
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Запустить сейчас" }),
+    );
+
+    expect(await screen.findByText("UP")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Запустить сейчас" }),
+    ).toBeEnabled();
+    expect(screen.queryByText("Получен новый результат.")).toBeNull();
+    expect(
+      screen.getByTitle(formatDateTime(monitor.nextRunAt)),
+    ).toHaveAttribute("datetime", monitor.nextRunAt);
   });
 
   it("keeps controlled run and history conflicts local to their monitor", async () => {

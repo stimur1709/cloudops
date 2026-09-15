@@ -7,7 +7,7 @@ import {
   LoaderCircle,
   Play,
 } from "lucide-react";
-import { useState } from "react";
+import { Fragment, useId, useState } from "react";
 import { ApiClientError, readableError } from "../../api/client/api-error";
 import type {
   MonitorResponse,
@@ -25,6 +25,10 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Skeleton } from "../../components/ui/skeleton";
+import {
+  TechnicalDataGrid,
+  TechnicalDisclosureTrigger,
+} from "../../components/ui/technical-data-grid";
 import {
   Table,
   TableBody,
@@ -44,6 +48,7 @@ import {
 import {
   formatCompactMonitorTime,
   getMonitorTypeLabel,
+  getProbeKeyMetric,
   getProbeResultLabel,
   presentProbeResult,
 } from "./monitoring-presentation";
@@ -58,7 +63,7 @@ interface PollState {
 }
 
 type PollStates = Record<number, PollState>;
-type RunFeedback = "polling" | "completed" | "timeout";
+type RunFeedback = "polling" | "timeout";
 
 function controlledRunError(error: unknown) {
   if (!(error instanceof ApiClientError)) return readableError(error);
@@ -69,17 +74,6 @@ function controlledRunError(error: unknown) {
   if (error.kind === "not-found")
     return "Монитор не найден или больше недоступен.";
   return readableError(error);
-}
-
-function ResultField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-caption text-foreground-muted">{label}</dt>
-      <dd className="mt-1 break-all font-mono text-technical text-foreground">
-        {value}
-      </dd>
-    </div>
-  );
 }
 
 function CompactTime({
@@ -117,7 +111,7 @@ function ResultSummary({ result }: { result?: ProbeExecutionResult | null }) {
   );
 }
 
-function TechnicalDetails({
+function ResultTechnicalData({
   monitor,
   result,
   includeMonitorMetadata = false,
@@ -127,41 +121,36 @@ function TechnicalDetails({
   includeMonitorMetadata?: boolean;
 }) {
   const presentation = result ? presentProbeResult(monitor.type, result) : null;
-  const hasDetails =
-    includeMonitorMetadata ||
-    Boolean(presentation?.errorCode) ||
-    Boolean(presentation?.fields.length);
-
-  if (!hasDetails) return null;
-
   return (
-    <details className="mt-1">
-      <summary className="cursor-pointer text-caption text-product-accent">
-        Технические детали
-      </summary>
-      <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-        {includeMonitorMetadata && (
-          <>
-            <ResultField
-              label="ID монитора"
-              value={String(monitor.id ?? "—")}
-            />
-            <ResultField label="Raw type" value={monitor.type ?? "—"} />
-          </>
-        )}
-        {presentation?.errorCode && (
-          <ResultField label="Код ошибки" value={presentation.errorCode} />
-        )}
-        {presentation?.fields.map((field) => (
-          <ResultField
-            key={field.label}
-            label={field.label}
-            value={field.value}
-          />
-        ))}
-      </dl>
-    </details>
+    <TechnicalDataGrid
+      fields={[
+        ...(result && "error" in result && result.error
+          ? [{ label: "Причина", value: presentation?.summary ?? "—" }]
+          : []),
+        ...(presentation?.errorCode
+          ? [{ label: "Код ошибки", value: presentation.errorCode }]
+          : []),
+        ...(presentation?.fields ?? []),
+      ]}
+      metadata={
+        includeMonitorMetadata
+          ? [
+              { label: "ID монитора", value: String(monitor.id ?? "—") },
+              { label: "Raw type", value: monitor.type ?? "—" },
+            ]
+          : []
+      }
+    />
   );
+}
+
+function hasResultDetails(
+  type: MonitorResponse["type"],
+  result?: ProbeExecutionResult | null,
+) {
+  if (!result) return false;
+  if ("error" in result && result.error) return true;
+  return presentProbeResult(type, result).fields.length > 0;
 }
 
 function RunMonitorControl({
@@ -189,11 +178,9 @@ function RunMonitorControl({
   });
   const waiting = mutation.isPending || feedback === "polling";
   const feedbackText =
-    feedback === "completed"
-      ? "Получен новый результат."
-      : feedback === "timeout"
-        ? "Запуск принят, результат пока не появился."
-        : undefined;
+    feedback === "timeout"
+      ? "Запуск принят, результат пока не появился."
+      : undefined;
 
   return (
     <div className="space-y-1">
@@ -252,70 +239,88 @@ function MonitorRow({
   onRunAccepted: (monitor: MonitorResponse) => void;
 }) {
   const monitorLabel = getMonitorTypeLabel(monitor.type);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailsId = useId();
   return (
-    <TableRow
-      aria-selected={selected}
-      className={cn(
-        "block p-4 md:table-row md:p-0",
-        selected && "bg-product-accent-soft",
-      )}
-    >
-      <TableCell className="block h-auto px-0 py-1 md:table-cell md:h-row md:px-3 md:py-2">
-        <MobileLabel>Проверка</MobileLabel>
-        <span className="text-label text-foreground">{monitorLabel}</span>
-      </TableCell>
-      <TableCell className="block h-auto px-0 py-1 md:table-cell md:h-row md:px-3 md:py-2">
-        <MobileLabel>Состояние</MobileLabel>
-        <span className="inline-flex items-center gap-2">
-          <HealthStatus status={monitor.healthStatus} />
-          {feedback === "polling" && (
-            <span className="text-caption text-foreground-muted">
-              Запуск выполняется
-            </span>
-          )}
-        </span>
-      </TableCell>
-      <TableCell className="block h-auto px-0 py-1 font-mono text-technical-sm md:table-cell md:h-row md:px-3 md:py-2">
-        <MobileLabel>Последняя проверка</MobileLabel>
-        <CompactTime
-          value={monitor.lastCheckedAt}
-          emptyText="Проверка ещё не выполнялась"
-        />
-      </TableCell>
-      <TableCell className="hidden h-row px-3 py-2 font-mono text-technical-sm md:table-cell">
-        <CompactTime value={monitor.nextRunAt} emptyText="Не запланирован" />
-      </TableCell>
-      <TableCell className="block h-auto px-0 py-1 md:table-cell md:h-row md:px-3 md:py-2">
-        <MobileLabel>Последний результат</MobileLabel>
-        <ResultSummary result={monitor.lastResult} />
-        <TechnicalDetails
-          monitor={monitor}
-          result={monitor.lastResult}
-          includeMonitorMetadata
-        />
-      </TableCell>
-      <TableCell className="block h-auto px-0 pt-3 pb-0 md:table-cell md:h-row md:px-3 md:py-2">
-        <div className="flex flex-wrap items-start gap-2 md:justify-end">
-          <RunMonitorControl
-            monitor={monitor}
-            organizationId={organizationId}
-            resourceId={resourceId}
-            feedback={feedback}
-            onAccepted={onRunAccepted}
+    <Fragment>
+      <TableRow
+        aria-selected={selected}
+        className={cn(
+          "block p-4 md:table-row md:p-0",
+          selected && "bg-product-accent-soft",
+        )}
+      >
+        <TableCell className="block h-auto px-0 py-1 md:table-cell md:h-row md:px-3 md:py-2">
+          <MobileLabel>Проверка</MobileLabel>
+          <span className="text-label text-foreground">{monitorLabel}</span>
+        </TableCell>
+        <TableCell className="block h-auto px-0 py-1 md:table-cell md:h-row md:px-3 md:py-2">
+          <MobileLabel>Состояние</MobileLabel>
+          <span className="inline-flex items-center gap-2">
+            <HealthStatus status={monitor.healthStatus} />
+            {feedback === "polling" && (
+              <span className="text-caption text-foreground-muted">
+                Запуск выполняется
+              </span>
+            )}
+          </span>
+        </TableCell>
+        <TableCell className="block h-auto px-0 py-1 font-mono text-technical-sm md:table-cell md:h-row md:px-3 md:py-2">
+          <MobileLabel>Последняя проверка</MobileLabel>
+          <CompactTime
+            value={monitor.lastCheckedAt}
+            emptyText="Проверка ещё не выполнялась"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={`Показать историю ${monitorLabel}`}
-            disabled={monitor.id === undefined}
-            onClick={onSelect}
+        </TableCell>
+        <TableCell className="hidden h-row px-3 py-2 font-mono text-technical-sm md:table-cell">
+          <CompactTime value={monitor.nextRunAt} emptyText="Не запланирован" />
+        </TableCell>
+        <TableCell className="block h-auto px-0 py-1 md:table-cell md:h-row md:px-3 md:py-2">
+          <MobileLabel>Последний результат</MobileLabel>
+          <ResultSummary result={monitor.lastResult} />
+          <TechnicalDisclosureTrigger
+            aria-expanded={detailsOpen}
+            aria-controls={detailsId}
+            className="ml-2"
+            onClick={() => setDetailsOpen((current) => !current)}
           >
-            <History aria-hidden="true" />
-            История
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
+            Технические детали
+          </TechnicalDisclosureTrigger>
+        </TableCell>
+        <TableCell className="block h-auto px-0 pt-3 pb-0 md:table-cell md:h-row md:px-3 md:py-2">
+          <div className="flex flex-wrap items-start gap-2 md:justify-end">
+            <RunMonitorControl
+              monitor={monitor}
+              organizationId={organizationId}
+              resourceId={resourceId}
+              feedback={feedback}
+              onAccepted={onRunAccepted}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={`Показать историю ${monitorLabel}`}
+              disabled={monitor.id === undefined}
+              onClick={onSelect}
+            >
+              <History aria-hidden="true" />
+              История
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+      {detailsOpen && (
+        <TableRow id={detailsId} className="block md:table-row">
+          <TableCell colSpan={6} className="block px-4 py-3 md:table-cell">
+            <ResultTechnicalData
+              monitor={monitor}
+              result={monitor.lastResult}
+              includeMonitorMetadata
+            />
+          </TableCell>
+        </TableRow>
+      )}
+    </Fragment>
   );
 }
 
@@ -326,16 +331,42 @@ function HistoryRow({
   item: MonitoringResultResponse;
   monitor: MonitorResponse;
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailsId = useId();
+  const keyMetric = getProbeKeyMetric(monitor.type, item.result);
+  const hasDetails = hasResultDetails(monitor.type, item.result);
   return (
-    <TableRow>
-      <TableCell className="align-top font-mono text-technical-sm text-foreground-muted">
-        <time dateTime={item.checkedAt}>{formatDateTime(item.checkedAt)}</time>
-      </TableCell>
-      <TableCell className="align-top">
-        <ResultSummary result={item.result} />
-        <TechnicalDetails monitor={monitor} result={item.result} />
-      </TableCell>
-    </TableRow>
+    <Fragment>
+      <TableRow>
+        <TableCell className="font-mono text-technical-sm text-foreground-muted">
+          <CompactTime value={item.checkedAt} emptyText="—" />
+        </TableCell>
+        <TableCell>
+          <ResultSummary result={item.result} />
+        </TableCell>
+        <TableCell className="font-mono text-technical-sm text-foreground-muted">
+          {keyMetric ?? "—"}
+        </TableCell>
+        <TableCell className="text-right">
+          {hasDetails && (
+            <TechnicalDisclosureTrigger
+              aria-expanded={detailsOpen}
+              aria-controls={detailsId}
+              onClick={() => setDetailsOpen((current) => !current)}
+            >
+              {detailsOpen ? "Скрыть детали" : "Подробнее"}
+            </TechnicalDisclosureTrigger>
+          )}
+        </TableCell>
+      </TableRow>
+      {detailsOpen && (
+        <TableRow id={detailsId}>
+          <TableCell colSpan={4} className="px-4 py-3">
+            <ResultTechnicalData monitor={monitor} result={item.result} />
+          </TableCell>
+        </TableRow>
+      )}
+    </Fragment>
   );
 }
 
@@ -389,8 +420,7 @@ function MonitorHistory({
           </p>
         </div>
         {!query.isError && (
-          <label className="w-44">
-            <span className="mb-1 block text-label">Сортировка</span>
+          <div className="w-44">
             <Select
               value={order}
               onValueChange={(value) => {
@@ -406,7 +436,7 @@ function MonitorHistory({
                 <SelectItem value="asc">Сначала старые</SelectItem>
               </SelectContent>
             </Select>
-          </label>
+          </div>
         )}
       </div>
 
@@ -458,6 +488,8 @@ function MonitorHistory({
               <TableRow>
                 <TableHead>Время проверки</TableHead>
                 <TableHead>Результат</TableHead>
+                <TableHead>Время ответа</TableHead>
+                <TableHead className="text-right">Детали</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -483,24 +515,27 @@ function MonitorHistory({
               ? `${rangeStart}–${rangeEnd} из ${query.data.total}`
               : `Страница ${page + 1}`}
           </p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              disabled={page === 0}
-              onClick={() => setPage((current) => current - 1)}
-            >
-              <ArrowLeft aria-hidden="true" />
-              Назад
-            </Button>
-            <Button
-              type="button"
-              disabled={!canGoNext}
-              onClick={() => setPage((current) => current + 1)}
-            >
-              Далее
-              <ArrowRight aria-hidden="true" />
-            </Button>
-          </div>
+          {(query.data.total === undefined ||
+            query.data.total > historyPageSize) && (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                disabled={page === 0}
+                onClick={() => setPage((current) => current - 1)}
+              >
+                <ArrowLeft aria-hidden="true" />
+                Назад
+              </Button>
+              <Button
+                type="button"
+                disabled={!canGoNext}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Далее
+                <ArrowRight aria-hidden="true" />
+              </Button>
+            </div>
+          )}
         </nav>
       )}
     </section>
@@ -589,7 +624,7 @@ export function MonitoringSection({
     const pollState = pollStates[monitor.id];
     if (!pollState) return undefined;
     if (monitor.lastCheckedAt && monitor.lastCheckedAt !== pollState.baseline)
-      return "completed";
+      return undefined;
     if (monitorsQuery.dataUpdatedAt - pollState.startedAt >= pollingLimitMs)
       return "timeout";
     return "polling";

@@ -177,3 +177,13 @@ export function getProbeResultLabel(result?: ProbeExecutionResult | null) {
   if ("error" in result && result.error) return "Ошибка";
   return result.success === true ? "Успешно" : "Неуспешно";
 }
+
+export function getProbeKeyMetric(
+  type: MonitorResponseType | undefined,
+  result?: ProbeExecutionResult | null,
+) {
+  if (!result) return undefined;
+  return presentProbeResult(type, result).fields.find(
+    (field) => field.label === "Время ответа",
+  )?.value;
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatCompactMonitorTime,
   getMonitorTypeLabel,
+  getProbeKeyMetric,
   getProbeResultLabel,
   presentProbeResult,
 } from "./monitoring-presentation";
@@ -61,5 +62,15 @@ describe("monitoring presentation", () => {
     expect(
       formatCompactMonitorTime(value, new Date("2026-09-14T12:00:00Z")),
     ).toMatch(/^Сегодня, /);
+  });
+
+  it("shows a key metric only when typed probe data includes latency", () => {
+    expect(
+      getProbeKeyMetric("HTTP_CHECK", {
+        success: true,
+        data: { responseTimeMs: 739 },
+      }),
+    ).toBe("739 мс");
+    expect(getProbeKeyMetric("HTTP_CHECK", { success: true })).toBeUndefined();
   });
 });
