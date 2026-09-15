@@ -278,7 +278,7 @@ function SettingsEditor({
   );
 }
 
-export function SettingsSection({
+function SettingsSectionContent({
   scope,
   organizationId,
   resourceId,
@@ -525,7 +525,7 @@ export function SettingsSection({
           (row) => row.probeType === editing && row.effective,
         ) && (
           <SettingsEditor
-            key={editing}
+            key={`${organizationId}-${resourceId ?? "organization"}-${editing}`}
             row={query.data.find((row) => row.probeType === editing)!}
             pending={save.isPending}
             serverError={save.error}
@@ -544,5 +544,20 @@ export function SettingsSection({
           />
         )}
     </div>
+  );
+}
+
+export function SettingsSection(props: {
+  scope: SettingsScope;
+  organizationId: number;
+  resourceId?: number;
+  isManager: boolean;
+  enabled?: boolean;
+}) {
+  return (
+    <SettingsSectionContent
+      key={`${props.scope}-${props.organizationId}-${props.resourceId ?? "organization"}`}
+      {...props}
+    />
   );
 }

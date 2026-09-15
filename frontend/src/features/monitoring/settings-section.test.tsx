@@ -223,4 +223,28 @@ describe("Monitoring settings", () => {
       settingsKeys.organization(11),
     );
   });
+  it("drops an open editor when organization scope changes", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const view = render(
+      <QueryClientProvider client={client}>
+        <SettingsSection scope="organization" organizationId={11} isManager />
+      </QueryClientProvider>,
+    );
+    await user.click(
+      (await screen.findAllByRole("button", { name: "Переопределить" }))[0]!,
+    );
+    expect(screen.getByRole("form", { name: "Настройки HTTP" })).toBeVisible();
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <SettingsSection scope="organization" organizationId={12} isManager />
+      </QueryClientProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("form", { name: "Настройки HTTP" })).toBeNull(),
+    );
+    expect(vi.mocked(list3).mock.calls.some(([id]) => id === 12)).toBe(true);
+  });
 });
