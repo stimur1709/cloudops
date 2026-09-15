@@ -148,17 +148,22 @@ describe("ResourceDetailsPage", () => {
   });
 
   it("keeps lifecycle, health and server availability semantics distinct", async () => {
+    const user = userEvent.setup();
     renderPage();
     expect(
       await screen.findByRole("heading", { name: "payments-api" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("DEGRADED").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Активен").length).toBeGreaterThan(0);
+    expect(screen.getByText("https://payments.example.test")).toBeVisible();
+    expect(get5).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("tab", { name: "Здоровье" }));
     expect(await screen.findByText("63,66%")).toBeVisible();
     expect(screen.getByText("Покрытие")).toBeVisible();
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText("0%")).toBeNull();
-    expect(screen.getByText("https://payments.example.test")).toBeVisible();
+    expect(screen.queryByText("https://payments.example.test")).toBeNull();
   });
 
   it("keeps resource and monitor health distinct and allows members to run monitors", async () => {
@@ -176,10 +181,11 @@ describe("ResourceDetailsPage", () => {
       ]),
     );
     renderPage({ isManager: false });
+    const user = userEvent.setup();
 
-    expect(
-      await screen.findByRole("heading", { name: "HTTP_CHECK" }),
-    ).toBeVisible();
+    await user.click(await screen.findByRole("tab", { name: "Мониторинг" }));
+
+    expect(await screen.findByText("HTTP")).toBeVisible();
     expect(screen.getAllByText("DEGRADED").length).toBeGreaterThan(0);
     expect(screen.getAllByText("DOWN").length).toBeGreaterThan(0);
     expect(
@@ -190,6 +196,7 @@ describe("ResourceDetailsPage", () => {
   it("uses the selected period as exact from/to request parameters", async () => {
     const user = userEvent.setup();
     renderPage();
+    await user.click(await screen.findByRole("tab", { name: "Здоровье" }));
     await screen.findByText("63,66%");
     await user.click(
       screen.getByRole("combobox", { name: "Период доступности" }),
@@ -203,8 +210,10 @@ describe("ResourceDetailsPage", () => {
   });
 
   it("shows real newest-first transitions", async () => {
+    const user = userEvent.setup();
     renderPage();
-    expect(await screen.findByText("UP")).toBeVisible();
+    await user.click(await screen.findByRole("tab", { name: "Здоровье" }));
+    expect((await screen.findAllByText("UP")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("DEGRADED").length).toBeGreaterThan(0);
     expect(search2).toHaveBeenCalledWith(
       7,
@@ -218,7 +227,10 @@ describe("ResourceDetailsPage", () => {
   });
 
   it("loads monitoring only after the resource is confirmed in the organization", async () => {
+    const user = userEvent.setup();
     renderPage();
+    expect(list1).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole("tab", { name: "Мониторинг" }));
     expect(
       await screen.findByRole("heading", { name: "Мониторинг" }),
     ).toBeVisible();
@@ -226,13 +238,15 @@ describe("ResourceDetailsPage", () => {
       7,
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
-    expect(screen.getByRole("link", { name: "Мониторинг" })).toHaveAttribute(
-      "href",
-      "#monitoring",
+    expect(screen.getByRole("tab", { name: "Мониторинг" })).toHaveAttribute(
+      "aria-selected",
+      "true",
     );
+    expect(screen.queryByText("Конфигурация")).toBeNull();
   });
 
   it("keeps Overview visible when secondary health requests fail", async () => {
+    const user = userEvent.setup();
     vi.mocked(get5).mockRejectedValue(
       new ApiClientError("Failed", { kind: "network" }),
     );
@@ -243,6 +257,7 @@ describe("ResourceDetailsPage", () => {
     expect(
       await screen.findByText("https://payments.example.test"),
     ).toBeVisible();
+    await user.click(screen.getByRole("tab", { name: "Здоровье" }));
     expect(
       await screen.findByText(
         "Не удалось загрузить доступность за выбранный период.",
@@ -253,6 +268,7 @@ describe("ResourceDetailsPage", () => {
         "Не удалось загрузить историю изменений здоровья.",
       ),
     ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "payments-api" })).toBeVisible();
   });
 
   it("shows mutations only to managers and restores the list URL", async () => {
@@ -262,7 +278,9 @@ describe("ResourceDetailsPage", () => {
     });
     await screen.findByRole("heading", { name: "payments-api" });
     expect(screen.queryByRole("link", { name: "Редактировать" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Удалить" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Действия с ресурсом" }),
+    ).toBeNull();
     expect(
       screen.getByRole("link", { name: "К списку ресурсов" }),
     ).toHaveAttribute(
@@ -271,10 +289,17 @@ describe("ResourceDetailsPage", () => {
     );
     member.unmount();
 
+    const managerUser = userEvent.setup();
     renderPage();
     expect(
       await screen.findByRole("link", { name: "Редактировать" }),
     ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Удалить" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Удалить ресурс" })).toBeNull();
+    await managerUser.click(
+      screen.getByRole("button", { name: "Действия с ресурсом" }),
+    );
+    expect(
+      await screen.findByRole("menuitem", { name: "Удалить ресурс" }),
+    ).toBeVisible();
   });
 });

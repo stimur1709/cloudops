@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { presentProbeResult } from "./monitoring-presentation";
+import {
+  formatCompactMonitorTime,
+  getMonitorTypeLabel,
+  getProbeResultLabel,
+  presentProbeResult,
+} from "./monitoring-presentation";
 
 describe("monitoring presentation", () => {
   it("uses the monitor type to present a typed result", () => {
@@ -36,5 +41,25 @@ describe("monitoring presentation", () => {
       errorCode: "TIMEOUT",
       fields: [],
     });
+  });
+
+  it("uses friendly monitor names and compact overview states", () => {
+    expect(getMonitorTypeLabel("HTTP_CHECK")).toBe("HTTP");
+    expect(getMonitorTypeLabel("PING")).toBe("Ping");
+    expect(getProbeResultLabel(null)).toBe("Не выполнялась");
+    expect(getProbeResultLabel({ success: true })).toBe("Успешно");
+    expect(
+      getProbeResultLabel({
+        success: false,
+        error: { code: "TIMEOUT", message: "Timed out" },
+      }),
+    ).toBe("Ошибка");
+  });
+
+  it("formats same-day timestamps without repeating date and timezone", () => {
+    const value = "2026-09-14T10:05:00Z";
+    expect(
+      formatCompactMonitorTime(value, new Date("2026-09-14T12:00:00Z")),
+    ).toMatch(/^Сегодня, /);
   });
 });

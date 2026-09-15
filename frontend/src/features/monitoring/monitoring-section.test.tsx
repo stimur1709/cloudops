@@ -73,16 +73,23 @@ describe("MonitoringSection", () => {
     const user = userEvent.setup();
     renderSection();
 
-    expect(await screen.findByText("HTTP_CHECK")).toBeVisible();
+    expect(await screen.findByText("HTTP")).toBeVisible();
     expect(screen.getByText("DOWN")).toBeVisible();
-    await user.click(screen.getAllByText("Технические детали")[0]!);
-    expect(screen.getAllByText("503")[0]!).toBeVisible();
-    expect(
-      screen.getAllByText(
-        "Проверка завершилась с отрицательным результатом.",
-      )[0]!,
-    ).toBeVisible();
-    expect(await screen.findByText("История HTTP_CHECK")).toBeVisible();
+    expect(screen.getByText("Неуспешно")).toBeVisible();
+    await user.click(screen.getByText("Технические детали"));
+    expect(screen.getByText("HTTP_CHECK")).toBeVisible();
+    expect(screen.getByText("503")).toBeVisible();
+    expect(screen.queryByText("История HTTP")).toBeNull();
+
+    const historyButton = screen.getByRole("button", {
+      name: "Показать историю HTTP",
+    });
+    await user.click(historyButton);
+    expect(historyButton.closest("tr")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await screen.findByText("История HTTP")).toBeVisible();
     expect(searchResults).toHaveBeenCalledWith(
       21,
       {
@@ -113,11 +120,10 @@ describe("MonitoringSection", () => {
     renderSection();
 
     expect(
-      await screen.findAllByText("Проверка ещё не выполнялась."),
-    ).toHaveLength(2);
-    expect(
-      screen.getByText("Периодический запуск не запланирован"),
-    ).toBeVisible();
+      await screen.findByText("Проверка ещё не выполнялась"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Не выполнялась")).toBeInTheDocument();
+    expect(screen.getByText("Не запланирован")).toBeInTheDocument();
     expect(screen.getByText("UNKNOWN")).toBeVisible();
   });
 
@@ -130,10 +136,36 @@ describe("MonitoringSection", () => {
 
     await waitFor(() => expect(run1).toHaveBeenCalledWith(21));
     expect(
-      await screen.findByText("Запуск запрошен, ожидаем новый результат…"),
-    ).toBeVisible();
+      await screen.findByRole("button", { name: "Запуск запрошен…" }),
+    ).toBeDisabled();
     await waitFor(() => expect(list1).toHaveBeenCalledTimes(2));
-    expect(screen.getByText(formatDateTime(monitor.nextRunAt))).toBeVisible();
+    expect(
+      screen.getByTitle(formatDateTime(monitor.nextRunAt)),
+    ).toHaveAttribute("datetime", monitor.nextRunAt);
+  });
+
+  it("does not block manual runs for other monitors", async () => {
+    const user = userEvent.setup();
+    vi.mocked(list1).mockImplementation(() =>
+      ok([
+        monitor,
+        {
+          ...monitor,
+          id: 22,
+          type: "DNS_CHECK" as const,
+          healthStatus: "UP" as const,
+        },
+      ]),
+    );
+    vi.mocked(run1).mockImplementationOnce(() => new Promise<never>(() => {}));
+    renderSection();
+
+    const runButtons = await screen.findAllByRole("button", {
+      name: "Запустить сейчас",
+    });
+    await user.click(runButtons[0]!);
+    await waitFor(() => expect(run1).toHaveBeenCalledWith(21));
+    expect(runButtons[1]).toBeEnabled();
   });
 
   it("keeps controlled run and history conflicts local to their monitor", async () => {
@@ -157,8 +189,14 @@ describe("MonitoringSection", () => {
     );
     renderSection();
 
+    await user.click(
+      await screen.findByRole("button", { name: "Показать историю HTTP" }),
+    );
     expect(await screen.findByText("История не включена")).toBeVisible();
-    expect(screen.getByText("HTTP_CHECK")).toBeVisible();
+    expect(
+      screen.queryByRole("combobox", { name: "Сортировка истории" }),
+    ).toBeNull();
+    expect(screen.getByText("HTTP")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Запустить сейчас" }));
     expect(
       await screen.findByText(

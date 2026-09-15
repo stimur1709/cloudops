@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
+  Ellipsis,
   FolderSearch,
   History,
   LoaderCircle,
@@ -31,6 +32,12 @@ import {
 import { Alert } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,6 +45,12 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Skeleton } from "../../components/ui/skeleton";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
 import { MonitoringSection } from "../monitoring/monitoring-section";
 import { useOrganization } from "../organization/organization-context";
 import {
@@ -57,6 +70,11 @@ import {
 } from "./resource-details-format";
 
 const eventPageSize = 10;
+type ResourceTab = "overview" | "health" | "monitoring";
+
+function isResourceTab(value: string | null): value is ResourceTab {
+  return value === "overview" || value === "health" || value === "monitoring";
+}
 const configLabels: Record<string, string> = {
   host: "Хост",
   port: "Порт",
@@ -135,7 +153,7 @@ function Metric({
   hint?: string;
 }) {
   return (
-    <div className="rounded-panel border border-border bg-surface p-4">
+    <div className="p-4">
       <p className="text-label text-foreground-muted">{label}</p>
       <p className="mt-2 font-mono text-metric tabular-nums text-foreground">
         {value}
@@ -150,7 +168,7 @@ function Metric({
 function AvailabilitySummary({ data }: { data: ResourceAvailabilityResponse }) {
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <Metric
           label="Доступность"
           value={formatPercent(data.availabilityPercent)}
@@ -217,6 +235,8 @@ function HealthEvents({
     query.data?.total !== undefined
       ? (page + 1) * eventPageSize < query.data.total
       : (query.data?.items.length ?? 0) === eventPageSize;
+  const rangeStart = page * eventPageSize + 1;
+  const rangeEnd = rangeStart + (query.data?.items.length ?? 0) - 1;
 
   if (query.isPending)
     return (
@@ -259,7 +279,9 @@ function HealthEvents({
         className="flex items-center justify-between gap-3"
       >
         <p className="text-caption text-foreground-muted">
-          Страница {page + 1}
+          {query.data.total !== undefined
+            ? `${rangeStart}–${rangeEnd} из ${query.data.total}`
+            : `Страница ${page + 1}`}
         </p>
         <div className="flex gap-2">
           <Button
@@ -284,7 +306,7 @@ function HealthEvents({
 
 function HealthEventRow({ event }: { event: ResourceHealthEventResponse }) {
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 p-4">
+    <li className="flex flex-wrap items-center justify-between gap-3 p-3">
       <div className="flex items-center gap-3">
         <HealthStatus status={event.fromStatus} />
         <ArrowRight
@@ -330,6 +352,10 @@ export function ResourceDetailsPage() {
   const period: AvailabilityPeriod = isAvailabilityPeriod(periodValue)
     ? periodValue
     : "24h";
+  const tabValue = searchParams.get("tab");
+  const activeTab: ResourceTab = isResourceTab(tabValue)
+    ? tabValue
+    : "overview";
   const [rangeEnd] = useState(() => new Date());
   const range = useMemo(
     () => buildAvailabilityRange(period, rangeEnd),
@@ -356,7 +382,7 @@ export function ResourceDetailsPage() {
     ),
     queryFn: ({ signal }) =>
       getResourceAvailability(resourceId, range.from, range.to, signal),
-    enabled: belongsToOrganization,
+    enabled: belongsToOrganization && activeTab === "health",
   });
 
   if (!Number.isFinite(resourceId))
@@ -438,177 +464,186 @@ export function ResourceDetailsPage() {
                   Редактировать
                 </Link>
               </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 aria-hidden="true" />
-                Удалить
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Действия с ресурсом"
+                  >
+                    <Ellipsis aria-hidden="true" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="text-status-down"
+                    onSelect={() => setDeleteOpen(true)}
+                  >
+                    <Trash2 aria-hidden="true" className="size-icon" />
+                    Удалить ресурс
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>
-        <nav
-          aria-label="Разделы ресурса"
-          className="flex gap-4 border-b border-border"
-        >
-          <a
-            href="#overview"
-            className="border-b-2 border-product-accent px-1 py-2 text-label text-foreground"
-          >
-            Обзор
-          </a>
-          <a
-            href="#health"
-            className="px-1 py-2 text-label text-foreground-muted hover:text-foreground"
-          >
-            Здоровье
-          </a>
-          <a
-            href="#monitoring"
-            className="px-1 py-2 text-label text-foreground-muted hover:text-foreground"
-          >
-            Мониторинг
-          </a>
-        </nav>
       </header>
 
-      <section
-        id="overview"
-        aria-labelledby="overview-heading"
-        className="scroll-mt-4 space-y-4"
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          const next = new URLSearchParams(searchParams);
+          if (value === "overview") next.delete("tab");
+          else next.set("tab", value);
+          setSearchParams(next, { replace: true });
+        }}
       >
-        <h2 id="overview-heading" className="text-section-title">
-          Обзор
-        </h2>
-        <div className="rounded-panel border border-border bg-surface p-4">
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <DefinitionItem label="Имя">{resource.name ?? "—"}</DefinitionItem>
-            <DefinitionItem label="Тип">
-              {getResourceTypeLabel(resource.type)}
-            </DefinitionItem>
-            <DefinitionItem label="Статус жизненного цикла">
-              <LifecycleStatus status={resource.status} />
-            </DefinitionItem>
-            <DefinitionItem label="Текущее здоровье">
-              <HealthStatus status={resource.healthStatus} />
-            </DefinitionItem>
-            <DefinitionItem label="ID ресурса" technical>
-              {resource.id ?? "—"}
-            </DefinitionItem>
-            <DefinitionItem label="ID организации" technical>
-              {resource.organizationId ?? "—"}
-            </DefinitionItem>
-          </dl>
-        </div>
-        <div className="rounded-panel border border-border bg-surface p-4">
-          <h3 className="mb-4 text-card-title">Конфигурация</h3>
-          <ConfigDetails resource={resource} />
-        </div>
-        <div className="rounded-panel border border-border bg-surface p-4">
-          <h3 className="mb-4 text-card-title">Метаданные записи</h3>
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <DefinitionItem label="Создано" technical>
-              {formatDateTime(resource.createdAt)}
-            </DefinitionItem>
-            <DefinitionItem label="Изменено" technical>
-              {formatDateTime(resource.updatedAt)}
-            </DefinitionItem>
-          </dl>
-        </div>
-      </section>
+        <TabsList aria-label="Разделы ресурса">
+          <TabsTrigger value="overview">Обзор</TabsTrigger>
+          <TabsTrigger value="health">Здоровье</TabsTrigger>
+          <TabsTrigger value="monitoring">Мониторинг</TabsTrigger>
+        </TabsList>
 
-      <section
-        id="health"
-        aria-labelledby="health-heading"
-        className="scroll-mt-4 space-y-6"
-      >
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 id="health-heading" className="text-section-title">
-              Здоровье
+        <TabsContent value="overview">
+          <section aria-labelledby="overview-heading" className="space-y-6">
+            <h2 id="overview-heading" className="sr-only">
+              Обзор
             </h2>
-            <p className="mt-1 text-body text-foreground-muted">
-              Серверная сводка доступности и реальные переходы статуса.
-            </p>
-          </div>
-          <label className="w-36">
-            <span className="mb-1 block text-label">Период</span>
-            <Select
-              value={period}
-              onValueChange={(value) => {
-                const nextPeriod = isAvailabilityPeriod(value) ? value : "24h";
-                const next = new URLSearchParams(searchParams);
-                if (nextPeriod === "24h") next.delete("period");
-                else next.set("period", nextPeriod);
-                setSearchParams(next, { replace: true });
-              }}
-            >
-              <SelectTrigger className="w-full" aria-label="Период доступности">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="24h">24 часа</SelectItem>
-                <SelectItem value="7d">7 дней</SelectItem>
-                <SelectItem value="30d">30 дней</SelectItem>
-              </SelectContent>
-            </Select>
-          </label>
-        </div>
-        {availabilityQuery.isPending ? (
-          <div
-            className="grid gap-3 sm:grid-cols-3"
-            aria-label="Загрузка доступности"
-            aria-busy="true"
-          >
-            <Skeleton className="h-28" />
-            <Skeleton className="h-28" />
-            <Skeleton className="h-28" />
-          </div>
-        ) : availabilityQuery.isError ? (
-          <div className="space-y-3">
-            <Alert>Не удалось загрузить доступность за выбранный период.</Alert>
-            <Button
-              type="button"
-              onClick={() => void availabilityQuery.refetch()}
-            >
-              Повторить
-            </Button>
-          </div>
-        ) : (
-          <AvailabilitySummary data={availabilityQuery.data} />
-        )}
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <DefinitionItem label="Имя">
+                {resource.name ?? "—"}
+              </DefinitionItem>
+              <DefinitionItem label="Тип">
+                {getResourceTypeLabel(resource.type)}
+              </DefinitionItem>
+              <DefinitionItem label="Статус жизненного цикла">
+                <LifecycleStatus status={resource.status} />
+              </DefinitionItem>
+              <DefinitionItem label="Текущее здоровье">
+                <HealthStatus status={resource.healthStatus} />
+              </DefinitionItem>
+            </dl>
 
-        <div className="space-y-4">
-          <h3 className="text-card-title">Переходы здоровья</h3>
-          <HealthEvents
-            resourceId={resourceId}
-            organizationId={organizationId}
-            enabled={belongsToOrganization}
-          />
-        </div>
-      </section>
+            <section className="rounded-panel border border-border bg-surface p-4">
+              <h3 className="mb-4 text-card-title">Конфигурация</h3>
+              <ConfigDetails resource={resource} />
+            </section>
 
-      <section
-        id="monitoring"
-        aria-labelledby="monitoring-heading"
-        className="scroll-mt-4 space-y-6"
-      >
-        <div>
-          <h2 id="monitoring-heading" className="text-section-title">
-            Мониторинг
-          </h2>
-          <p className="mt-1 text-body text-foreground-muted">
-            Текущее состояние проверок, ручной запуск и сохранённая история.
-          </p>
-        </div>
-        <MonitoringSection
-          organizationId={organizationId}
-          resourceId={resourceId}
-          enabled={belongsToOrganization}
-        />
-      </section>
+            <section className="border-t border-border pt-4">
+              <h3 className="text-card-title">Технические данные</h3>
+              <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                <DefinitionItem label="ID ресурса" technical>
+                  {resource.id ?? "—"}
+                </DefinitionItem>
+                <DefinitionItem label="ID организации" technical>
+                  {resource.organizationId ?? "—"}
+                </DefinitionItem>
+                <DefinitionItem label="Создано" technical>
+                  {formatDateTime(resource.createdAt)}
+                </DefinitionItem>
+                <DefinitionItem label="Изменено" technical>
+                  {formatDateTime(resource.updatedAt)}
+                </DefinitionItem>
+              </dl>
+            </section>
+          </section>
+        </TabsContent>
+
+        <TabsContent value="health">
+          <section aria-labelledby="health-heading" className="space-y-6">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 id="health-heading" className="text-section-title">
+                  Здоровье
+                </h2>
+                <p className="mt-1 text-body text-foreground-muted">
+                  Серверная сводка доступности и реальные переходы статуса.
+                </p>
+              </div>
+              <label className="w-36">
+                <span className="mb-1 block text-label">Период</span>
+                <Select
+                  value={period}
+                  onValueChange={(value) => {
+                    const nextPeriod = isAvailabilityPeriod(value)
+                      ? value
+                      : "24h";
+                    const next = new URLSearchParams(searchParams);
+                    if (nextPeriod === "24h") next.delete("period");
+                    else next.set("period", nextPeriod);
+                    setSearchParams(next, { replace: true });
+                  }}
+                >
+                  <SelectTrigger
+                    className="w-full"
+                    aria-label="Период доступности"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">24 часа</SelectItem>
+                    <SelectItem value="7d">7 дней</SelectItem>
+                    <SelectItem value="30d">30 дней</SelectItem>
+                  </SelectContent>
+                </Select>
+              </label>
+            </div>
+            {availabilityQuery.isPending ? (
+              <div
+                className="grid gap-3 sm:grid-cols-3"
+                aria-label="Загрузка доступности"
+                aria-busy="true"
+              >
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+              </div>
+            ) : availabilityQuery.isError ? (
+              <div className="space-y-3">
+                <Alert>
+                  Не удалось загрузить доступность за выбранный период.
+                </Alert>
+                <Button
+                  type="button"
+                  onClick={() => void availabilityQuery.refetch()}
+                >
+                  Повторить
+                </Button>
+              </div>
+            ) : (
+              <AvailabilitySummary data={availabilityQuery.data} />
+            )}
+
+            <div className="space-y-4">
+              <h3 className="text-card-title">Переходы здоровья</h3>
+              <HealthEvents
+                resourceId={resourceId}
+                organizationId={organizationId}
+                enabled={belongsToOrganization}
+              />
+            </div>
+          </section>
+        </TabsContent>
+
+        <TabsContent value="monitoring">
+          <section aria-labelledby="monitoring-heading" className="space-y-6">
+            <div>
+              <h2 id="monitoring-heading" className="text-section-title">
+                Мониторинг
+              </h2>
+              <p className="mt-1 text-body text-foreground-muted">
+                Текущее состояние проверок, ручной запуск и сохранённая история.
+              </p>
+            </div>
+            <MonitoringSection
+              organizationId={organizationId}
+              resourceId={resourceId}
+              enabled={belongsToOrganization}
+            />
+          </section>
+        </TabsContent>
+      </Tabs>
 
       {isManager && (
         <ResourceDeleteDialog

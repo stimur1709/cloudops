@@ -26,6 +26,7 @@
     "@radix-ui/react-select": "^2.3.7",
     "@radix-ui/react-separator": "latest",
     "@radix-ui/react-slot": "latest",
+    "@radix-ui/react-tabs": "^1.1.21",
     "@radix-ui/react-tooltip": "latest",
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-table": "^8.21.3",

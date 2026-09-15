@@ -21,6 +21,46 @@ export interface ProbeResultPresentation {
   errorCode?: string;
 }
 
+const monitorTypeLabels: Record<MonitorResponseType, string> = {
+  HTTP_CHECK: "HTTP",
+  PORT_CHECK: "Port",
+  DNS_CHECK: "DNS",
+  PING: "Ping",
+  TLS_CHECK: "TLS",
+  SSH_CHECK: "SSH",
+};
+
+export function getMonitorTypeLabel(type?: MonitorResponseType) {
+  return type ? monitorTypeLabels[type] : "Неизвестная проверка";
+}
+
+export function formatCompactMonitorTime(
+  value?: string | null,
+  now = new Date(),
+) {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  const time = new Intl.DateTimeFormat("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
+  if (sameDay) return `Сегодня, ${time}`;
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "short",
+    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
+}
+
 function present(value: unknown): string | undefined {
   if (value === null || value === undefined || value === "") return undefined;
   if (Array.isArray(value)) return value.length ? value.join(", ") : undefined;
@@ -130,4 +170,10 @@ export function presentProbeResult(
       : "Проверка завершилась с отрицательным результатом.",
     fields: "data" in result ? dataFields(type, result.data) : [],
   };
+}
+
+export function getProbeResultLabel(result?: ProbeExecutionResult | null) {
+  if (!result) return "Не выполнялась";
+  if ("error" in result && result.error) return "Ошибка";
+  return result.success === true ? "Успешно" : "Неуспешно";
 }
