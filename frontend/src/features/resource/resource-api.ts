@@ -98,6 +98,14 @@ export const resourceKeys = {
       "health-events",
       page,
     ] as const,
+  healthEventsScope: (organizationId: number, resourceId: number) =>
+    [
+      "resources",
+      organizationId,
+      "detail",
+      resourceId,
+      "health-events",
+    ] as const,
 };
 
 export function buildResourceSearchRequest(

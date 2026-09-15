@@ -1,0 +1,393 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiClientError } from "../../api/client/api-error";
+import { list1, run1, searchResults } from "../../api/generated/cloud-ops";
+import { MonitoringSection } from "./monitoring-section";
+import { formatDateTime } from "../resource/resource-details-format";
+
+vi.mock("../../api/generated/cloud-ops", () => ({
+  list1: vi.fn(),
+  run1: vi.fn(),
+  searchResults: vi.fn(),
+}));
+
+const monitor = {
+  id: 21,
+  resourceId: 7,
+  type: "HTTP_CHECK" as const,
+  healthStatus: "DOWN" as const,
+  lastCheckedAt: "2026-09-14T10:00:00Z",
+  nextRunAt: "2026-09-14T10:05:00Z",
+  lastResult: {
+    success: false,
+    data: {
+      url: "https://payments.example.test",
+      statusCode: 503,
+      expectedStatus: 204,
+      responseTimeMs: 42,
+      matchedExpectedStatus: false,
+    },
+  },
+};
+
+function ok<T, S extends 200 | 202 = 200>(data: T, status: S = 200 as S) {
+  return Promise.resolve({ data, status, headers: new Headers() });
+}
+
+function renderSection() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MonitoringSection organizationId={11} resourceId={7} enabled />
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(() => {
+  vi.mocked(list1).mockReset();
+  vi.mocked(run1).mockReset();
+  vi.mocked(searchResults).mockReset();
+  vi.mocked(list1).mockImplementation(() => ok([monitor]));
+  vi.mocked(run1).mockImplementation(() => ok(undefined, 202));
+  vi.mocked(searchResults).mockImplementation(() =>
+    ok({
+      items: [
+        {
+          id: 31,
+          monitorId: 21,
+          checkedAt: "2026-09-14T10:00:00Z",
+          result: monitor.lastResult,
+        },
+      ],
+      total: 1,
+    }),
+  );
+});
+
+describe("MonitoringSection", () => {
+  it("loads monitor health, typed last result and server-side history", async () => {
+    const user = userEvent.setup();
+    renderSection();
+
+    expect(await screen.findByText("HTTP")).toBeVisible();
+    expect(screen.getByText("DOWN")).toBeVisible();
+    expect(screen.getByText("Неуспешно")).toBeVisible();
+    expect(screen.queryByText("HTTP_CHECK")).toBeNull();
+    expect(screen.queryByText("503")).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Технические детали" }),
+    );
+    expect(screen.getByText("HTTP_CHECK")).toBeVisible();
+    expect(screen.getByText("503")).toBeVisible();
+    expect(screen.queryByText("История HTTP")).toBeNull();
+
+    const historyButton = screen.getByRole("button", {
+      name: "Показать историю HTTP",
+    });
+    await user.click(historyButton);
+    expect(historyButton.closest("tr")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await screen.findByText("История HTTP")).toBeVisible();
+    expect(screen.getAllByText("42 мс").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Подробнее" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.queryByRole("button", { name: "Назад" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Далее" })).toBeNull();
+    expect(screen.getByText("1–1 из 1")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Подробнее" }));
+    expect(screen.getAllByText("503")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Скрыть детали" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getAllByTitle(formatDateTime(monitor.lastCheckedAt))[0],
+    ).toHaveTextContent(/^(Сегодня|\d)/);
+    expect(searchResults).toHaveBeenCalledWith(
+      21,
+      {
+        start: 0,
+        size: 10,
+        sort: [{ field: "checkedAt", order: "DESC" }],
+        getTotal: true,
+      },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it("shows never-run and unscheduled states without treating them as failures", async () => {
+    vi.mocked(list1).mockImplementation(() =>
+      ok([
+        {
+          ...monitor,
+          healthStatus: "UNKNOWN" as const,
+          lastCheckedAt: null,
+          lastResult: null,
+          nextRunAt: null,
+        },
+      ]),
+    );
+    vi.mocked(searchResults).mockImplementation(() =>
+      ok({ items: [], total: 0 }),
+    );
+    renderSection();
+
+    expect(
+      await screen.findByText("Проверка ещё не выполнялась"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Не выполнялась")).toBeInTheDocument();
+    expect(screen.getByText("Не запланирован")).toBeInTheDocument();
+    expect(screen.getByText("UNKNOWN")).toBeVisible();
+  });
+
+  it("keeps historical technical fields closed until that result is expanded", async () => {
+    const user = userEvent.setup();
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Показать историю HTTP" }),
+    );
+
+    expect(await screen.findByText("История HTTP")).toBeVisible();
+    expect(screen.getByText("42 мс")).toBeVisible();
+    expect(screen.queryByText("503")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Подробнее" }));
+    expect(screen.getByText("503")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Скрыть детали" }));
+    expect(screen.queryByText("503")).toBeNull();
+  });
+
+  it("keeps the confirmed history page visible until the next page arrives", async () => {
+    const user = userEvent.setup();
+    const firstItems = Array.from({ length: 10 }, (_, index) => ({
+      id: index + 101,
+      monitorId: 21,
+      checkedAt: `2026-09-14T10:${String(index).padStart(2, "0")}:00Z`,
+      result: monitor.lastResult,
+    }));
+    type SearchResult = Awaited<ReturnType<typeof searchResults>>;
+    let resolveNext: ((value: SearchResult) => void) | undefined;
+    vi.mocked(searchResults)
+      .mockImplementationOnce(() => ok({ items: firstItems, total: 21 }))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNext = resolve;
+          }),
+      );
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Показать историю HTTP" }),
+    );
+    expect(await screen.findByText("1–10 из 21")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    expect(screen.getByText("Обновление истории…")).toBeVisible();
+    expect(screen.getByText("1–10 из 21")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Далее" })).toBeDisabled();
+    expect(screen.queryByLabelText("Загрузка истории монитора")).toBeNull();
+    expect(
+      screen.getAllByTitle(formatDateTime(firstItems[0]!.checkedAt))[0],
+    ).toBeVisible();
+
+    resolveNext?.(
+      (await ok({
+        items: [
+          {
+            id: 201,
+            monitorId: 21,
+            checkedAt: "2026-09-13T10:00:00Z",
+            result: monitor.lastResult,
+          },
+        ],
+        total: 21,
+      })) as SearchResult,
+    );
+    expect(await screen.findByText("11–11 из 21")).toBeVisible();
+    expect(screen.queryByText("Обновление истории…")).toBeNull();
+  });
+
+  it("keeps history rows during a server-side sort transition", async () => {
+    const user = userEvent.setup();
+    type SearchResult = Awaited<ReturnType<typeof searchResults>>;
+    let resolveNext: ((value: SearchResult) => void) | undefined;
+    vi.mocked(searchResults)
+      .mockImplementationOnce(() =>
+        ok({
+          items: [
+            {
+              id: 301,
+              monitorId: 21,
+              checkedAt: "2026-09-14T10:00:00Z",
+              result: monitor.lastResult,
+            },
+          ],
+          total: 1,
+        }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNext = resolve;
+          }),
+      );
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Показать историю HTTP" }),
+    );
+    await screen.findByText("1–1 из 1");
+    await user.click(
+      screen.getByRole("combobox", { name: "Сортировка истории" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Сначала старые" }));
+
+    expect(screen.getByText("Обновление истории…")).toBeVisible();
+    expect(screen.getByText("1–1 из 1")).toBeVisible();
+    expect(screen.queryByLabelText("Загрузка истории монитора")).toBeNull();
+    expect(searchResults).toHaveBeenLastCalledWith(
+      21,
+      expect.objectContaining({
+        sort: [{ field: "checkedAt", order: "ASC" }],
+      }),
+      expect.anything(),
+    );
+    resolveNext?.((await ok({ items: [], total: 0 })) as SearchResult);
+  });
+
+  it("requests a manual run, keeps the periodic schedule and refetches", async () => {
+    const user = userEvent.setup();
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Запустить сейчас" }),
+    );
+
+    await waitFor(() => expect(run1).toHaveBeenCalledWith(21));
+    expect(
+      await screen.findByRole("button", { name: "Запуск запрошен…" }),
+    ).toBeDisabled();
+    await waitFor(() => expect(list1).toHaveBeenCalledTimes(2));
+    expect(
+      screen.getByTitle(formatDateTime(monitor.nextRunAt)),
+    ).toHaveAttribute("datetime", monitor.nextRunAt);
+  });
+
+  it("does not block manual runs for other monitors", async () => {
+    const user = userEvent.setup();
+    vi.mocked(list1).mockImplementation(() =>
+      ok([
+        monitor,
+        {
+          ...monitor,
+          id: 22,
+          type: "DNS_CHECK" as const,
+          healthStatus: "UP" as const,
+        },
+      ]),
+    );
+    vi.mocked(run1).mockImplementationOnce(() => new Promise<never>(() => {}));
+    renderSection();
+
+    const runButtons = await screen.findAllByRole("button", {
+      name: "Запустить сейчас",
+    });
+    await user.click(runButtons[0]!);
+    await waitFor(() => expect(run1).toHaveBeenCalledWith(21));
+    expect(runButtons[1]).toBeEnabled();
+  });
+
+  it("removes completion feedback when a confirmed new result updates the row", async () => {
+    const user = userEvent.setup();
+    vi.mocked(list1)
+      .mockImplementationOnce(() => ok([monitor]))
+      .mockImplementation(() =>
+        ok([
+          {
+            ...monitor,
+            healthStatus: "UP" as const,
+            lastCheckedAt: "2026-09-14T10:01:00Z",
+            lastResult: { success: true, data: monitor.lastResult.data },
+          },
+        ]),
+      );
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Запустить сейчас" }),
+    );
+
+    expect(await screen.findByText("UP")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Запустить сейчас" }),
+    ).toBeEnabled();
+    expect(screen.queryByText("Получен новый результат.")).toBeNull();
+    expect(
+      screen.getByTitle(formatDateTime(monitor.nextRunAt)),
+    ).toHaveAttribute("datetime", monitor.nextRunAt);
+  });
+
+  it("keeps controlled run and history conflicts local to their monitor", async () => {
+    const user = userEvent.setup();
+    vi.mocked(run1).mockRejectedValue(
+      new ApiClientError("Disabled", {
+        kind: "conflict",
+        status: 409,
+        details: { code: "MONITOR_DISABLED", message: "Disabled" } as never,
+      }),
+    );
+    vi.mocked(searchResults).mockRejectedValue(
+      new ApiClientError("History disabled", {
+        kind: "conflict",
+        status: 409,
+        details: {
+          code: "MONITOR_HISTORY_NOT_ENABLED",
+          message: "History disabled",
+        } as never,
+      }),
+    );
+    renderSection();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Показать историю HTTP" }),
+    );
+    expect(await screen.findByText("История не включена")).toBeVisible();
+    expect(
+      screen.queryByRole("combobox", { name: "Сортировка истории" }),
+    ).toBeNull();
+    expect(screen.getByText("HTTP")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Запустить сейчас" }));
+    expect(
+      await screen.findByText(
+        "Монитор отключён. Измените настройки мониторинга перед запуском.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("DOWN")).toBeVisible();
+  });
+
+  it("shows incompatible conflicts without applying frontend compatibility rules", async () => {
+    const user = userEvent.setup();
+    vi.mocked(run1).mockRejectedValue(
+      new ApiClientError("Incompatible", {
+        kind: "conflict",
+        status: 409,
+        details: {
+          code: "MONITOR_INCOMPATIBLE",
+          message: "Incompatible",
+        } as never,
+      }),
+    );
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Запустить сейчас" }),
+    );
+    expect(
+      await screen.findByText(
+        "Монитор несовместим с текущей конфигурацией ресурса.",
+      ),
+    ).toBeVisible();
+  });
+});

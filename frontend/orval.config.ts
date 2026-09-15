@@ -22,6 +22,8 @@ export default defineConfig({
           "resource-controller",
           "resource-availability-controller",
           "resource-health-event-controller",
+          "resource-monitor-controller",
+          "monitor-controller",
         ],
       },
     },

@@ -4,7 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../api/client/api-error";
-import { delete2, get1, get5, search2 } from "../../api/generated/cloud-ops";
+import {
+  delete2,
+  get1,
+  get5,
+  list1,
+  run1,
+  search2,
+  searchResults,
+} from "../../api/generated/cloud-ops";
 import { OrganizationContext } from "../organization/organization-context";
 import { ResourceDetailsPage } from "./resource-details-page";
 
@@ -12,7 +20,10 @@ vi.mock("../../api/generated/cloud-ops", () => ({
   delete2: vi.fn(),
   get1: vi.fn(),
   get5: vi.fn(),
+  list1: vi.fn(),
+  run1: vi.fn(),
   search2: vi.fn(),
+  searchResults: vi.fn(),
 }));
 
 const resource = {
@@ -82,6 +93,9 @@ beforeEach(() => {
   vi.mocked(get1).mockReset();
   vi.mocked(get5).mockReset();
   vi.mocked(search2).mockReset();
+  vi.mocked(list1).mockReset();
+  vi.mocked(run1).mockReset();
+  vi.mocked(searchResults).mockReset();
   vi.mocked(delete2).mockReset();
   vi.mocked(get1).mockImplementation(() => ok(resource));
   vi.mocked(get5).mockImplementation(() =>
@@ -98,6 +112,10 @@ beforeEach(() => {
       availabilityPercent: null as unknown as number,
       coveragePercent: 63.66,
     }),
+  );
+  vi.mocked(list1).mockImplementation(() => ok([]));
+  vi.mocked(searchResults).mockImplementation(() =>
+    ok({ items: [], total: 0 }),
   );
   vi.mocked(search2).mockImplementation(() =>
     ok({
@@ -126,25 +144,59 @@ describe("ResourceDetailsPage", () => {
     expect(screen.queryByText("payments-api")).toBeNull();
     expect(get5).not.toHaveBeenCalled();
     expect(search2).not.toHaveBeenCalled();
+    expect(list1).not.toHaveBeenCalled();
   });
 
   it("keeps lifecycle, health and server availability semantics distinct", async () => {
+    const user = userEvent.setup();
     renderPage();
     expect(
       await screen.findByRole("heading", { name: "payments-api" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("DEGRADED").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Активен").length).toBeGreaterThan(0);
+    expect(screen.getByText("https://payments.example.test")).toBeVisible();
+    expect(get5).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("tab", { name: "Здоровье" }));
     expect(await screen.findByText("63,66%")).toBeVisible();
     expect(screen.getByText("Покрытие")).toBeVisible();
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText("0%")).toBeNull();
-    expect(screen.getByText("https://payments.example.test")).toBeVisible();
+    expect(screen.queryByText("https://payments.example.test")).toBeNull();
+  });
+
+  it("keeps resource and monitor health distinct and allows members to run monitors", async () => {
+    vi.mocked(list1).mockImplementation(() =>
+      ok([
+        {
+          id: 21,
+          resourceId: 7,
+          type: "HTTP_CHECK" as const,
+          healthStatus: "DOWN" as const,
+          lastCheckedAt: null,
+          lastResult: null,
+          nextRunAt: null,
+        },
+      ]),
+    );
+    renderPage({ isManager: false });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("tab", { name: "Мониторинг" }));
+
+    expect(await screen.findByText("HTTP")).toBeVisible();
+    expect(screen.getAllByText("DEGRADED").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("DOWN").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("button", { name: "Запустить сейчас" }),
+    ).toBeVisible();
   });
 
   it("uses the selected period as exact from/to request parameters", async () => {
     const user = userEvent.setup();
     renderPage();
+    await user.click(await screen.findByRole("tab", { name: "Здоровье" }));
     await screen.findByText("63,66%");
     await user.click(
       screen.getByRole("combobox", { name: "Период доступности" }),
@@ -158,8 +210,10 @@ describe("ResourceDetailsPage", () => {
   });
 
   it("shows real newest-first transitions", async () => {
+    const user = userEvent.setup();
     renderPage();
-    expect(await screen.findByText("UP")).toBeVisible();
+    await user.click(await screen.findByRole("tab", { name: "Здоровье" }));
+    expect((await screen.findAllByText("UP")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("DEGRADED").length).toBeGreaterThan(0);
     expect(search2).toHaveBeenCalledWith(
       7,
@@ -172,7 +226,72 @@ describe("ResourceDetailsPage", () => {
     );
   });
 
+  it("keeps confirmed health transitions visible while changing page", async () => {
+    const user = userEvent.setup();
+    const firstItems = Array.from({ length: 10 }, (_, index) => ({
+      id: index + 41,
+      fromStatus: "UP" as const,
+      toStatus: "DEGRADED" as const,
+      changedAt: `2026-09-13T11:${String(index).padStart(2, "0")}:00Z`,
+    }));
+    type SearchResult = Awaited<ReturnType<typeof search2>>;
+    let resolveNext: ((value: SearchResult) => void) | undefined;
+    vi.mocked(search2)
+      .mockImplementationOnce(() => ok({ items: firstItems, total: 21 }))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNext = resolve;
+          }),
+      );
+    renderPage();
+    await user.click(await screen.findByRole("tab", { name: "Здоровье" }));
+    expect(await screen.findByText("1–10 из 21")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    expect(screen.getByText("Обновление переходов…")).toBeVisible();
+    expect(screen.getByText("1–10 из 21")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Далее" })).toBeDisabled();
+    expect(screen.queryByLabelText("Загрузка истории")).toBeNull();
+
+    resolveNext?.(
+      (await ok({
+        items: [
+          {
+            id: 99,
+            fromStatus: "DEGRADED" as const,
+            toStatus: "UP" as const,
+            changedAt: "2026-09-12T11:00:00Z",
+          },
+        ],
+        total: 21,
+      })) as SearchResult,
+    );
+    expect(await screen.findByText("11–11 из 21")).toBeVisible();
+    expect(screen.queryByText("Обновление переходов…")).toBeNull();
+  });
+
+  it("loads monitoring only after the resource is confirmed in the organization", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    expect(list1).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole("tab", { name: "Мониторинг" }));
+    expect(
+      await screen.findByRole("heading", { name: "Мониторинг" }),
+    ).toBeVisible();
+    expect(list1).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(screen.getByRole("tab", { name: "Мониторинг" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.queryByText("Конфигурация")).toBeNull();
+  });
+
   it("keeps Overview visible when secondary health requests fail", async () => {
+    const user = userEvent.setup();
     vi.mocked(get5).mockRejectedValue(
       new ApiClientError("Failed", { kind: "network" }),
     );
@@ -183,6 +302,7 @@ describe("ResourceDetailsPage", () => {
     expect(
       await screen.findByText("https://payments.example.test"),
     ).toBeVisible();
+    await user.click(screen.getByRole("tab", { name: "Здоровье" }));
     expect(
       await screen.findByText(
         "Не удалось загрузить доступность за выбранный период.",
@@ -193,6 +313,7 @@ describe("ResourceDetailsPage", () => {
         "Не удалось загрузить историю изменений здоровья.",
       ),
     ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "payments-api" })).toBeVisible();
   });
 
   it("shows mutations only to managers and restores the list URL", async () => {
@@ -202,7 +323,9 @@ describe("ResourceDetailsPage", () => {
     });
     await screen.findByRole("heading", { name: "payments-api" });
     expect(screen.queryByRole("link", { name: "Редактировать" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Удалить" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Действия с ресурсом" }),
+    ).toBeNull();
     expect(
       screen.getByRole("link", { name: "К списку ресурсов" }),
     ).toHaveAttribute(
@@ -211,10 +334,17 @@ describe("ResourceDetailsPage", () => {
     );
     member.unmount();
 
+    const managerUser = userEvent.setup();
     renderPage();
     expect(
       await screen.findByRole("link", { name: "Редактировать" }),
     ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Удалить" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Удалить ресурс" })).toBeNull();
+    await managerUser.click(
+      screen.getByRole("button", { name: "Действия с ресурсом" }),
+    );
+    expect(
+      await screen.findByRole("menuitem", { name: "Удалить ресурс" }),
+    ).toBeVisible();
   });
 });

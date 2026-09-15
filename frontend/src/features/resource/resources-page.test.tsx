@@ -312,6 +312,50 @@ describe("ResourcesPage", () => {
     ).toHaveTextContent("20");
   });
 
+  it("keeps the confirmed resource page and range during pagination", async () => {
+    const user = userEvent.setup();
+    const firstItems = Array.from({ length: 20 }, (_, index) => ({
+      ...resources[0],
+      id: index + 101,
+      name: `resource-${index + 101}`,
+    }));
+    type SearchResult = Awaited<ReturnType<typeof search3>>;
+    let resolveNext: ((value: SearchResult) => void) | undefined;
+    vi.mocked(search3)
+      .mockImplementationOnce(() => response(firstItems, 73))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNext = resolve;
+          }),
+      );
+    renderPage();
+    expect(await screen.findByText("1–20 из 73")).toBeVisible();
+
+    await user.click(
+      screen.getByRole("button", { name: "Следующая страница" }),
+    );
+    expect(screen.getByText("1–20 из 73")).toBeVisible();
+    expect(screen.getAllByText("resource-101").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("button", { name: "Следующая страница" }),
+    ).toBeDisabled();
+    expect(screen.queryByLabelText("Загрузка ресурсов")).toBeNull();
+
+    resolveNext?.(
+      (await response(
+        Array.from({ length: 20 }, (_, index) => ({
+          ...resources[0],
+          id: index + 201,
+          name: `resource-${index + 201}`,
+        })),
+        73,
+      )) as SearchResult,
+    );
+    expect(await screen.findByText("21–40 из 73")).toBeVisible();
+    expect(screen.queryByText("resource-101")).toBeNull();
+  });
+
   it("shows mutation actions only to organization managers", async () => {
     const user = userEvent.setup();
     const memberView = renderPage(undefined, false);
